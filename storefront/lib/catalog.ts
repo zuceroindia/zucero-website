@@ -42,7 +42,7 @@ export const products: Product[] = [
     name: "Original Brown Khand Mishri",
     eyebrow: "From the abundance of sugarcane to the rarity of every crystal",
     description: "Crafted crystal by crystal through an age-old Indian thread technique, preserving its distinctive colour, delicate sweetness and refined crunch.",
-    image: "/images/mishri-raw-hero.png",
+    image: "/images/mishri-jar-lifestyle.png",
     cartImage: "/images/mishri-jar-lifestyle.png",
     ingredients: "Sugarcane juice, desi cow milk and desi cow ghee. Contains milk.",
     variants: [
