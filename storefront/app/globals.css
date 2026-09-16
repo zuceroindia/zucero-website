@@ -577,7 +577,7 @@ body:has(.pdp-page) .back-to-top{bottom:118px}
 .priority-popup>a>svg:first-child{width:19px;height:19px;color:#d5ac45;filter:drop-shadow(0 0 6px rgba(213,172,69,.35))}
 .priority-popup>a>span{display:grid;gap:.15rem;flex:1}
 .priority-popup>a strong{font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;color:#e3c36c}
-.priority-popup>a small{font:400 .82rem/1.1 var(--serif);letter-spacing:.01em;color:#fffaf0;white-space:normal}
+.priority-popup>a small{font:400 .78rem/1.1 var(--serif);letter-spacing:.01em;color:#fffaf0;white-space:nowrap}
 .priority-popup>a>svg:last-child{width:17px;height:17px;color:#e3c36c;transition:transform .2s ease}
 .priority-popup>a:hover>svg:last-child{transform:translateX(3px)}
 .priority-popup>button{position:absolute;z-index:2;top:50%;right:.55rem;display:grid;place-items:center;width:30px;height:30px;transform:translateY(-50%);border:1px solid rgba(227,195,108,.28);border-radius:50%;background:rgba(255,255,255,.04);color:#f8f0dc}
