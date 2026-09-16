@@ -110,7 +110,7 @@ export function Header() {
       {showPriorityNotice && !collectionInView && (
         <aside className="priority-popup" aria-label="Priority access to the Zucero collection">
           <button type="button" aria-label="Dismiss priority access offer" onClick={() => setShowPriorityNotice(false)}><X size={16} /></button>
-          <Link href="/products#collection-title"><Gem aria-hidden="true" /><span><strong>Priority access</strong></span><ArrowRight aria-hidden="true" /></Link>
+          <Link href="/products#collection-title"><Gem aria-hidden="true" /><span><strong>Priority access</strong><small>Extra 10% off: use coupon <b>ZUCADD10</b> at checkout.</small></span><ArrowRight aria-hidden="true" /></Link>
         </aside>
       )}
     </>

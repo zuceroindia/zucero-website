@@ -92,6 +92,7 @@ export function ProductPurchase({ product }: { product: Product }) {
     <h1>{product.name}</h1>
     <p className="product-description">{product.description}</p>
     <aside className="featured-prebook-offer"><span>Experience the goodness of the first batch · {variant.label}</span><strong>{offerPrice}</strong></aside>
+    <p className="coupon-offer"><strong>Extra 10% off:</strong> use coupon <strong>ZUCADD10</strong> at checkout.</p>
     <div className="pdp-khand-benefits">{benefits.map(({ title, Icon }) => <article key={title}><Icon aria-hidden="true" /><h3>{title}</h3></article>)}</div>
     <p className="pdp-ingredients"><strong>Ingredients:</strong> Sugar cane Juice, Desi Cow Milk and Desi Cow Ghee</p>
     <div className="purchase-block"><span>Selected size: {variant.label}</span><div className="variant-row pdp-sizes">{product.variants.map((item) => <button key={item.id} type="button" aria-pressed={variantId === item.id} className={variantId === item.id ? "active" : ""} onClick={() => { setVariantId(item.id); setShippingMessage(""); }}><strong>{item.label}</strong><small>{formatPrice(item.pricePaise)}</small></button>)}</div></div>
