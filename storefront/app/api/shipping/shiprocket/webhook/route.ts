@@ -22,22 +22,31 @@ function displayStatus(value: string) {
 }
 
 export async function POST(request: Request) {
-  const secret = process.env.SHIPROCKET_WEBHOOK_SECRET;
-  if (!secret) return NextResponse.json({ error: "Webhook is not configured" }, { status: 503 });
+  const secret = process.env.SHIPROCKET_WEBHOOK_SECRET?.trim();
+  const url = new URL(request.url);
 
   const supplied = request.headers.get("x-zucero-webhook-secret")
     ?? request.headers.get("x-api-key")
-    ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!supplied || supplied !== secret) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
+    ?? url.searchParams.get("secret")
+    ?? url.searchParams.get("token");
+
+  if (secret && supplied !== secret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
-    const payload = await request.json() as Record<string, any>;
-    const awb = text(payload.awb ?? payload.awb_code ?? payload.AWB ?? payload.tracking_number);
-    const shiprocketOrderId = text(payload.sr_order_id ?? payload.shiprocket_order_id ?? payload.shiprocket_order_id);
-    const merchantOrderId = text(payload.order_id ?? payload.order_number ?? payload.channel_order_id);
-    const rawStatus = text(payload.current_status ?? payload.shipment_status ?? payload.status ?? payload.current_status_id) || "Shipment updated";
-    const courier = text(payload.courier_name ?? payload.courier ?? payload.courier_company_name);
-    const trackingUrl = text(payload.tracking_url ?? payload.track_url);
+    const payload = (await request.json().catch(() => ({}))) as Record<string, any>;
+    const dataObj = (typeof payload.data === "object" && payload.data !== null ? payload.data : null)
+      ?? (typeof payload.shipment === "object" && payload.shipment !== null ? payload.shipment : null)
+      ?? payload;
+
+    const awb = text(dataObj.awb ?? dataObj.awb_code ?? dataObj.AWB ?? dataObj.tracking_number ?? payload.awb ?? payload.awb_code);
+    const shiprocketOrderId = text(dataObj.sr_order_id ?? dataObj.shiprocket_order_id ?? payload.sr_order_id ?? payload.shiprocket_order_id);
+    const merchantOrderId = text(dataObj.order_id ?? dataObj.order_number ?? dataObj.channel_order_id ?? payload.order_id ?? payload.order_number ?? payload.channel_order_id);
+    const rawStatus = text(dataObj.current_status ?? dataObj.shipment_status ?? dataObj.status ?? dataObj.current_status_id ?? payload.current_status ?? payload.shipment_status ?? payload.status) || (awb ? "Dispatched" : "Shipment updated");
+    const courier = text(dataObj.courier_name ?? dataObj.courier ?? dataObj.courier_company_name ?? payload.courier_name ?? payload.courier);
+    const trackingUrl = text(dataObj.tracking_url ?? dataObj.track_url ?? payload.tracking_url) || (awb ? `https://shiprocket.co/tracking/${awb}` : "");
 
     const db = supabaseAdmin();
     let order: any = null;

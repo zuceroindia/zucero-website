@@ -234,20 +234,96 @@ export async function notifyPaidOrder(orderId: string) {
 }
 
 export async function notifyShipmentStatus(orderId: string, status: string) {
-  const { order } = await orderSnapshot(orderId);
+  const { order, items } = await orderSnapshot(orderId);
   const normalized = status.trim() || "Shipment updated";
   const merchantEmail = process.env.ORDER_NOTIFICATION_EMAIL?.trim() || DEFAULT_MERCHANT_EMAIL;
-  const trackingLine = order.tracking_awb ? `AWB ${order.tracking_awb}${order.courier_name ? ` · ${order.courier_name}` : ""}` : "Tracking details will be available shortly.";
+  const address = (order.shipping_address ?? {}) as Record<string, any>;
   const accountUrl = `${SITE_URL}/account/orders`;
+  const trackingUrl = order.tracking_url || (order.tracking_awb ? `https://shiprocket.co/tracking/${order.tracking_awb}` : accountUrl);
   const keyStatus = normalized.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 80);
 
-  const customerHtml = `<div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#10271d"><h1 style="font-family:Georgia,serif;font-weight:500">Your order is ${escapeHtml(normalized)}.</h1><p>Order <strong>${escapeHtml(order.order_number)}</strong> has a new delivery update.</p><p>${escapeHtml(trackingLine)}</p><p><a href="${accountUrl}" style="display:inline-block;padding:12px 18px;background:#10271d;color:white;text-decoration:none">Track your order</a></p></div>`;
-  const customerText = `Order ${order.order_number}: ${normalized}\n${trackingLine}\nTrack: ${accountUrl}`;
-  const merchantText = `Shipment update for ${order.order_number}: ${normalized}\n${trackingLine}`;
+  // Determine user-friendly subject and title
+  const lower = normalized.toLowerCase();
+  let subject = `Shipment update · ${order.order_number}`;
+  let headline = `Your Zucero order is ${escapeHtml(normalized)}.`;
+  let subheadline = "We have an update regarding your delivery";
+
+  if (lower.includes("shipped") || lower.includes("transit") || lower.includes("dispatched") || lower.includes("picked")) {
+    subject = `Your Zucero order is on the way! · ${order.order_number}`;
+    headline = "Your pure sweetness is on the way.";
+    subheadline = "Your parcel has been dispatched from our Gurugram facility";
+  } else if (lower.includes("out for delivery") || lower.includes("out_for_delivery")) {
+    subject = `Out for delivery today: Your Zucero order · ${order.order_number}`;
+    headline = "Your order is out for delivery today!";
+    subheadline = "The delivery agent will reach your address shortly";
+  } else if (lower.includes("delivered")) {
+    subject = `Delivered: Your Zucero order · ${order.order_number}`;
+    headline = "Your Zucero order has been delivered.";
+    subheadline = "Thank you for choosing pure, chemical-free sugarcane sweetness";
+  }
+
+  const trackingBox = order.tracking_awb ? `
+    <div style="background:#f4f7f4;border:1px solid #cce0d4;padding:16px 20px;border-radius:8px;margin:20px 0">
+      <div style="font-size:13px;color:#4a6358;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;margin-bottom:6px">Courier &amp; Tracking Details</div>
+      <div style="font-size:15px;color:#10271d;margin-bottom:4px"><strong>Courier Partner:</strong> ${escapeHtml(order.courier_name || "Express Surface Courier")}</div>
+      <div style="font-size:15px;color:#10271d;margin-bottom:14px"><strong>AWB Number:</strong> <span style="font-family:monospace;background:#e8f0eb;padding:2px 8px;border-radius:4px;font-weight:bold">${escapeHtml(order.tracking_awb)}</span></div>
+      <a href="${trackingUrl}" style="display:inline-block;padding:11px 22px;background:#10271d;color:#ffffff;text-decoration:none;border-radius:4px;font-weight:bold;font-size:14px">Track Your Parcel Live &rarr;</a>
+    </div>
+  ` : `
+    <div style="background:#fafafa;border:1px solid #eee;padding:14px 16px;border-radius:6px;margin:16px 0">
+      <p style="margin:0;font-size:14px;color:#10271d">Tracking details will be updated as soon as the courier scans your parcel.</p>
+    </div>
+  `;
+
+  const customerHtml = `
+    <div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#10271d;line-height:1.5">
+      <div style="border-bottom:3px solid #10271d;padding-bottom:14px;margin-bottom:20px">
+        <h1 style="font-family:Georgia,serif;font-weight:500;color:#10271d;margin:0 0 6px 0">${headline}</h1>
+        <p style="margin:0;color:#4a6358;font-size:14px">${subheadline}</p>
+      </div>
+
+      <p>Hello ${escapeHtml(address.fullName || "there")},</p>
+      <p>Your order <strong>${escapeHtml(order.order_number)}</strong> status has been updated to: <span style="display:inline-block;padding:3px 10px;background:#10271d;color:#fff;border-radius:12px;font-size:13px;font-weight:bold">${escapeHtml(normalized)}</span></p>
+
+      ${trackingBox}
+
+      <table style="width:100%;border-collapse:collapse;margin:16px 0">${itemsHtml(items)}</table>
+
+      <div style="background:#fafafa;padding:12px 16px;border-radius:6px;margin:16px 0;font-size:13px">
+        <p style="margin:0 0 4px 0;font-weight:bold;color:#10271d">Delivery Address:</p>
+        <p style="margin:0;color:#4a6358">${escapeHtml(address.fullName)}<br/>${escapeHtml(address.addressLine1)} ${escapeHtml(address.addressLine2 || "")}<br/>${escapeHtml(address.city)}, ${escapeHtml(address.state)} ${escapeHtml(address.postalCode)}</p>
+      </div>
+
+      <p style="margin:24px 0 16px 0"><a href="${accountUrl}" style="color:#10271d;text-decoration:underline;font-size:14px">View All Orders &amp; Invoices</a></p>
+    </div>
+  `;
+
+  const customerText = `${headline}\n\nOrder ${order.order_number}: ${normalized}\n${order.tracking_awb ? `Courier: ${order.courier_name}\nAWB: ${order.tracking_awb}\nTrack: ${trackingUrl}\n\n` : ""}${itemsText(items)}\n\nDelivery Address: ${address.fullName}, ${address.addressLine1}, ${address.city} ${address.postalCode}\n\nTrack: ${accountUrl}`;
+
+  const merchantHtml = `
+    <div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#10271d">
+      <h2>Shipment Update: ${escapeHtml(normalized)}</h2>
+      <p><strong>Order:</strong> ${escapeHtml(order.order_number)} (${escapeHtml(money(order.total_paise))})</p>
+      <p><strong>Status:</strong> ${escapeHtml(normalized)}</p>
+      ${order.tracking_awb ? `<p><strong>Courier:</strong> ${escapeHtml(order.courier_name || "Shiprocket")}<br/><strong>AWB:</strong> ${escapeHtml(order.tracking_awb)}<br/><a href="${trackingUrl}">Live Tracking Link</a></p>` : ""}
+      <p><strong>Customer:</strong><br/>${escapeHtml(address.fullName)}<br/>${escapeHtml(order.customer_email)}<br/>${escapeHtml(order.customer_phone)}</p>
+      <p><strong>Delivery Address:</strong><br/>${escapeHtml(address.addressLine1)} ${escapeHtml(address.addressLine2 || "")}<br/>${escapeHtml(address.city)}, ${escapeHtml(address.state)} ${escapeHtml(address.postalCode)}</p>
+      <table style="width:100%;border-collapse:collapse">${itemsHtml(items)}</table>
+    </div>
+  `;
+
+  const merchantText = `Shipment Update: ${order.order_number} is ${normalized}\nCourier: ${order.courier_name || "Shiprocket"}\nAWB: ${order.tracking_awb || "Pending"}\nTrack: ${trackingUrl}\nCustomer: ${address.fullName} · ${order.customer_phone}\n${itemsText(items)}`;
 
   const results = await Promise.allSettled([
-    once(`shipment-customer:${order.id}:${keyStatus}`, "shipment.status.customer", { order_id: order.id, status: normalized }, () => sendEmail({ to: order.customer_email, subject: `${normalized} · ${order.order_number}`, html: customerHtml, text: customerText })),
-    once(`shipment-merchant:${order.id}:${keyStatus}`, "shipment.status.merchant", { order_id: order.id, status: normalized }, () => sendEmail({ to: merchantEmail, subject: `Shipment update · ${order.order_number}`, html: `<p>${escapeHtml(merchantText)}</p>`, text: merchantText })),
+    once(`shipment-customer:${order.id}:${keyStatus}`, "shipment.status.customer", { order_id: order.id, status: normalized }, () =>
+      sendEmail({ to: order.customer_email, subject, html: customerHtml, text: customerText })
+    ),
+    once(`shipment-merchant:${order.id}:${keyStatus}`, "shipment.status.merchant", { order_id: order.id, status: normalized }, () =>
+      sendEmail({ to: merchantEmail, subject: `Merchant Alert: ${subject}`, html: merchantHtml, text: merchantText })
+    ),
   ]);
-  results.forEach((result) => { if (result.status === "rejected") console.error("Shipment email notification failed", result.reason); });
+
+  results.forEach((result) => {
+    if (result.status === "rejected") console.error("Shipment email notification failed", result.reason);
+  });
 }
