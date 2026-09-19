@@ -300,7 +300,7 @@ export function generateInvoicePdfBuffer(order: InvoiceOrder, items: InvoiceItem
   sy -= 14;
 
   if (order.discount_paise > 0) {
-    text(rightX, sy, "Coupon Discount:", "F1", 8.5);
+    text(rightX, sy, "Referral Discount:", "F1", 8.5);
     text(rightValX, sy, `-Rs ${discountRupees}`, "F1", 8.5);
     sy -= 14;
   }
@@ -340,6 +340,11 @@ export async function generateInvoiceForOrder(orderId: string): Promise<{ buffer
   const db = supabaseAdmin();
   const { data: order, error } = await db.from("orders").select("*").eq("id", orderId).single();
   if (error || !order) throw new Error("Order not found for invoice generation");
+
+  const isPlaced = order.payment_status === "captured" || ["paid", "processing", "shipped", "delivered"].includes(String(order.status).toLowerCase());
+  if (!isPlaced) {
+    throw new Error("Tax invoice can only be generated once the order is successfully placed.");
+  }
 
   const { data: items } = await db.from("order_items").select("*").eq("order_id", orderId);
   const invoiceOrder: InvoiceOrder = {

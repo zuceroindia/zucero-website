@@ -1228,6 +1228,7 @@ export default function OrdersPage() {
                   <div className={styles.orderList}>
                     {orders.map((order) => {
                       const progress = orderProgress(order.display_status);
+                      const isPlaced = order.payment_status === "captured" || ["paid", "processing", "shipped", "delivered"].includes(order.display_status?.toLowerCase());
                       return (
                         <article className={styles.orderCard} key={order.id}>
                           <div className={styles.orderHead}>
@@ -1249,7 +1250,7 @@ export default function OrdersPage() {
                                     fontWeight: 600,
                                   }}
                                 >
-                                  Delivery Window: {order.estimated_delivery_window}
+                                  {order.tracking_awb ? "Delivery Schedule:" : "Estimated Delivery:"} {order.estimated_delivery_window}
                                 </p>
                               )}
                             </div>
@@ -1297,23 +1298,29 @@ export default function OrdersPage() {
                                 <p>
                                   <strong>AWB:</strong> {order.tracking_awb}
                                 </p>
+                                {order.estimated_delivery_window && (
+                                  <p>
+                                    <strong>Delivery Schedule:</strong> {order.estimated_delivery_window}
+                                  </p>
+                                )}
                               </>
                             ) : (
                               <p>
-                                <strong>Delivery:</strong> Your order is being prepared. Tracking will appear after
-                                courier assignment.
+                                <strong>Delivery:</strong> Estimated 5–7 days. Your order is being prepared and tracking details will appear once shipped.
                               </p>
                             )}
                             <div style={{ display: "flex", gap: "10px", marginTop: "12px", flexWrap: "wrap" }}>
-                              <a
-                                className="button button-dark"
-                                href={`/api/orders/${order.id}/invoice`}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{ fontSize: "0.82rem", padding: "8px 14px", textDecoration: "none" }}
-                              >
-                                Download Tax Invoice (PDF)
-                              </a>
+                              {isPlaced && (
+                                <a
+                                  className="button button-dark"
+                                  href={`/api/orders/${order.id}/invoice`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{ fontSize: "0.82rem", padding: "8px 14px", textDecoration: "none" }}
+                                >
+                                  Download Tax Invoice (PDF)
+                                </a>
+                              )}
                               {order.tracking_url && (
                                 <a
                                   className="button button-dark"

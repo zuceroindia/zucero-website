@@ -63,43 +63,36 @@ export async function getShippingOptions(input: { pickupPostcode: string; delive
   return shiprocketFetch(`/courier/serviceability/?${params}`);
 }
 
-export function getFallbackDeliveryEstimate(destinationState?: string, baseDate = new Date()): { minDays: number; maxDays: number; windowText: string } {
-  const normState = (destinationState ?? "").trim().toLowerCase();
-  let minDays = 5;
-  let maxDays = 7;
+export function formatAccurateEdd(rawDate: unknown): string | null {
+  if (!rawDate) return null;
+  const str = String(rawDate).trim();
+  if (!str) return null;
 
-  if (["haryana", "delhi", "chandigarh"].includes(normState)) {
-    minDays = 2;
-    maxDays = 4;
-  } else if (["punjab", "uttar pradesh", "rajasthan", "himachal pradesh", "uttarakhand"].includes(normState)) {
-    minDays = 3;
-    maxDays = 5;
-  } else if (["maharashtra", "gujarat", "madhya pradesh", "west bengal", "karnataka", "telangana", "tamil nadu"].includes(normState)) {
-    minDays = 4;
-    maxDays = 6;
-  } else {
-    minDays = 5;
-    maxDays = 8;
+  if (str.toLowerCase().startsWith("expected by")) {
+    return str;
   }
 
-  const addBusinessDays = (d: Date, days: number) => {
-    const res = new Date(d);
-    let added = 0;
-    while (added < days) {
-      res.setDate(res.getDate() + 1);
-      if (res.getDay() !== 0) added++; // Skip Sundays
-    }
-    return res;
-  };
+  const parsed = new Date(str.replace(/-/g, "/"));
+  if (!isNaN(parsed.getTime())) {
+    return `Expected by ${parsed.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}`;
+  }
 
-  const start = addBusinessDays(baseDate, minDays);
-  const end = addBusinessDays(baseDate, maxDays);
-  const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  const fallback = new Date(str);
+  if (!isNaN(fallback.getTime())) {
+    return `Expected by ${fallback.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}`;
+  }
+
+  return `Expected by ${str}`;
+}
+
+export function getFallbackDeliveryEstimate(destinationState?: string, baseDate = new Date()): { minDays: number; maxDays: number; windowText: string } {
+  const minDays = 5;
+  const maxDays = 7;
 
   return {
     minDays,
     maxDays,
-    windowText: `${fmt(start)} – ${fmt(end)} (${minDays}–${maxDays} business days)`,
+    windowText: "5–7 days",
   };
 }
 
@@ -133,17 +126,8 @@ export function selectPrepaidShippingQuote(result: unknown, fallbackWeightKg: nu
   const recommended = recommendedId === null ? null : candidates.find((item) => item.courierCompanyId === recommendedId) ?? null;
   const selected = recommended ?? candidates.reduce((best, item) => item.rateRupees < best.rateRupees ? item : best);
 
-  let windowText = "";
-  if (selected.etdString) {
-    windowText = `Expected by ${selected.etdString}`;
-  } else if (selected.etdDays) {
-    const days = Math.round(selected.etdDays);
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    windowText = `Expected in ${days} days (by ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short" })})`;
-  } else {
-    windowText = getFallbackDeliveryEstimate(destinationState).windowText;
-  }
+  // Standard estimated delivery time before order shipment is 5–7 days
+  const windowText = "5–7 days";
 
   return {
     shippingPaise: Math.max(1, Math.round(selected.rateRupees * 100)),
@@ -151,7 +135,7 @@ export function selectPrepaidShippingQuote(result: unknown, fallbackWeightKg: nu
     courierName: selected.courierName,
     chargeWeightKg: selected.chargeWeightKg,
     estimatedDeliveryDate: selected.etdString,
-    estimatedDeliveryDays: selected.etdDays ? Math.round(selected.etdDays) : null,
+    estimatedDeliveryDays: 7,
     deliveryWindowText: windowText,
   };
 }

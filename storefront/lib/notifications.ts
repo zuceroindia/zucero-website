@@ -129,7 +129,7 @@ export async function notifyPaidOrder(orderId: string) {
   const address = (order.shipping_address ?? {}) as Record<string, any>;
   const merchantEmail = process.env.ORDER_NOTIFICATION_EMAIL?.trim() || DEFAULT_MERCHANT_EMAIL;
   const accountUrl = `${SITE_URL}/account/orders`;
-  const deliveryWindow = order.estimated_delivery_window || address.estimated_delivery_window || "3-5 business days";
+  const deliveryWindow = order.estimated_delivery_window || address.estimated_delivery_window || "5–7 days";
   const invoiceNumber = order.invoice_number || `INV-${order.order_number}`;
 
   // Generate tax invoice PDF

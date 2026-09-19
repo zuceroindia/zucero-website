@@ -37,7 +37,7 @@ export function buildCustomerOrderWhatsAppLink(order: {
   estimatedDeliveryWindow?: string | null;
 }): string {
   const totalRupees = Math.round(order.totalPaise / 100);
-  const delivery = order.estimatedDeliveryWindow || "3-5 business days";
+  const delivery = order.estimatedDeliveryWindow || "5–7 days";
   const text = `Hello Zucero! I have placed order ${order.orderNumber} for Rs ${totalRupees}. Expected delivery: ${delivery}. Please share order and shipment tracking updates on this WhatsApp number.`;
   return whatsappLink(text);
 }
@@ -64,7 +64,7 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
   }
 
   const recipient = normalizeWhatsAppRecipient(rawPhone);
-  const deliveryWindow = order.estimated_delivery_window || address.estimated_delivery_window || "3-5 business days";
+  const deliveryWindow = order.estimated_delivery_window || address.estimated_delivery_window || "5–7 days";
   const customerName = address.fullName || "Customer";
   const totalRupeesFormatted = (order.total_rupees !== null && order.total_rupees !== undefined)
     ? Number(order.total_rupees).toFixed(2)

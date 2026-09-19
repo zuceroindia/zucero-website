@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { notifyShipmentStatus } from "@/lib/notifications";
 import { isAuthorizedAdminOrInternal } from "@/lib/api-auth";
+import { formatAccurateEdd } from "@/lib/shiprocket";
 
 const SHIPROCKET_API_BASE = "https://apiv2.shiprocket.in/v1/external";
 let cachedToken: { value: string; expiresAt: number } | null = null;
@@ -71,6 +72,8 @@ export async function POST(
     const courier = latestShipment.courier ?? latestShipment.courier_name ?? orderData.courier_name ?? order.courier_name;
     const rawStatus = latestShipment.current_status ?? orderData.status ?? "Processing";
     const trackingUrl = awb ? `https://shiprocket.co/tracking/${awb}` : order.tracking_url;
+    const rawEdd = latestShipment.edd ?? latestShipment.expected_date ?? orderData.edd ?? orderData.expected_date;
+    const accurateEdd = formatAccurateEdd(rawEdd);
 
     const isNewlyDispatched = Boolean(awb && !order.tracking_awb);
 
@@ -80,6 +83,7 @@ export async function POST(
     if (awb) update.tracking_awb = awb;
     if (courier) update.courier_name = courier;
     if (trackingUrl) update.tracking_url = trackingUrl;
+    if (accurateEdd) update.estimated_delivery_window = accurateEdd;
     if (rawStatus) {
       const s = String(rawStatus).toLowerCase();
       if (s.includes("delivered")) update.status = "delivered";

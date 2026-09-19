@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { notifyShipmentStatus } from "@/lib/notifications";
+import { formatAccurateEdd } from "@/lib/shiprocket";
 
 function text(value: unknown) {
   return typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
@@ -47,6 +48,8 @@ export async function POST(request: Request) {
     const rawStatus = text(dataObj.current_status ?? dataObj.shipment_status ?? dataObj.status ?? dataObj.current_status_id ?? payload.current_status ?? payload.shipment_status ?? payload.status) || (awb ? "Dispatched" : "Shipment updated");
     const courier = text(dataObj.courier_name ?? dataObj.courier ?? dataObj.courier_company_name ?? payload.courier_name ?? payload.courier);
     const trackingUrl = text(dataObj.tracking_url ?? dataObj.track_url ?? payload.tracking_url) || (awb ? `https://shiprocket.co/tracking/${awb}` : "");
+    const edd = text(dataObj.edd ?? dataObj.expected_date ?? dataObj.etd ?? payload.edd ?? payload.expected_date);
+    const accurateEdd = formatAccurateEdd(edd);
 
     const db = supabaseAdmin();
     let order: any = null;
@@ -73,6 +76,7 @@ export async function POST(request: Request) {
     if (awb) update.tracking_awb = awb;
     if (courier) update.courier_name = courier;
     if (trackingUrl) update.tracking_url = trackingUrl;
+    if (accurateEdd) update.estimated_delivery_window = accurateEdd;
     if (shiprocketOrderId && !order.shiprocket_order_id) update.shiprocket_order_id = shiprocketOrderId;
 
     const { error } = await db.from("orders").update(update).eq("id", order.id);

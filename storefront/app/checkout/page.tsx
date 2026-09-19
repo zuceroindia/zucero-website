@@ -232,7 +232,7 @@ export default function CheckoutPage() {
           totalWeightGrams: 1000,
           chargeWeightKg: 1,
           courierName: "Insured Express Delivery",
-          deliveryWindowText: "3-5 business days",
+          deliveryWindowText: "5–7 days",
         });
         setShippingError("");
       } finally {
@@ -427,7 +427,7 @@ export default function CheckoutPage() {
 
           <div style={{ background: "#f4f7f4", borderLeft: "4px solid #10271d", padding: "16px 18px", margin: "22px 0", borderRadius: "4px" }}>
             <p style={{ margin: 0, fontWeight: "bold", color: "#10271d", fontSize: "0.95rem" }}>
-              Estimated Delivery: {completed.deliveryWindow || "3-5 business days"}
+              Estimated Delivery: {completed.deliveryWindow || "5–7 days"}
             </p>
             <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "#4a6358" }}>
               Dispatched from Gurugram, Haryana via insured express surface delivery. An email confirmation with GST invoice has been sent to your inbox.

@@ -18,12 +18,20 @@ export async function GET(
     const db = supabaseAdmin();
     const { data: order, error: orderError } = await db
       .from("orders")
-      .select("id, order_number, customer_email, idempotency_key")
+      .select("id, order_number, customer_email, idempotency_key, status, payment_status")
       .or(`id.eq.${orderId},order_number.eq.${orderId}`)
       .maybeSingle();
 
     if (orderError || !order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    const isPlaced = order.payment_status === "captured" || ["paid", "processing", "shipped", "delivered"].includes(String(order.status).toLowerCase());
+    if (!isPlaced) {
+      return NextResponse.json(
+        { error: "Tax invoice can only be generated once the order is successfully placed." },
+        { status: 400 }
+      );
     }
 
     // Access control checks:
