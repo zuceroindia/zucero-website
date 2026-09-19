@@ -55,8 +55,18 @@ export async function POST(request: Request) {
       processed_at: new Date().toISOString(),
     }, { onConflict: "provider,provider_event_id" });
 
-    const fulfilment = await fulfilPaidOrder(order.id);
-    await notifyPaidOrder(order.id).catch((notificationError) => console.error("Paid order notification failed", notificationError));
+    const [fulfilmentResult] = await Promise.allSettled([
+      fulfilPaidOrder(order.id).catch((err) => {
+        console.error("Fulfilment error in verify route:", err);
+        return null;
+      }),
+      notifyPaidOrder(order.id).catch((err) => {
+        console.error("Paid order notification failed in verify route:", err);
+      }),
+    ]);
+
+    const fulfilment = fulfilmentResult.status === "fulfilled" ? fulfilmentResult.value : null;
+
     return NextResponse.json({
       ok: true,
       captured: true,

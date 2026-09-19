@@ -72,8 +72,10 @@ export async function POST(request: Request) {
         razorpay_payment_id: payment?.id ?? order.razorpay_payment_id,
         updated_at: new Date().toISOString(),
       }).eq("id", order.id);
-      await fulfilPaidOrder(order.id);
-      await notifyPaidOrder(order.id).catch((notificationError) => console.error("Paid order notification failed", notificationError));
+      await Promise.allSettled([
+        fulfilPaidOrder(order.id).catch((err) => console.error("Fulfilment failed:", err)),
+        notifyPaidOrder(order.id).catch((err) => console.error("Notification failed:", err)),
+      ]);
     }
 
     return NextResponse.json({ received: true });
