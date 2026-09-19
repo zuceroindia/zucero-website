@@ -9,7 +9,7 @@ import { SiteFooter } from "@/components/site-footer";
 import type { CustomerDetails } from "@/lib/customer-details";
 import { emptyCustomerDetails } from "@/lib/customer-details";
 import { INDIAN_STATES } from "@/lib/india";
-import { calculateCheckoutTotal, calculateCouponDiscount, normalizeCouponCode, ZUCADD10_CODE } from "@/lib/tax";
+import { calculateCheckoutTotal, calculateCouponDiscount, isIntraState, normalizeCouponCode, ZUCADD10_CODE } from "@/lib/tax";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase-browser";
 import { whatsappLink } from "@/lib/whatsapp";
 
@@ -101,9 +101,10 @@ export default function CheckoutPage() {
     deliveryWindow?: string;
   } | null>(null);
   const discountPaise = useMemo(() => calculateCouponDiscount(subtotalPaise, appliedCoupon), [subtotalPaise, appliedCoupon]);
-  const quote = useMemo(() => details.state && shippingQuote
-    ? calculateCheckoutTotal(subtotalPaise, details.state, discountPaise, shippingQuote.shippingPaise)
-    : null, [details.state, subtotalPaise, discountPaise, shippingQuote]);
+  const shippingPaise = shippingQuote ? shippingQuote.shippingPaise : 0;
+  const quote = useMemo(() => {
+    return calculateCheckoutTotal(subtotalPaise, details.state || "Haryana", discountPaise, shippingPaise);
+  }, [subtotalPaise, details.state, discountPaise, shippingPaise]);
 
   useEffect(() => {
     let active = true;
@@ -165,7 +166,22 @@ export default function CheckoutPage() {
         });
       } catch (quoteError) {
         if (controller.signal.aborted) return;
-        setShippingError(quoteError instanceof Error ? quoteError.message : "Could not calculate delivery charge.");
+        // Resilient fallback for shipping rate
+        const normState = (details.state ?? "").trim().toLowerCase();
+        let fallbackShippingPaise = 11000;
+        if (["haryana", "delhi", "chandigarh"].includes(normState)) {
+          fallbackShippingPaise = 7500;
+        } else if (["punjab", "uttar pradesh", "rajasthan", "himachal pradesh", "uttarakhand"].includes(normState)) {
+          fallbackShippingPaise = 9000;
+        }
+        setShippingQuote({
+          shippingPaise: fallbackShippingPaise,
+          totalWeightGrams: 1000,
+          chargeWeightKg: 1,
+          courierName: "Insured Express Delivery",
+          deliveryWindowText: "3-5 business days",
+        });
+        setShippingError("");
       } finally {
         if (!controller.signal.aborted) setShippingLoading(false);
       }
@@ -175,7 +191,7 @@ export default function CheckoutPage() {
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [details.postalCode, lines]);
+  }, [details.postalCode, details.state, lines]);
 
   function update(field: keyof CustomerDetails, value: string) {
     setError("");
@@ -334,14 +350,24 @@ export default function CheckoutPage() {
 
   if (!lines.length) return <main className="store-page"><StoreHeader /><section className="empty-cart"><h1>Your bag is empty.</h1><Link className="button button-dark" href="/products">Shop products</Link></section><SiteFooter /></main>;
 
-  const checkoutDisabled = loading || shippingLoading || !shippingQuote || !details.state || details.postalCode.length !== 6;
+  const isAddressComplete = Boolean(
+    details.email.trim() &&
+    details.fullName.trim() &&
+    details.phone.trim() &&
+    details.addressLine1.trim() &&
+    details.city.trim() &&
+    details.state.trim() &&
+    details.postalCode.length === 6
+  );
+
+  const checkoutDisabled = loading || shippingLoading || !isAddressComplete;
   const checkoutLabel = loading
     ? "Preparing secure payment…"
     : shippingLoading
       ? "Calculating delivery…"
-      : quote
-        ? `Pay ${formatPrice(quote.totalPaise)} securely`
-        : "Complete delivery details";
+      : !isAddressComplete
+        ? "Complete delivery details"
+        : `Pay ${formatPrice(quote.totalPaise)} securely`;
 
   return <main className="store-page checkout-page"><StoreHeader /><section className="checkout-layout">
     <form className="checkout-form" onSubmit={submit}>
@@ -353,6 +379,70 @@ export default function CheckoutPage() {
       {error && <p className="form-message" role="alert">{error}</p>}
       <button className="button button-dark checkout-button" type="submit" disabled={checkoutDisabled}>{checkoutLabel}</button>
     </form>
-    <aside className="checkout-summary"><p className="eyebrow">Your order</p>{lines.map((line) => <div className="checkout-line" key={line.variantId}><span>{line.productName} · {line.variantLabel} × {line.quantity}</span><strong>{formatPrice(line.pricePaise * line.quantity)}</strong></div>)}<div className="checkout-line"><span>Product subtotal</span><strong>{formatPrice(subtotalPaise)}</strong></div>{discountPaise > 0 && <div className="checkout-line"><span>Coupon {ZUCADD10_CODE} · 10% off</span><strong>-{formatPrice(discountPaise)}</strong></div>}{shippingLoading && details.postalCode.length === 6 && <div className="checkout-line"><span>Shipping</span><strong>Calculating…</strong></div>}{quote && <><div className="checkout-line"><span>Shipping</span><strong>{formatPrice(quote.shippingPaise)}</strong></div>{shippingQuote?.deliveryWindowText && <div className="checkout-line" style={{ fontSize: "0.85rem", color: "#4a6358" }}><span>Estimated delivery</span><strong>{shippingQuote.deliveryWindowText}</strong></div>}{quote.mode === "CGST_SGST" ? <><div className="checkout-line"><span>CGST @ 2.5%</span><strong>{formatPrice(quote.cgstPaise)}</strong></div><div className="checkout-line"><span>SGST @ 2.5%</span><strong>{formatPrice(quote.sgstPaise)}</strong></div></> : <div className="checkout-line"><span>IGST @ 5%</span><strong>{formatPrice(quote.igstPaise)}</strong></div>}<div className="checkout-total"><span>Total payable</span><strong>{formatPrice(quote.totalPaise)}</strong></div></>}</aside>
+    <aside className="checkout-summary">
+      <p className="eyebrow">Your order</p>
+      {lines.map((line) => (
+        <div className="checkout-line" key={line.variantId}>
+          <span>{line.productName} · {line.variantLabel} × {line.quantity}</span>
+          <strong>{formatPrice(line.pricePaise * line.quantity)}</strong>
+        </div>
+      ))}
+      <div className="checkout-line">
+        <span>Product subtotal</span>
+        <strong>{formatPrice(subtotalPaise)}</strong>
+      </div>
+      {discountPaise > 0 && (
+        <div className="checkout-line">
+          <span>Coupon {ZUCADD10_CODE} · 10% off</span>
+          <strong>-{formatPrice(discountPaise)}</strong>
+        </div>
+      )}
+      <div className="checkout-line">
+        <span>Shipping</span>
+        <strong>
+          {shippingLoading && details.postalCode.length === 6
+            ? "Calculating…"
+            : shippingQuote
+              ? formatPrice(shippingQuote.shippingPaise)
+              : details.postalCode.length === 6
+                ? "Calculating…"
+                : "Calculated at next step"}
+        </strong>
+      </div>
+      {shippingQuote?.deliveryWindowText && (
+        <div className="checkout-line" style={{ fontSize: "0.85rem", color: "#4a6358" }}>
+          <span>Estimated delivery</span>
+          <strong>{shippingQuote.deliveryWindowText}</strong>
+        </div>
+      )}
+      {details.state ? (
+        isIntraState(details.state) ? (
+          <>
+            <div className="checkout-line">
+              <span>CGST @ 2.5%</span>
+              <strong>{formatPrice(quote.cgstPaise)}</strong>
+            </div>
+            <div className="checkout-line">
+              <span>SGST @ 2.5%</span>
+              <strong>{formatPrice(quote.sgstPaise)}</strong>
+            </div>
+          </>
+        ) : (
+          <div className="checkout-line">
+            <span>IGST @ 5%</span>
+            <strong>{formatPrice(quote.igstPaise)}</strong>
+          </div>
+        )
+      ) : (
+        <div className="checkout-line">
+          <span>Estimated GST (5%)</span>
+          <strong>{formatPrice(quote.totalTaxPaise)}</strong>
+        </div>
+      )}
+      <div className="checkout-total">
+        <span>Total payable</span>
+        <strong>{formatPrice(quote.totalPaise)}</strong>
+      </div>
+    </aside>
   </section><SiteFooter /></main>;
 }

@@ -17,22 +17,25 @@ export function ProductGallery({ product, selectedVariantId }: { product: Produc
 
   // When variant changes, ensure active index is valid
   const safeActive = active >= photos.length ? 0 : active;
+  const currentPhoto = photos[safeActive];
+  const isLabel = currentPhoto.src.includes("/labels/");
 
   return (
     <div className="pdp-gallery">
-      <div className="pdp-main-image">
+      <div className={`pdp-main-image ${isLabel ? "is-label-view" : ""}`}>
         <button
           type="button"
-          className="pdp-zoom"
+          className={`pdp-zoom ${isLabel ? "pdp-zoom-label" : ""}`}
           onClick={() => zoom.current?.showModal()}
-          aria-label={`Enlarge ${photos[safeActive].label}`}
+          aria-label={`Enlarge ${currentPhoto.label}`}
         >
           <Image
-            src={photos[safeActive].src}
-            alt={photos[safeActive].label}
+            src={currentPhoto.src}
+            alt={currentPhoto.label}
             fill
             priority
             sizes="(max-width: 900px) 92vw, 48vw"
+            style={isLabel ? { objectFit: "contain", padding: "36px" } : { objectFit: "cover" }}
           />
           <Expand className="zoom-icon" size={22} />
         </button>
@@ -55,23 +58,41 @@ export function ProductGallery({ product, selectedVariantId }: { product: Produc
         </div>
       </div>
       <div className="pdp-thumbnails">
-        {photos.map((photo, i) => (
-          <button
-            key={`${photo.src}-${i}`}
-            type="button"
-            aria-label={`View ${photo.label}`}
-            aria-pressed={i === safeActive}
-            onClick={() => setActive(i)}
-          >
-            <Image src={photo.src} alt="" width={100} height={100} />
-          </button>
-        ))}
+        {photos.map((photo, i) => {
+          const isThumbLabel = photo.src.includes("/labels/");
+          return (
+            <button
+              key={`${photo.src}-${i}`}
+              type="button"
+              className={isThumbLabel ? "is-label-thumb" : ""}
+              aria-label={`View ${photo.label}`}
+              aria-pressed={i === safeActive}
+              onClick={() => setActive(i)}
+            >
+              <Image
+                src={photo.src}
+                alt=""
+                width={100}
+                height={100}
+                style={isThumbLabel ? { objectFit: "contain", padding: "6px", background: "#fbf9f5" } : { objectFit: "cover" }}
+              />
+            </button>
+          );
+        })}
       </div>
       <dialog className="pdp-lightbox" ref={zoom}>
         <button type="button" autoFocus aria-label="Close enlarged image" onClick={() => zoom.current?.close()}>
           <X />
         </button>
-        <Image src={photos[safeActive].src} alt={photos[safeActive].label} width={1200} height={1200} />
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "16px" }}>
+          <Image
+            src={currentPhoto.src}
+            alt={currentPhoto.label}
+            width={1200}
+            height={1200}
+            style={{ maxWidth: "88vw", maxHeight: "85vh", width: "auto", height: "auto", objectFit: "contain" }}
+          />
+        </div>
       </dialog>
     </div>
   );

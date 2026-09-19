@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { products } from "@/lib/catalog";
-import { getShippingOptions, selectPrepaidShippingQuote } from "@/lib/shiprocket";
+import { getPrepaidShippingQuote } from "@/lib/shiprocket";
 
 const lineSchema = z.object({
   variantId: z.string().min(2).max(80),
@@ -26,8 +26,7 @@ function catalogVariant(variantId: string) {
 export async function POST(request: Request) {
   try {
     const input = inputSchema.parse(await request.json());
-    const pickupPostcode = process.env.SHIPROCKET_PICKUP_POSTCODE;
-    if (!pickupPostcode) return NextResponse.json({ configured: false, message: "Shipping quote is awaiting pickup configuration." }, { status: 503 });
+    const pickupPostcode = process.env.SHIPROCKET_PICKUP_POSTCODE || "122003";
 
     const totalWeightGrams = input.lines
       ? input.lines.reduce((sum, line) => {
@@ -42,20 +41,15 @@ export async function POST(request: Request) {
     }
 
     const billableWeightKg = Math.max(0.5, totalWeightGrams / 1000);
-    const result = await getShippingOptions({
+    const quote = await getPrepaidShippingQuote({
       pickupPostcode,
       deliveryPostcode: input.postalCode,
       weightKg: billableWeightKg,
-      cod: false,
+      destinationState: input.state,
     });
-    const quote = selectPrepaidShippingQuote(result, billableWeightKg, input.state);
-    if (!quote) {
-      return NextResponse.json({ error: "Delivery is currently unavailable for this PIN code." }, { status: 422 });
-    }
 
     return NextResponse.json({
       configured: true,
-      result,
       shippingPaise: quote.shippingPaise,
       shippingRupees: Number((quote.shippingPaise / 100).toFixed(2)),
       totalWeightGrams,

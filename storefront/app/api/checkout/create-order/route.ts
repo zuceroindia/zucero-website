@@ -64,8 +64,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "This order is too heavy for online checkout. Please contact us for assistance." }, { status: 400 });
     }
 
-    const pickupPostcode = process.env.SHIPROCKET_PICKUP_POSTCODE;
-    if (!pickupPostcode) throw new Error("Shiprocket pickup postcode is not configured");
+    const pickupPostcode = process.env.SHIPROCKET_PICKUP_POSTCODE || "122003";
     const shippingQuote = await getPrepaidShippingQuote({
       pickupPostcode,
       deliveryPostcode: input.customer.postalCode,

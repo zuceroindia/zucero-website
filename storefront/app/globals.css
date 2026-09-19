@@ -306,6 +306,9 @@ html{scroll-padding-top:120px}
 .pdp-gallery{position:static;min-width:0}
 .pdp-main-image{position:relative;aspect-ratio:1;background:var(--cream)}
 .pdp-zoom{position:absolute;inset:0;border:0;padding:0;background:none}
+.pdp-main-image.is-label-view{background:#faf8f5;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)}
+.pdp-zoom.pdp-zoom-label img{object-fit:contain !important;padding:28px !important;filter:drop-shadow(0 2px 8px rgba(0,0,0,.08))}
+.pdp-thumbnails button.is-label-thumb img{object-fit:contain !important;padding:4px !important;background:#faf8f5}
 .pdp-zoom img{object-fit:cover}
 .zoom-icon{position:absolute;right:18px;top:18px;color:var(--paper);filter:drop-shadow(0 1px 2px #000)}
 .gallery-controls{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:1rem;background:var(--paper);padding:0 .4rem;border-radius:30px;font-size:.75rem}

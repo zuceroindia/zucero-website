@@ -52,8 +52,7 @@ export const products: Product[] = [
         hsn: "1701",
         galleryPhotos: [
           { src: "/images/khand-branded-jar.png", label: "Single Origin Desi Khand 330 g jar" },
-          { src: "/images/labels/khand-330g-front.png", label: "Single Origin Desi Khand 330 g approved front label" },
-          { src: "/images/labels/khand-330g-back.png", label: "Single Origin Desi Khand 330 g approved back label · Nutrition facts & MRP ₹400.00" },
+          { src: "/images/labels/khand-330g-back.png", label: "Approved Nutrition Facts, Ingredients & MRP ₹400.00" },
           { src: "/images/khand-matka-serving.png", label: "Fine Desi Khand served from a black matka" },
         ],
       },
@@ -69,8 +68,7 @@ export const products: Product[] = [
         hsn: "1701",
         galleryPhotos: [
           { src: "/images/khand-branded-jar.png", label: "Single Origin Desi Khand 580 g jar" },
-          { src: "/images/labels/khand-580g-front.png", label: "Single Origin Desi Khand 580 g approved front label" },
-          { src: "/images/labels/khand-580g-back.png", label: "Single Origin Desi Khand 580 g approved back label · Nutrition facts & MRP ₹680.00" },
+          { src: "/images/labels/khand-580g-back.png", label: "Approved Nutrition Facts, Ingredients & MRP ₹680.00" },
           { src: "/images/khand-matka-serving.png", label: "Fine Desi Khand served from a black matka" },
         ],
       },
@@ -97,8 +95,7 @@ export const products: Product[] = [
         hsn: "1702",
         galleryPhotos: [
           { src: "/images/mishri-jar-lifestyle.png", label: "Original Khand Dhaga Mishri 280 g jar" },
-          { src: "/images/labels/mishri-280g-front.png", label: "Original Khand Dhaga Mishri 280 g approved front label" },
-          { src: "/images/labels/mishri-280g-back.png", label: "Original Khand Dhaga Mishri 280 g approved back label · Nutrition facts & MRP ₹630.00" },
+          { src: "/images/labels/mishri-280g-back.png", label: "Approved Nutrition Facts, Ingredients & MRP ₹630.00" },
           { src: "/images/mishri-raw-hero.png", label: "Brown Mishri served in a silver bowl" },
         ],
       },
@@ -114,8 +111,7 @@ export const products: Product[] = [
         hsn: "1702",
         galleryPhotos: [
           { src: "/images/mishri-jar-lifestyle.png", label: "Original Khand Dhaga Mishri 580 g jar" },
-          { src: "/images/labels/mishri-580g-front.png", label: "Original Khand Dhaga Mishri 580 g approved front label" },
-          { src: "/images/labels/mishri-580g-back.png", label: "Original Khand Dhaga Mishri 580 g approved back label · Nutrition facts & MRP ₹1,100.00" },
+          { src: "/images/labels/mishri-580g-back.png", label: "Approved Nutrition Facts, Ingredients & MRP ₹1,100.00" },
           { src: "/images/mishri-raw-hero.png", label: "Brown Mishri served in a silver bowl" },
         ],
       },

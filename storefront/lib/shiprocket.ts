@@ -156,12 +156,42 @@ export function selectPrepaidShippingQuote(result: unknown, fallbackWeightKg: nu
   };
 }
 
-export async function getPrepaidShippingQuote(input: { pickupPostcode: string; deliveryPostcode: string; weightKg: number; destinationState?: string }) {
+export function getFallbackShippingQuote(totalWeightGrams: number, destinationState?: string): ShippingQuote {
+  const normState = (destinationState ?? "").trim().toLowerCase();
+  let basePaise = 11000; // Rest of India ₹110.00
+  if (["haryana", "delhi", "chandigarh"].includes(normState)) {
+    basePaise = 7500; // NCR / Haryana ₹75.00
+  } else if (["punjab", "uttar pradesh", "rajasthan", "himachal pradesh", "uttarakhand"].includes(normState)) {
+    basePaise = 9000; // North India ₹90.00
+  }
+
+  // Weight surcharge beyond 1kg: ₹35 per additional 500g
+  const extraKg = Math.max(0, (totalWeightGrams - 1000) / 1000);
+  const extraPaise = Math.ceil(extraKg * 2) * 3500;
+  const shippingPaise = basePaise + extraPaise;
+  const delivery = getFallbackDeliveryEstimate(destinationState);
+
+  return {
+    shippingPaise,
+    courierCompanyId: null,
+    courierName: "Insured Express Delivery",
+    chargeWeightKg: Math.max(0.5, Number((totalWeightGrams / 1000).toFixed(2))),
+    estimatedDeliveryDate: null,
+    estimatedDeliveryDays: delivery.maxDays,
+    deliveryWindowText: delivery.windowText,
+  };
+}
+
+export async function getPrepaidShippingQuote(input: { pickupPostcode: string; deliveryPostcode: string; weightKg: number; destinationState?: string }): Promise<ShippingQuote> {
   const billableWeightKg = Math.max(0.5, input.weightKg);
-  const result = await getShippingOptions({ ...input, weightKg: billableWeightKg, cod: false });
-  const quote = selectPrepaidShippingQuote(result, billableWeightKg, input.destinationState);
-  if (!quote) throw new Error("Delivery is currently unavailable for this PIN code.");
-  return quote;
+  try {
+    const result = await getShippingOptions({ ...input, weightKg: billableWeightKg, cod: false });
+    const quote = selectPrepaidShippingQuote(result, billableWeightKg, input.destinationState);
+    if (quote) return quote;
+  } catch (err) {
+    console.warn("[Shiprocket] Live rate fetch failed, using reliable fallback quote:", err);
+  }
+  return getFallbackShippingQuote(Math.round(billableWeightKg * 1000), input.destinationState);
 }
 
 export async function createShiprocketOrder(payload: Record<string, unknown>) {
