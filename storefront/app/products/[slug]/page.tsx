@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { Leaf, PackageCheck, Truck, MessageCircle } from "lucide-react";
-import { ProductGallery } from "@/components/product-gallery";
+import { ProductDetailView } from "@/components/product-detail-view";
 import { notFound } from "next/navigation";
-import { ProductPurchase } from "@/components/product-purchase";
 import { StoreHeader } from "@/components/store-header";
 import { SiteFooter } from "@/components/site-footer";
 import { products, formatPrice } from "@/lib/catalog";
@@ -18,10 +16,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!product) return {};
 
   const isKhand = slug === "desi-khand";
-  const title = isKhand ? "Desi Khand | Traditional Khand Sugar from Sugarcane" : "Original Brown Khand Mishri | Dhage Wali Mishri";
+  const title = isKhand ? "Single Origin Desi Khand | Traditional Unrefined Cane Sugar" : "Original Khand Dhaga Mishri | Dhage Wali Mishri";
   const description = isKhand
-    ? "Explore Zucero Desi Khand, traditionally crafted from sugarcane. See ingredients, sizes, uses, pricing, shipping and clear product information."
-    : "Explore Zucero Original Brown Khand Mishri, slowly crystallised using the traditional thread technique. See ingredients, sizes, pricing and product information.";
+    ? "Explore Zucero Single Origin Desi Khand, traditionally crafted from sugarcane. See ingredients, approved 330 g & 580 g sizes, uses, pricing and shipping information."
+    : "Explore Zucero Original Khand Dhaga Mishri, slowly crystallised using the traditional thread technique. See ingredients, approved 280 g & 580 g sizes, pricing and product information.";
   const image = absoluteUrl(product.image);
   const url = absoluteUrl(`/products/${product.slug}`);
 
@@ -96,19 +94,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   return <main className="store-page pdp-page">
     <StoreHeader />
     <nav className="pdp-breadcrumb" aria-label="Breadcrumb"><Link href="/">Home</Link><span>/</span><Link href="/products">The Collection</Link><span>/</span><span>{product.name}</span></nav>
-    <section className="product-detail">
-      <div className="pdp-gallery-column">
-        <ProductGallery product={product} />
-        {relatedProduct && <section className="pdp-recommendation" aria-labelledby="related-product-heading">
-          <h2 id="related-product-heading">You may also like</h2>
-          <Link className="pdp-recommendation-card" href={`/products/${relatedProduct.slug}`}>
-            <Image src={relatedProduct.image} alt={relatedProduct.name} width={112} height={112} sizes="112px" />
-            <div><h3>{relatedProduct.name}</h3><p>From {formatPrice(relatedProduct.variants[0].pricePaise)}</p><span>View product <span aria-hidden="true">→</span></span></div>
-          </Link>
-        </section>}
-      </div>
-      <ProductPurchase product={product} />
-    </section>
+    <ProductDetailView product={product} relatedProduct={relatedProduct} />
     <section className="pdp-service-strip" aria-label="Shopping information"><Link href="/shipping"><Truck /><strong>Delivery by PIN code</strong><span>Check availability above</span></Link><Link href="/returns"><PackageCheck /><strong>Care with every order</strong><span>Read our returns policy</span></Link><Link href="/contact"><MessageCircle /><strong>Here to help</strong><span>Contact Zucero support</span></Link><a href="#product-information"><Leaf /><strong>Know your sugar</strong><span>Ingredients, clearly stated</span></a></section>
     <section className="pdp-difference"><p className="eyebrow">The Good Facts — {isKhand ? "Desi Khand" : "Mishri"}</p><h2>Good begins<br /><em>with how it’s made.</em></h2><div>{goodFacts.map(([title, copy]) => <article key={title}><Leaf /><h3>{title}</h3><p>{copy}</p></article>)}</div></section>
     <section className="transparency-section"><p className="eyebrow">Transparency</p><h2>Nothing hidden<br /><em>behind sweetness.</em></h2><p>Clear information. Specific claims. Nothing overstated.</p><p>Check your pack for the complete ingredients, manufacturing, nutrition and best-before details.</p><p><strong>Contains milk.</strong> Both products are prepared with desi cow milk and desi cow ghee.</p></section>

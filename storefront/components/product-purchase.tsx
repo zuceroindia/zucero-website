@@ -7,9 +7,22 @@ import type { Product } from "@/lib/catalog";
 import { formatPrice } from "@/lib/catalog";
 import { useCart } from "@/components/cart-provider";
 
-export function ProductPurchase({ product }: { product: Product }) {
+export function ProductPurchase({
+  product,
+  selectedVariantId,
+  onSelectVariant,
+}: {
+  product: Product;
+  selectedVariantId?: string;
+  onSelectVariant?: (id: string) => void;
+}) {
   const router = useRouter();
-  const [variantId, setVariantId] = useState(product.variants[0].id);
+  const [internalVariantId, setInternalVariantId] = useState(product.variants[0].id);
+  const variantId = selectedVariantId ?? internalVariantId;
+  const setVariant = (id: string) => {
+    setInternalVariantId(id);
+    onSelectVariant?.(id);
+  };
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const { add } = useCart();
@@ -19,7 +32,7 @@ export function ProductPurchase({ product }: { product: Product }) {
   const variant = product.variants.find((item) => item.id === variantId)!;
   const readyForSale = variant.pricePaise !== null;
   const isKhand = product.slug === "desi-khand";
-  const offerPrice = variant.pricePaise === null ? "Price to be confirmed" : `₹${variant.pricePaise / 100}${isKhand ? "*" : ""}`;
+  const offerPrice = variant.pricePaise === null ? "Price to be confirmed" : formatPrice(variant.pricePaise);
   const benefits = isKhand
     ? [
         { title: "Sun-dried", Icon: Sun },
@@ -46,6 +59,7 @@ export function ProductPurchase({ product }: { product: Product }) {
       sku: variant.sku,
       image: product.cartImage ?? product.image,
       pricePaise: variant.pricePaise,
+      priceRupees: variant.priceRupees ?? variant.pricePaise / 100,
     };
   }
 
@@ -95,7 +109,7 @@ export function ProductPurchase({ product }: { product: Product }) {
     <p className="coupon-offer"><strong>Extra 10% off:</strong> use coupon <strong>ZUCADD10</strong> at checkout.</p>
     <div className="pdp-khand-benefits">{benefits.map(({ title, Icon }) => <article key={title}><Icon aria-hidden="true" /><h3>{title}</h3></article>)}</div>
     <p className="pdp-ingredients"><strong>Ingredients:</strong> Sugar cane Juice, Desi Cow Milk and Desi Cow Ghee</p>
-    <div className="purchase-block"><span>Selected size: {variant.label}</span><div className="variant-row pdp-sizes">{product.variants.map((item) => <button key={item.id} type="button" aria-pressed={variantId === item.id} className={variantId === item.id ? "active" : ""} onClick={() => { setVariantId(item.id); setShippingMessage(""); }}><strong>{item.label}</strong><small>{formatPrice(item.pricePaise)}</small></button>)}</div></div>
+    <div className="purchase-block"><span>Selected size: {variant.label}</span><div className="variant-row pdp-sizes">{product.variants.map((item) => <button key={item.id} type="button" aria-pressed={variantId === item.id} className={variantId === item.id ? "active" : ""} onClick={() => { setVariant(item.id); setShippingMessage(""); }}><strong>{item.label}</strong><small>{formatPrice(item.pricePaise)}</small></button>)}</div></div>
     <div className="purchase-actions">
       <div className="quantity-picker" aria-label="Quantity"><button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Minus size={16} /></button><span>{quantity}</span><button type="button" onClick={() => setQuantity(Math.min(10, quantity + 1))} aria-label="Increase quantity"><Plus size={16} /></button></div>
       <button type="button" className="button button-dark add-button" disabled={!readyForSale} onClick={addToBag}>{added ? <><Check size={17} /> Added</> : <><ShoppingBag size={17} /> {readyForSale ? "Add to cart" : "Awaiting launch price"}</>}</button>

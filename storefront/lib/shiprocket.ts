@@ -3,11 +3,14 @@ import { z } from "zod";
 const API_BASE = "https://apiv2.shiprocket.in/v1/external";
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
-type ShippingQuote = {
+export type ShippingQuote = {
   shippingPaise: number;
   courierCompanyId: number | null;
   courierName: string;
   chargeWeightKg: number;
+  estimatedDeliveryDate?: string | null;
+  estimatedDeliveryDays?: number | null;
+  deliveryWindowText: string;
 };
 
 function credentials() {
@@ -60,7 +63,47 @@ export async function getShippingOptions(input: { pickupPostcode: string; delive
   return shiprocketFetch(`/courier/serviceability/?${params}`);
 }
 
-export function selectPrepaidShippingQuote(result: unknown, fallbackWeightKg: number): ShippingQuote | null {
+export function getFallbackDeliveryEstimate(destinationState?: string, baseDate = new Date()): { minDays: number; maxDays: number; windowText: string } {
+  const normState = (destinationState ?? "").trim().toLowerCase();
+  let minDays = 5;
+  let maxDays = 7;
+
+  if (["haryana", "delhi", "chandigarh"].includes(normState)) {
+    minDays = 2;
+    maxDays = 4;
+  } else if (["punjab", "uttar pradesh", "rajasthan", "himachal pradesh", "uttarakhand"].includes(normState)) {
+    minDays = 3;
+    maxDays = 5;
+  } else if (["maharashtra", "gujarat", "madhya pradesh", "west bengal", "karnataka", "telangana", "tamil nadu"].includes(normState)) {
+    minDays = 4;
+    maxDays = 6;
+  } else {
+    minDays = 5;
+    maxDays = 8;
+  }
+
+  const addBusinessDays = (d: Date, days: number) => {
+    const res = new Date(d);
+    let added = 0;
+    while (added < days) {
+      res.setDate(res.getDate() + 1);
+      if (res.getDay() !== 0) added++; // Skip Sundays
+    }
+    return res;
+  };
+
+  const start = addBusinessDays(baseDate, minDays);
+  const end = addBusinessDays(baseDate, maxDays);
+  const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+
+  return {
+    minDays,
+    maxDays,
+    windowText: `${fmt(start)} – ${fmt(end)} (${minDays}–${maxDays} business days)`,
+  };
+}
+
+export function selectPrepaidShippingQuote(result: unknown, fallbackWeightKg: number, destinationState?: string): ShippingQuote | null {
   if (!result || typeof result !== "object") return null;
   const data = (result as Record<string, unknown>).data;
   if (!data || typeof data !== "object") return null;
@@ -72,11 +115,15 @@ export function selectPrepaidShippingQuote(result: unknown, fallbackWeightKg: nu
     const option = entry as Record<string, unknown>;
     const rateRupees = courierRateRupees(option);
     if (rateRupees === null || rateRupees <= 0) return [];
+    const etdString = typeof option.etd === "string" && option.etd.trim() ? option.etd.trim() : null;
+    const etdDays = numeric(option.estimated_delivery_days) ?? (numeric(option.etd_hours) ? Math.max(1, Math.round(Number(option.etd_hours) / 24)) : null);
     return [{
       rateRupees,
       courierCompanyId: numeric(option.courier_company_id),
       courierName: typeof option.courier_name === "string" ? option.courier_name : "Shiprocket courier",
       chargeWeightKg: numeric(option.charge_weight) ?? fallbackWeightKg,
+      etdString,
+      etdDays,
     }];
   });
 
@@ -86,18 +133,33 @@ export function selectPrepaidShippingQuote(result: unknown, fallbackWeightKg: nu
   const recommended = recommendedId === null ? null : candidates.find((item) => item.courierCompanyId === recommendedId) ?? null;
   const selected = recommended ?? candidates.reduce((best, item) => item.rateRupees < best.rateRupees ? item : best);
 
+  let windowText = "";
+  if (selected.etdString) {
+    windowText = `Expected by ${selected.etdString}`;
+  } else if (selected.etdDays) {
+    const days = Math.round(selected.etdDays);
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    windowText = `Expected in ${days} days (by ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short" })})`;
+  } else {
+    windowText = getFallbackDeliveryEstimate(destinationState).windowText;
+  }
+
   return {
     shippingPaise: Math.max(1, Math.round(selected.rateRupees * 100)),
     courierCompanyId: selected.courierCompanyId === null ? null : Math.round(selected.courierCompanyId),
     courierName: selected.courierName,
     chargeWeightKg: selected.chargeWeightKg,
+    estimatedDeliveryDate: selected.etdString,
+    estimatedDeliveryDays: selected.etdDays ? Math.round(selected.etdDays) : null,
+    deliveryWindowText: windowText,
   };
 }
 
-export async function getPrepaidShippingQuote(input: { pickupPostcode: string; deliveryPostcode: string; weightKg: number }) {
+export async function getPrepaidShippingQuote(input: { pickupPostcode: string; deliveryPostcode: string; weightKg: number; destinationState?: string }) {
   const billableWeightKg = Math.max(0.5, input.weightKg);
   const result = await getShippingOptions({ ...input, weightKg: billableWeightKg, cod: false });
-  const quote = selectPrepaidShippingQuote(result, billableWeightKg);
+  const quote = selectPrepaidShippingQuote(result, billableWeightKg, input.destinationState);
   if (!quote) throw new Error("Delivery is currently unavailable for this PIN code.");
   return quote;
 }

@@ -3,38 +3,42 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 const DEFAULT_MERCHANT_EMAIL = "zucero.thegoodsugar@gmail.com";
 
 function money(paise: number | null | undefined) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format((paise ?? 0) / 100);
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format((paise ?? 0) / 100);
 }
 
 async function sendEmail(input: { to: string; subject: string; html: string; text: string }) {
-  const apiKey = process.env.SENDGRID_API_KEY;
-  const from = process.env.SENDGRID_FROM_EMAIL;
-  if (!apiKey || !from) {
-    console.warn("Payment status email skipped: SendGrid is not configured");
+  const apiKey = process.env.RESEND_API_KEY?.trim() || process.env.SENDGRID_API_KEY?.trim();
+  const rawFrom = process.env.RESEND_FROM_EMAIL?.trim() || process.env.SENDGRID_FROM_EMAIL?.trim() || "Zucero <orders@thegoodsugar.in>";
+  if (!apiKey) {
+    console.warn("Payment status email skipped: Resend is not configured (RESEND_API_KEY missing)");
     return false;
   }
 
-  const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+  const from = rawFrom.includes("<") ? rawFrom : `Zucero <${rawFrom}>`;
+  const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      personalizations: [{ to: [{ email: input.to }] }],
-      from: { email: from, name: "Zucero" },
+      from,
+      to: [input.to],
       subject: input.subject,
-      content: [
-        { type: "text/plain", value: input.text },
-        { type: "text/html", value: input.html },
-      ],
+      html: input.html,
+      text: input.text,
     }),
     cache: "no-store",
   });
 
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
-    throw new Error(`SendGrid payment status email failed (${response.status})${detail ? `: ${detail.slice(0, 300)}` : ""}`);
+    throw new Error(`Resend payment status email failed (${response.status})${detail ? `: ${detail.slice(0, 300)}` : ""}`);
   }
   return true;
 }

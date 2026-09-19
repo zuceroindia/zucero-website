@@ -10,6 +10,7 @@ const lineSchema = z.object({
 
 const inputSchema = z.object({
   postalCode: z.string().regex(/^\d{6}$/),
+  state: z.string().optional(),
   weightGrams: z.number().int().positive().max(30_000).optional(),
   lines: z.array(lineSchema).min(1).max(20).optional(),
 }).refine((value) => value.weightGrams || value.lines?.length, { message: "Shipping weight is required" });
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
       weightKg: billableWeightKg,
       cod: false,
     });
-    const quote = selectPrepaidShippingQuote(result, billableWeightKg);
+    const quote = selectPrepaidShippingQuote(result, billableWeightKg, input.state);
     if (!quote) {
       return NextResponse.json({ error: "Delivery is currently unavailable for this PIN code." }, { status: 422 });
     }
@@ -56,9 +57,11 @@ export async function POST(request: Request) {
       configured: true,
       result,
       shippingPaise: quote.shippingPaise,
+      shippingRupees: Number((quote.shippingPaise / 100).toFixed(2)),
       totalWeightGrams,
       chargeWeightKg: quote.chargeWeightKg,
       courierName: quote.courierName,
+      deliveryWindowText: quote.deliveryWindowText,
     });
   } catch (error) {
     const message = error instanceof z.ZodError

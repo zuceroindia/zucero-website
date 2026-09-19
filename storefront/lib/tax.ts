@@ -31,13 +31,27 @@ export function calculateCheckoutTotal(subtotalPaise: number, destinationState: 
   const discountedSubtotalPaise = subtotalPaise - normalizedDiscountPaise;
   const taxablePaise = discountedSubtotalPaise + normalizedShippingPaise;
   const tax = calculateTax(taxablePaise, destinationState);
+  const totalPaise = taxablePaise + tax.totalTaxPaise;
+
+  const toRupees = (paise: number) => Number((paise / 100).toFixed(2));
+
   return {
     subtotalPaise,
+    subtotalRupees: toRupees(subtotalPaise),
     discountPaise: normalizedDiscountPaise,
+    discountRupees: toRupees(normalizedDiscountPaise),
     discountedSubtotalPaise,
+    discountedSubtotalRupees: toRupees(discountedSubtotalPaise),
     shippingPaise: normalizedShippingPaise,
+    shippingRupees: toRupees(normalizedShippingPaise),
     taxablePaise,
-    totalPaise: taxablePaise + tax.totalTaxPaise,
+    taxableRupees: toRupees(taxablePaise),
+    totalPaise,
+    totalRupees: toRupees(totalPaise),
+    cgstRupees: toRupees(tax.cgstPaise),
+    sgstRupees: toRupees(tax.sgstPaise),
+    igstRupees: toRupees(tax.igstPaise),
+    totalTaxRupees: toRupees(tax.totalTaxPaise),
     ...tax,
   };
 }

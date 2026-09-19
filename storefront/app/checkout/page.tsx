@@ -11,6 +11,7 @@ import { emptyCustomerDetails } from "@/lib/customer-details";
 import { INDIAN_STATES } from "@/lib/india";
 import { calculateCheckoutTotal, calculateCouponDiscount, normalizeCouponCode, ZUCADD10_CODE } from "@/lib/tax";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase-browser";
+import { whatsappLink } from "@/lib/whatsapp";
 
 type RazorpayResponse = {
   razorpay_order_id: string;
@@ -47,6 +48,7 @@ type ShippingQuote = {
   totalWeightGrams: number;
   chargeWeightKg: number;
   courierName: string;
+  deliveryWindowText?: string;
 };
 
 declare global {
@@ -92,7 +94,12 @@ export default function CheckoutPage() {
   const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(null);
   const [shippingLoading, setShippingLoading] = useState(false);
   const [shippingError, setShippingError] = useState("");
-  const [completed, setCompleted] = useState<{ orderNumber: string; captured: boolean } | null>(null);
+  const [completed, setCompleted] = useState<{
+    orderNumber: string;
+    localOrderId: string;
+    captured: boolean;
+    deliveryWindow?: string;
+  } | null>(null);
   const discountPaise = useMemo(() => calculateCouponDiscount(subtotalPaise, appliedCoupon), [subtotalPaise, appliedCoupon]);
   const quote = useMemo(() => details.state && shippingQuote
     ? calculateCheckoutTotal(subtotalPaise, details.state, discountPaise, shippingQuote.shippingPaise)
@@ -142,6 +149,7 @@ export default function CheckoutPage() {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             postalCode: details.postalCode,
+            state: details.state || undefined,
             lines: lines.map((line) => ({ variantId: line.variantId, quantity: line.quantity })),
           }),
           signal: controller.signal,
@@ -153,6 +161,7 @@ export default function CheckoutPage() {
           totalWeightGrams: result.totalWeightGrams,
           chargeWeightKg: result.chargeWeightKg,
           courierName: result.courierName,
+          deliveryWindowText: result.deliveryWindowText,
         });
       } catch (quoteError) {
         if (controller.signal.aborted) return;
@@ -239,7 +248,12 @@ export default function CheckoutPage() {
             const result = await verification.json();
             if (!verification.ok && verification.status !== 202) throw new Error(result.error ?? "Payment confirmation failed.");
             clear();
-            setCompleted({ orderNumber: result.orderNumber ?? order.orderNumber, captured: result.captured !== false });
+            setCompleted({
+              orderNumber: result.orderNumber ?? order.orderNumber,
+              localOrderId: order.localOrderId,
+              captured: result.captured !== false,
+              deliveryWindow: order.deliveryWindow,
+            });
           } catch (verificationError) {
             setError(verificationError instanceof Error ? verificationError.message : "Payment confirmation failed. Please contact us with your payment ID.");
           } finally {
@@ -256,7 +270,66 @@ export default function CheckoutPage() {
   }
 
   if (completed) {
-    return <main className="store-page"><StoreHeader /><section className="empty-cart"><p className="eyebrow">Order received</p><h1>{completed.captured ? "Payment successful." : "Payment received."}</h1><p>Order <strong>{completed.orderNumber}</strong> has been recorded. {completed.captured ? "Your order is being sent to our fulfilment system automatically." : "We are waiting for final payment capture confirmation."}</p><div className="button-row"><Link className="button button-dark" href="/account/orders">View my account</Link><Link className="text-link" href="/products">Continue shopping</Link></div></section><SiteFooter /></main>;
+    const waLink = whatsappLink(`Hello Zucero! I have placed order ${completed.orderNumber}. Please confirm my order and share delivery and shipment tracking updates.`);
+    return (
+      <main className="store-page">
+        <StoreHeader />
+        <section className="empty-cart" style={{ maxWidth: "660px", margin: "48px auto", textAlign: "left", padding: "0 24px" }}>
+          <p className="eyebrow" style={{ color: "#2f5d47" }}>Payment Confirmed</p>
+          <h1 style={{ fontFamily: "Georgia,serif", fontSize: "2.1rem", margin: "8px 0 16px 0", color: "#10271d" }}>
+            {completed.captured ? "Thank you for your order." : "Payment received."}
+          </h1>
+          <p style={{ fontSize: "1.05rem", lineHeight: 1.5, color: "#10271d" }}>
+            Order <strong>{completed.orderNumber}</strong> has been confirmed. {completed.captured ? "We are preparing your parcel for dispatch." : "We are awaiting final capture confirmation."}
+          </p>
+
+          <div style={{ background: "#f4f7f4", borderLeft: "4px solid #10271d", padding: "16px 18px", margin: "22px 0", borderRadius: "4px" }}>
+            <p style={{ margin: 0, fontWeight: "bold", color: "#10271d", fontSize: "0.95rem" }}>
+              Estimated Delivery: {completed.deliveryWindow || "3-5 business days"}
+            </p>
+            <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "#4a6358" }}>
+              Dispatched from Gurugram, Haryana via insured express surface delivery. An email confirmation has been sent to your inbox.
+            </p>
+          </div>
+
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", margin: "22px 0" }}>
+            <a
+              className="button button-dark"
+              href={`/api/orders/${completed.localOrderId}/invoice`}
+              target="_blank"
+              rel="noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: "8px", textDecoration: "none" }}
+            >
+              <span>Download Tax Invoice (PDF)</span>
+            </a>
+            <a
+              className="button"
+              href={waLink}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "#25D366",
+                color: "#ffffff",
+                borderColor: "#25D366",
+                textDecoration: "none",
+                fontWeight: 500,
+              }}
+            >
+              <span>Get Updates on WhatsApp</span>
+            </a>
+          </div>
+
+          <div className="button-row" style={{ marginTop: "32px", borderTop: "1px solid #e5e7eb", paddingTop: "20px" }}>
+            <Link className="button button-dark" href="/account/orders">View My Orders</Link>
+            <Link className="text-link" href="/products">Continue Shopping</Link>
+          </div>
+        </section>
+        <SiteFooter />
+      </main>
+    );
   }
 
   if (!lines.length) return <main className="store-page"><StoreHeader /><section className="empty-cart"><h1>Your bag is empty.</h1><Link className="button button-dark" href="/products">Shop products</Link></section><SiteFooter /></main>;
@@ -280,6 +353,6 @@ export default function CheckoutPage() {
       {error && <p className="form-message" role="alert">{error}</p>}
       <button className="button button-dark checkout-button" type="submit" disabled={checkoutDisabled}>{checkoutLabel}</button>
     </form>
-    <aside className="checkout-summary"><p className="eyebrow">Your order</p>{lines.map((line) => <div className="checkout-line" key={line.variantId}><span>{line.productName} · {line.variantLabel} × {line.quantity}</span><strong>{formatPrice(line.pricePaise * line.quantity)}</strong></div>)}<div className="checkout-line"><span>Product subtotal</span><strong>{formatPrice(subtotalPaise)}</strong></div>{discountPaise > 0 && <div className="checkout-line"><span>Coupon {ZUCADD10_CODE} · 10% off</span><strong>-{formatPrice(discountPaise)}</strong></div>}{shippingLoading && details.postalCode.length === 6 && <div className="checkout-line"><span>Shipping</span><strong>Calculating…</strong></div>}{quote && <><div className="checkout-line"><span>Shipping</span><strong>{formatPrice(quote.shippingPaise)}</strong></div>{quote.mode === "CGST_SGST" ? <><div className="checkout-line"><span>CGST @ 2.5%</span><strong>{formatPrice(quote.cgstPaise)}</strong></div><div className="checkout-line"><span>SGST @ 2.5%</span><strong>{formatPrice(quote.sgstPaise)}</strong></div></> : <div className="checkout-line"><span>IGST @ 5%</span><strong>{formatPrice(quote.igstPaise)}</strong></div>}<div className="checkout-total"><span>Total payable</span><strong>{formatPrice(quote.totalPaise)}</strong></div></>}</aside>
+    <aside className="checkout-summary"><p className="eyebrow">Your order</p>{lines.map((line) => <div className="checkout-line" key={line.variantId}><span>{line.productName} · {line.variantLabel} × {line.quantity}</span><strong>{formatPrice(line.pricePaise * line.quantity)}</strong></div>)}<div className="checkout-line"><span>Product subtotal</span><strong>{formatPrice(subtotalPaise)}</strong></div>{discountPaise > 0 && <div className="checkout-line"><span>Coupon {ZUCADD10_CODE} · 10% off</span><strong>-{formatPrice(discountPaise)}</strong></div>}{shippingLoading && details.postalCode.length === 6 && <div className="checkout-line"><span>Shipping</span><strong>Calculating…</strong></div>}{quote && <><div className="checkout-line"><span>Shipping</span><strong>{formatPrice(quote.shippingPaise)}</strong></div>{shippingQuote?.deliveryWindowText && <div className="checkout-line" style={{ fontSize: "0.85rem", color: "#4a6358" }}><span>Estimated delivery</span><strong>{shippingQuote.deliveryWindowText}</strong></div>}{quote.mode === "CGST_SGST" ? <><div className="checkout-line"><span>CGST @ 2.5%</span><strong>{formatPrice(quote.cgstPaise)}</strong></div><div className="checkout-line"><span>SGST @ 2.5%</span><strong>{formatPrice(quote.sgstPaise)}</strong></div></> : <div className="checkout-line"><span>IGST @ 5%</span><strong>{formatPrice(quote.igstPaise)}</strong></div>}<div className="checkout-total"><span>Total payable</span><strong>{formatPrice(quote.totalPaise)}</strong></div></>}</aside>
   </section><SiteFooter /></main>;
 }

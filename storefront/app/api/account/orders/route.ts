@@ -70,8 +70,14 @@ export async function GET() {
       }
     }
 
+    const addr = (order.shipping_address || {}) as Record<string, any>;
+    const estimatedDelivery = order.estimated_delivery_window || addr.estimated_delivery_window || null;
+    const invoiceNum = order.invoice_number || addr.invoice_number || `INV-${order.order_number}`;
+
     return {
       ...order,
+      estimated_delivery_window: estimatedDelivery,
+      invoice_number: invoiceNum,
       display_status: titleStatus(liveStatus || order.status),
       courier_name: liveCourier || order.courier_name,
       tracking_url: liveTrackingUrl || order.tracking_url,

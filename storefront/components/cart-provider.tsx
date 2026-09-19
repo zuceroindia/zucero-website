@@ -11,6 +11,7 @@ export type CartLine = {
   sku: string;
   image: string;
   pricePaise: number;
+  priceRupees?: number;
   quantity: number;
 };
 
@@ -18,6 +19,7 @@ type CartContextValue = {
   lines: CartLine[];
   count: number;
   subtotalPaise: number;
+  subtotalRupees: number;
   add: (line: Omit<CartLine, "quantity">, quantity?: number) => void;
   update: (variantId: string, quantity: number) => void;
   remove: (variantId: string) => void;
@@ -40,7 +42,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const product = products.find((item) => item.slug === line.productSlug);
             const variant = product?.variants.find((item) => item.id === line.variantId);
             if (!product || variant?.pricePaise === null || variant?.pricePaise === undefined) return line;
-            return { ...line, productName: product.name, variantLabel: variant.label, sku: variant.sku, image: product.cartImage ?? product.image, pricePaise: variant.pricePaise };
+            return {
+              ...line,
+              productName: product.name,
+              variantLabel: variant.label,
+              sku: variant.sku,
+              image: product.cartImage ?? product.image,
+              pricePaise: variant.pricePaise,
+              priceRupees: variant.priceRupees ?? variant.pricePaise / 100,
+            };
           }));
         }
       } catch { localStorage.removeItem("zucero-cart-prelaunch-v2"); }
@@ -52,20 +62,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (ready) localStorage.setItem("zucero-cart-prelaunch-v2", JSON.stringify(lines));
   }, [lines, ready]);
 
-  const value = useMemo<CartContextValue>(() => ({
-    lines,
-    count: lines.reduce((total, line) => total + line.quantity, 0),
-    subtotalPaise: lines.reduce((total, line) => total + line.pricePaise * line.quantity, 0),
-    add: (incoming, quantity = 1) => setLines((current) => {
-      const found = current.find((line) => line.variantId === incoming.variantId);
+  const value = useMemo<CartContextValue>(() => {
+    const subtotalPaise = lines.reduce((total, line) => total + line.pricePaise * line.quantity, 0);
+    return {
+      lines,
+      count: lines.reduce((total, line) => total + line.quantity, 0),
+      subtotalPaise,
+      subtotalRupees: Number((subtotalPaise / 100).toFixed(2)),
+      add: (incoming, quantity = 1) => setLines((current) => {
+        const found = current.find((line) => line.variantId === incoming.variantId);
       return found
         ? current.map((line) => line.variantId === incoming.variantId ? { ...line, quantity: Math.min(10, line.quantity + quantity) } : line)
         : [...current, { ...incoming, quantity }];
     }),
     update: (variantId, quantity) => setLines((current) => quantity < 1 ? current.filter((line) => line.variantId !== variantId) : current.map((line) => line.variantId === variantId ? { ...line, quantity: Math.min(10, quantity) } : line)),
     remove: (variantId) => setLines((current) => current.filter((line) => line.variantId !== variantId)),
-    clear: () => setLines([])
-  }), [lines]);
+    clear: () => setLines([]),
+  };
+}, [lines]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

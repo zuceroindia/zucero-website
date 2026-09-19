@@ -70,6 +70,7 @@ export async function POST(request: Request) {
       pickupPostcode,
       deliveryPostcode: input.customer.postalCode,
       weightKg: totalWeightGrams / 1000,
+      destinationState: input.customer.state,
     });
 
     const breakdown = calculateCheckoutTotal(subtotalPaise, input.customer.state, discountPaise, shippingQuote.shippingPaise);
@@ -77,8 +78,13 @@ export async function POST(request: Request) {
     const db = supabaseAdmin();
     localOrderId = randomUUID();
     const number = orderNumber();
+    const invoiceNum = `INV-${number}`;
     const idempotencyKey = randomUUID();
-    const address = input.customer;
+    const address = {
+      ...input.customer,
+      estimated_delivery_window: shippingQuote.deliveryWindowText,
+      invoice_number: invoiceNum,
+    };
 
     const { error: orderError } = await db.from("orders").insert({
       id: localOrderId,
@@ -124,6 +130,7 @@ export async function POST(request: Request) {
         order_number: number,
         shipping_weight_grams: String(totalWeightGrams),
         shipping_courier: shippingQuote.courierName,
+        delivery_window: shippingQuote.deliveryWindowText,
         ...(couponCode ? { coupon_code: couponCode } : {}),
       },
     });
@@ -136,11 +143,14 @@ export async function POST(request: Request) {
     return NextResponse.json({
       localOrderId,
       orderNumber: number,
+      invoiceNumber: invoiceNum,
       razorpayOrderId: razorpay.id,
       amountPaise: breakdown.totalPaise,
+      amountRupees: breakdown.totalRupees,
       keyId: razorpayPublicKeyId(),
       couponCode: couponCode || null,
       totalWeightGrams,
+      deliveryWindow: shippingQuote.deliveryWindowText,
       breakdown,
     });
   } catch (error) {
