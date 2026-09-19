@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, useCallback, type FormEvent } from "react";
 import { StoreHeader } from "@/components/store-header";
 import { useCart } from "@/components/cart-provider";
 import { formatPrice } from "@/lib/catalog";
@@ -88,24 +88,50 @@ export default function CheckoutPage() {
   const [details, setDetails] = useState<CustomerDetails>(emptyCustomerDetails);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [couponInput, setCouponInput] = useState("");
+  // Unified promo/referral field
+  const [promoInput, setPromoInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState("");
-  const [couponMessage, setCouponMessage] = useState("");
+  const [appliedReferral, setAppliedReferral] = useState("");
+  const [promoMessage, setPromoMessage] = useState("");
+  const [promoError, setPromoError] = useState(false);
+  const [promoLoading, setPromoLoading] = useState(false);
+  // Wallet
+  const [walletBalancePaise, setWalletBalancePaise] = useState(0);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [useWallet, setUseWallet] = useState(false);
+  // Shipping
   const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(null);
   const [shippingLoading, setShippingLoading] = useState(false);
   const [shippingError, setShippingError] = useState("");
+  // Success state
   const [completed, setCompleted] = useState<{
     orderNumber: string;
     localOrderId: string;
     captured: boolean;
     deliveryWindow?: string;
+    customerEmail?: string;
+    customerName?: string;
+    referralCode?: string;
   } | null>(null);
-  const discountPaise = useMemo(() => calculateCouponDiscount(subtotalPaise, appliedCoupon), [subtotalPaise, appliedCoupon]);
-  const shippingPaise = shippingQuote ? shippingQuote.shippingPaise : 0;
-  const quote = useMemo(() => {
-    return calculateCheckoutTotal(subtotalPaise, details.state || "Haryana", discountPaise, shippingPaise);
-  }, [subtotalPaise, details.state, discountPaise, shippingPaise]);
 
+  const discountPaise = useMemo(() => {
+    if (appliedReferral) return Math.round(subtotalPaise * 0.10);
+    return calculateCouponDiscount(subtotalPaise, appliedCoupon);
+  }, [subtotalPaise, appliedCoupon, appliedReferral]);
+
+  const shippingPaise = shippingQuote ? shippingQuote.shippingPaise : 0;
+
+  const walletAppliedPaise = useMemo(() => {
+    if (!useWallet || walletBalancePaise <= 0) return 0;
+    const base = calculateCheckoutTotal(subtotalPaise, details.state || "Haryana", discountPaise, shippingPaise);
+    return Math.min(walletBalancePaise, base.totalPaise);
+  }, [useWallet, walletBalancePaise, subtotalPaise, details.state, discountPaise, shippingPaise]);
+
+  const quote = useMemo(() => {
+    return calculateCheckoutTotal(subtotalPaise, details.state || "Haryana", discountPaise, shippingPaise, walletAppliedPaise);
+  }, [subtotalPaise, details.state, discountPaise, shippingPaise, walletAppliedPaise]);
+
+  // Prefill from Supabase account
   useEffect(() => {
     let active = true;
     async function prefillAccount() {
@@ -133,6 +159,34 @@ export default function CheckoutPage() {
     return () => { active = false; };
   }, []);
 
+  // Fetch wallet balance when email is entered
+  const fetchWalletBalance = useCallback(async (email: string) => {
+    if (!email || !email.includes("@")) return;
+    setWalletLoading(true);
+    try {
+      const res = await fetch(`/api/wallet/balance?email=${encodeURIComponent(email)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setWalletBalancePaise(data.balancePaise ?? 0);
+      }
+    } catch {
+      // Silently fail — wallet is optional
+    } finally {
+      setWalletLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!details.email || !details.email.includes("@")) {
+      setWalletBalancePaise(0);
+      setUseWallet(false);
+      return;
+    }
+    const timer = window.setTimeout(() => fetchWalletBalance(details.email), 600);
+    return () => window.clearTimeout(timer);
+  }, [details.email, fetchWalletBalance]);
+
+  // Shipping quote
   useEffect(() => {
     setShippingQuote(null);
     setShippingError("");
@@ -166,7 +220,6 @@ export default function CheckoutPage() {
         });
       } catch (quoteError) {
         if (controller.signal.aborted) return;
-        // Resilient fallback for shipping rate
         const normState = (details.state ?? "").trim().toLowerCase();
         let fallbackShippingPaise = 11000;
         if (["haryana", "delhi", "chandigarh"].includes(normState)) {
@@ -198,27 +251,61 @@ export default function CheckoutPage() {
     setDetails((current) => ({ ...current, [field]: value }));
   }
 
-  function updateCoupon(value: string) {
-    setCouponInput(value.toUpperCase());
-    setCouponMessage("");
-    if (appliedCoupon) setAppliedCoupon("");
+  function clearPromo() {
+    setAppliedCoupon("");
+    setAppliedReferral("");
+    setPromoInput("");
+    setPromoMessage("Promo code removed.");
+    setPromoError(false);
   }
 
-  function handleCoupon() {
-    if (appliedCoupon) {
-      setAppliedCoupon("");
-      setCouponInput("");
-      setCouponMessage("Coupon removed.");
+  async function handlePromo() {
+    if (appliedCoupon || appliedReferral) {
+      clearPromo();
       return;
     }
-    const normalized = normalizeCouponCode(couponInput || ZUCADD10_CODE);
-    if (normalized !== ZUCADD10_CODE) {
-      setCouponMessage("This coupon code is not valid.");
+    const raw = promoInput.trim().toUpperCase();
+    if (!raw) {
+      setPromoMessage("Please enter a promo or referral code.");
+      setPromoError(true);
       return;
     }
-    setCouponInput(ZUCADD10_CODE);
-    setAppliedCoupon(ZUCADD10_CODE);
-    setCouponMessage("ZUCADD10 applied. Additional 10% discount added.");
+    setPromoLoading(true);
+    setPromoMessage("");
+    setPromoError(false);
+    try {
+      // First try referral code
+      const refRes = await fetch("/api/referrals/validate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code: raw, buyerEmail: details.email || undefined }),
+      });
+      const refData = await refRes.json();
+      if (refData.valid) {
+        setAppliedReferral(raw);
+        setPromoInput(raw);
+        setPromoMessage(`Referral code applied! You get 10% off. Your friend earns 10% cashback when you pay.`);
+        setPromoError(false);
+        return;
+      }
+      // If not a referral, try as a coupon
+      const normalized = normalizeCouponCode(raw);
+      if (normalized === ZUCADD10_CODE) {
+        setAppliedCoupon(ZUCADD10_CODE);
+        setPromoInput(ZUCADD10_CODE);
+        setPromoMessage("ZUCADD10 applied. 10% discount added.");
+        setPromoError(false);
+        return;
+      }
+      // Neither worked
+      setPromoMessage(refData.error || "This code is not valid. Check for typos or try another.");
+      setPromoError(true);
+    } catch {
+      setPromoMessage("Could not validate code. Please try again.");
+      setPromoError(true);
+    } finally {
+      setPromoLoading(false);
+    }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -233,10 +320,39 @@ export default function CheckoutPage() {
           customer: { ...details, country: "India" },
           lines: lines.map((line) => ({ variantId: line.variantId, quantity: line.quantity })),
           couponCode: appliedCoupon || undefined,
+          referralCode: appliedReferral || undefined,
+          useWallet,
         }),
       });
       const order = await orderResponse.json();
       if (!orderResponse.ok) throw new Error(order.error ?? "Could not prepare checkout.");
+
+      // Wallet-only path (100% covered by wallet credits)
+      if (order.walletOnly) {
+        clear();
+        // Fetch referral code to show on success screen
+        let referralCode: string | undefined;
+        try {
+          const refRes = await fetch("/api/referrals/generate", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ email: details.email, name: details.fullName, phone: details.phone }),
+          });
+          const refData = await refRes.json();
+          referralCode = refData.code;
+        } catch {}
+        setCompleted({
+          orderNumber: order.orderNumber,
+          localOrderId: order.localOrderId,
+          captured: true,
+          deliveryWindow: order.deliveryWindow,
+          customerEmail: details.email,
+          customerName: details.fullName,
+          referralCode,
+        });
+        setLoading(false);
+        return;
+      }
 
       const scriptReady = await loadRazorpay();
       if (!scriptReady || !window.Razorpay) throw new Error("Secure payment window could not load. Please try again.");
@@ -264,11 +380,25 @@ export default function CheckoutPage() {
             const result = await verification.json();
             if (!verification.ok && verification.status !== 202) throw new Error(result.error ?? "Payment confirmation failed.");
             clear();
+            // Generate referral code to show on success screen
+            let referralCode: string | undefined;
+            try {
+              const refRes = await fetch("/api/referrals/generate", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ email: details.email, name: details.fullName, phone: details.phone }),
+              });
+              const refData = await refRes.json();
+              referralCode = refData.code;
+            } catch {}
             setCompleted({
               orderNumber: result.orderNumber ?? order.orderNumber,
               localOrderId: order.localOrderId,
               captured: result.captured !== false,
               deliveryWindow: order.deliveryWindow,
+              customerEmail: details.email,
+              customerName: details.fullName,
+              referralCode,
             });
           } catch (verificationError) {
             setError(verificationError instanceof Error ? verificationError.message : "Payment confirmation failed. Please contact us with your payment ID.");
@@ -286,7 +416,14 @@ export default function CheckoutPage() {
   }
 
   if (completed) {
-    const waLink = whatsappLink(`Hello Zucero! I have placed order ${completed.orderNumber}. Please confirm my order and share delivery and shipment tracking updates.`);
+    const waOrderLink = whatsappLink(`Hello Zucero! I have placed order ${completed.orderNumber}. Please confirm my order and share delivery and shipment tracking updates.`);
+    const referralShareMsg = completed.referralCode
+      ? `Hey! I just ordered from Zucero (The Good Sugar Co.) — pure, chemical-free sugarcane sweetness. Use my referral code *${completed.referralCode}* at checkout to get *10% off* your first order! Shop at www.thegoodsugar.in 🍃`
+      : "";
+    const referralWaLink = referralShareMsg
+      ? `https://wa.me/?text=${encodeURIComponent(referralShareMsg)}`
+      : "";
+
     return (
       <main className="store-page">
         <StoreHeader />
@@ -304,9 +441,109 @@ export default function CheckoutPage() {
               Estimated Delivery: {completed.deliveryWindow || "3-5 business days"}
             </p>
             <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "#4a6358" }}>
-              Dispatched from Gurugram, Haryana via insured express surface delivery. An email confirmation has been sent to your inbox.
+              Dispatched from Gurugram, Haryana via insured express surface delivery. An email confirmation with GST invoice has been sent to your inbox.
             </p>
           </div>
+
+          {/* Referral Share Card */}
+          {completed.referralCode && (
+            <div style={{
+              background: "linear-gradient(135deg, #10271d 0%, #1e4d38 100%)",
+              borderRadius: "10px",
+              padding: "20px 22px",
+              margin: "24px 0",
+              color: "#fff",
+            }}>
+              <p style={{ margin: "0 0 4px 0", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.8px", color: "#a3d5b8", fontWeight: 600 }}>
+                🎁 Your Referral Reward
+              </p>
+              <h2 style={{ margin: "0 0 8px 0", fontSize: "1.3rem", fontFamily: "Georgia,serif", fontWeight: 500 }}>
+                Share &amp; Earn 10% Back
+              </h2>
+              <p style={{ margin: "0 0 14px 0", fontSize: "0.9rem", color: "#c8e6d4", lineHeight: 1.5 }}>
+                Share your code with friends. When they place their first order, they get <strong style={{ color: "#fff" }}>10% off</strong> and you earn <strong style={{ color: "#fff" }}>10% cashback</strong> as Zucero wallet credits.
+              </p>
+              <div style={{
+                background: "rgba(255,255,255,0.12)",
+                borderRadius: "6px",
+                padding: "10px 16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                marginBottom: "14px",
+              }}>
+                <span style={{ fontFamily: "monospace", fontSize: "1.4rem", fontWeight: "bold", letterSpacing: "2px", color: "#fff" }}>
+                  {completed.referralCode}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(completed.referralCode ?? "").then(() => {
+                      // Brief visual feedback
+                    });
+                  }}
+                  style={{
+                    background: "#fff",
+                    color: "#10271d",
+                    border: "none",
+                    borderRadius: "4px",
+                    padding: "6px 14px",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    flexShrink: 0,
+                  }}
+                >
+                  Copy Code
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <a
+                  href={referralWaLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    background: "#25D366",
+                    color: "#fff",
+                    borderRadius: "4px",
+                    padding: "9px 16px",
+                    textDecoration: "none",
+                    fontWeight: 600,
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  Share on WhatsApp
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({ title: "10% off Zucero!", text: referralShareMsg, url: "https://www.thegoodsugar.in" }).catch(() => {});
+                    }
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    background: "rgba(255,255,255,0.15)",
+                    color: "#fff",
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    borderRadius: "4px",
+                    padding: "9px 16px",
+                    fontSize: "0.9rem",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                  }}
+                >
+                  Share via…
+                </button>
+              </div>
+            </div>
+          )}
 
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", margin: "22px 0" }}>
             <a
@@ -320,7 +557,7 @@ export default function CheckoutPage() {
             </a>
             <a
               className="button"
-              href={waLink}
+              href={waOrderLink}
               target="_blank"
               rel="noreferrer"
               style={{
@@ -361,13 +598,18 @@ export default function CheckoutPage() {
   );
 
   const checkoutDisabled = loading || shippingLoading || !isAddressComplete;
+  const payableLabel = quote.payablePaise > 0 ? formatPrice(quote.payablePaise) : "₹0.00";
   const checkoutLabel = loading
     ? "Preparing secure payment…"
     : shippingLoading
       ? "Calculating delivery…"
       : !isAddressComplete
         ? "Complete delivery details"
-        : `Pay ${formatPrice(quote.totalPaise)} securely`;
+        : quote.payablePaise <= 0
+          ? "Place order (100% wallet credits)"
+          : `Pay ${payableLabel} securely`;
+
+  const appliedPromo = appliedCoupon || appliedReferral;
 
   return <main className="store-page checkout-page"><StoreHeader /><section className="checkout-layout">
     <form className="checkout-form" onSubmit={submit}>
@@ -375,7 +617,74 @@ export default function CheckoutPage() {
       <fieldset><legend>Contact</legend><div className="field-grid"><label className="wide"><span>Email</span><input required type="email" autoComplete="email" value={details.email} onChange={event => update("email", event.target.value)} /></label><label className="wide"><span>Full name</span><input required autoComplete="name" value={details.fullName} onChange={event => update("fullName", event.target.value)} /></label><label className="wide"><span>Mobile number</span><input required inputMode="tel" autoComplete="tel" value={details.phone} onChange={event => update("phone", event.target.value)} /></label></div></fieldset>
       <fieldset><legend>Delivery address</legend><div className="field-grid"><label className="wide"><span>Address</span><input required autoComplete="address-line1" value={details.addressLine1} onChange={event => update("addressLine1", event.target.value)} /></label><label className="wide"><span>Apartment, suite, etc. (optional)</span><input autoComplete="address-line2" value={details.addressLine2} onChange={event => update("addressLine2", event.target.value)} /></label><label><span>PIN code</span><input required inputMode="numeric" pattern="[0-9]{6}" autoComplete="postal-code" value={details.postalCode} onChange={event => update("postalCode", event.target.value.replace(/\D/g, "").slice(0, 6))} /></label><label><span>City</span><input required autoComplete="address-level2" value={details.city} onChange={event => update("city", event.target.value)} /></label><label><span>State / UT</span><select required autoComplete="address-level1" value={details.state} onChange={event => update("state", event.target.value)}><option value="">Select state</option>{INDIAN_STATES.map((state) => <option value={state} key={state}>{state}</option>)}</select></label><label><span>Country</span><input value="India" readOnly /></label></div></fieldset>
       {shippingError && <p className="form-message" role="alert">{shippingError}</p>}
-      <fieldset><legend>Coupon code</legend><p><strong>Available offer:</strong> <strong>ZUCADD10</strong> · Additional 10% off</p><div className="field-grid"><label className="wide"><span>Coupon</span><input value={couponInput} onChange={event => updateCoupon(event.target.value)} placeholder="ZUCADD10" autoComplete="off" /></label><button className="button button-dark" type="button" onClick={handleCoupon} style={{ alignSelf: "end" }}>{appliedCoupon ? "Remove coupon" : "Apply ZUCADD10"}</button></div>{couponMessage && <p className="form-message" role="status">{couponMessage}</p>}</fieldset>
+
+      {/* Wallet Credits Toggle */}
+      {walletBalancePaise > 0 && (
+        <fieldset style={{ borderColor: "#10271d", background: "#f4faf7" }}>
+          <legend style={{ color: "#10271d", fontWeight: 600 }}>🎁 Zucero Wallet Credits</legend>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+            <div>
+              <p style={{ margin: "0 0 2px 0", fontWeight: 600, color: "#10271d" }}>
+                Available: {formatPrice(walletBalancePaise)}
+              </p>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#4a6358" }}>
+                {useWallet
+                  ? `Applying ${formatPrice(walletAppliedPaise)} from your wallet credits`
+                  : "Use your earned cashback towards this order"}
+              </p>
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", flexShrink: 0 }}>
+              <input
+                type="checkbox"
+                checked={useWallet}
+                onChange={(e) => setUseWallet(e.target.checked)}
+                style={{ width: "18px", height: "18px", cursor: "pointer" }}
+              />
+              <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>Use Credits</span>
+            </label>
+          </div>
+          {walletLoading && <p style={{ margin: "6px 0 0 0", fontSize: "0.8rem", color: "#4a6358" }}>Checking wallet…</p>}
+        </fieldset>
+      )}
+
+      {/* Promo / Referral Code */}
+      <fieldset>
+        <legend>Coupon or Referral Code</legend>
+        <p style={{ margin: "0 0 10px 0", fontSize: "0.88rem", color: "#4a6358" }}>
+          Enter a coupon code (e.g. <strong>ZUCADD10</strong>) or a friend&apos;s referral code for 10% off.
+        </p>
+        <div className="field-grid">
+          <label className="wide"><span>Promo / Referral code</span>
+            <input
+              value={promoInput}
+              onChange={(e) => {
+                setPromoInput(e.target.value.toUpperCase());
+                setPromoMessage("");
+                setPromoError(false);
+                if (appliedPromo) { setAppliedCoupon(""); setAppliedReferral(""); }
+              }}
+              placeholder="ZUCADD10 or your friend's code"
+              autoComplete="off"
+              disabled={Boolean(appliedPromo)}
+            />
+          </label>
+          <button
+            className="button button-dark"
+            type="button"
+            onClick={handlePromo}
+            disabled={promoLoading}
+            style={{ alignSelf: "end" }}
+          >
+            {promoLoading ? "Checking…" : appliedPromo ? "Remove" : "Apply"}
+          </button>
+        </div>
+        {promoMessage && (
+          <p className="form-message" role="status" style={{ color: promoError ? "#c0392b" : "#1b5e20" }}>
+            {promoMessage}
+          </p>
+        )}
+      </fieldset>
+
       {error && <p className="form-message" role="alert">{error}</p>}
       <button className="button button-dark checkout-button" type="submit" disabled={checkoutDisabled}>{checkoutLabel}</button>
     </form>
@@ -396,8 +705,14 @@ export default function CheckoutPage() {
       </div>
       {discountPaise > 0 && (
         <div className="checkout-line">
-          <span>Coupon {ZUCADD10_CODE} · 10% off</span>
-          <strong>-{formatPrice(discountPaise)}</strong>
+          <span>{appliedReferral ? `Referral ${appliedReferral} · 10% off` : `Coupon ${ZUCADD10_CODE} · 10% off`}</span>
+          <strong style={{ color: "#1b5e20" }}>-{formatPrice(discountPaise)}</strong>
+        </div>
+      )}
+      {walletAppliedPaise > 0 && (
+        <div className="checkout-line">
+          <span>Wallet credits applied</span>
+          <strong style={{ color: "#1b5e20" }}>-{formatPrice(walletAppliedPaise)}</strong>
         </div>
       )}
       <div className="checkout-line">
@@ -444,8 +759,13 @@ export default function CheckoutPage() {
       )}
       <div className="checkout-total">
         <span>Total payable</span>
-        <strong>{formatPrice(quote.totalPaise)}</strong>
+        <strong>{formatPrice(quote.payablePaise > 0 ? quote.payablePaise : 0)}</strong>
       </div>
+      {walletAppliedPaise > 0 && (
+        <p style={{ margin: "6px 0 0 0", fontSize: "0.8rem", color: "#4a6358", textAlign: "right" }}>
+          (Order total {formatPrice(quote.totalPaise)}, {formatPrice(walletAppliedPaise)} covered by wallet credits)
+        </p>
+      )}
     </aside>
   </section><SiteFooter /></main>;
 }

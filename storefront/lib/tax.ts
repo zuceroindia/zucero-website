@@ -25,13 +25,23 @@ export function calculateTax(taxablePaise: number, destinationState: string) {
   return { mode: "IGST" as const, ratePercent: 5, cgstPaise: 0, sgstPaise: 0, igstPaise: totalTaxPaise, totalTaxPaise };
 }
 
-export function calculateCheckoutTotal(subtotalPaise: number, destinationState: string, discountPaise = 0, shippingPaise = 0) {
+export function calculateCheckoutTotal(
+  subtotalPaise: number,
+  destinationState: string,
+  discountPaise = 0,
+  shippingPaise = 0,
+  walletSpentPaise = 0
+) {
   const normalizedDiscountPaise = Math.min(Math.max(Math.round(discountPaise), 0), subtotalPaise);
   const normalizedShippingPaise = Math.max(0, Math.round(shippingPaise));
   const discountedSubtotalPaise = subtotalPaise - normalizedDiscountPaise;
   const taxablePaise = discountedSubtotalPaise + normalizedShippingPaise;
   const tax = calculateTax(taxablePaise, destinationState);
   const totalPaise = taxablePaise + tax.totalTaxPaise;
+
+  // Wallet deduction from total payable (cannot exceed totalPaise)
+  const normalizedWalletSpentPaise = Math.min(Math.max(Math.round(walletSpentPaise), 0), totalPaise);
+  const payablePaise = totalPaise - normalizedWalletSpentPaise;
 
   const toRupees = (paise: number) => Number((paise / 100).toFixed(2));
 
@@ -48,6 +58,10 @@ export function calculateCheckoutTotal(subtotalPaise: number, destinationState: 
     taxableRupees: toRupees(taxablePaise),
     totalPaise,
     totalRupees: toRupees(totalPaise),
+    walletSpentPaise: normalizedWalletSpentPaise,
+    walletSpentRupees: toRupees(normalizedWalletSpentPaise),
+    payablePaise,
+    payableRupees: toRupees(payablePaise),
     cgstRupees: toRupees(tax.cgstPaise),
     sgstRupees: toRupees(tax.sgstPaise),
     igstRupees: toRupees(tax.igstPaise),

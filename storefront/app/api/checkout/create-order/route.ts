@@ -1,12 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { findCatalogProductAndVariant, products } from "@/lib/catalog";
+import { findCatalogProductAndVariant } from "@/lib/catalog";
 import { isIndianState } from "@/lib/india";
 import { createRazorpayOrder, razorpayPublicKeyId } from "@/lib/razorpay";
 import { getPrepaidShippingQuote } from "@/lib/shiprocket";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { calculateCheckoutTotal, calculateCouponDiscount, normalizeCouponCode, ZUCADD10_CODE } from "@/lib/tax";
+import { validateReferralCode, getOrCreateWallet, debitWallet } from "@/lib/referral";
+import { fulfilPaidOrder } from "@/lib/order-fulfilment";
+import { notifyPaidOrder } from "@/lib/notifications";
 
 const schema = z.object({
   customer: z.object({
@@ -25,6 +28,8 @@ const schema = z.object({
     quantity: z.number().int().min(1).max(10),
   })).min(1).max(20),
   couponCode: z.string().trim().max(40).optional().default(""),
+  referralCode: z.string().trim().max(40).optional().default(""),
+  useWallet: z.boolean().optional().default(false),
 });
 
 function catalogLine(variantId: string) {
@@ -50,11 +55,32 @@ export async function POST(request: Request) {
     });
 
     const subtotalPaise = resolved.reduce((sum, line) => sum + (line.variant.pricePaise ?? 0) * line.quantity, 0);
+
+    // ── Coupon OR Referral code ──────────────────────────────────────────────
     const couponCode = normalizeCouponCode(input.couponCode);
-    if (couponCode && couponCode !== ZUCADD10_CODE) {
-      return NextResponse.json({ error: "This coupon code is not valid." }, { status: 400 });
+    const rawReferral = input.referralCode?.trim().toUpperCase() || "";
+
+    let discountPaise = 0;
+    let validatedReferralCode: string | null = null;
+
+    if (rawReferral) {
+      // Treat the field as a referral code — validate it
+      const referralResult = await validateReferralCode(rawReferral, input.customer.email);
+      if (!referralResult.valid) {
+        return NextResponse.json({ error: referralResult.error ?? "Invalid referral code." }, { status: 400 });
+      }
+      validatedReferralCode = referralResult.code!;
+      // Give the referred customer 10% off
+      discountPaise = Math.round(subtotalPaise * (referralResult.discountPercentage ?? 10) / 100);
+    } else if (couponCode) {
+      // Standard coupon — only ZUCADD10 accepted
+      if (couponCode !== ZUCADD10_CODE) {
+        return NextResponse.json({ error: "This coupon code is not valid." }, { status: 400 });
+      }
+      discountPaise = calculateCouponDiscount(subtotalPaise, couponCode);
     }
-    const discountPaise = calculateCouponDiscount(subtotalPaise, couponCode);
+
+    // ── Shipping ─────────────────────────────────────────────────────────────
     const totalWeightGrams = resolved.reduce((sum, line) => sum + line.variant.packedWeightGrams * line.quantity, 0);
     if (totalWeightGrams > 30_000) {
       return NextResponse.json({ error: "This order is too heavy for online checkout. Please contact us for assistance." }, { status: 400 });
@@ -68,7 +94,19 @@ export async function POST(request: Request) {
       destinationState: input.customer.state,
     });
 
-    const breakdown = calculateCheckoutTotal(subtotalPaise, input.customer.state, discountPaise, shippingQuote.shippingPaise);
+    // ── Wallet ───────────────────────────────────────────────────────────────
+    let walletSpentPaise = 0;
+    if (input.useWallet) {
+      const wallet = await getOrCreateWallet(input.customer.email.trim().toLowerCase());
+      if (wallet && wallet.balance_paise > 0) {
+        const breakdown0 = calculateCheckoutTotal(subtotalPaise, input.customer.state, discountPaise, shippingQuote.shippingPaise);
+        // Cap wallet spend at total payable
+        walletSpentPaise = Math.min(wallet.balance_paise, breakdown0.totalPaise);
+      }
+    }
+
+    // ── Final totals ─────────────────────────────────────────────────────────
+    const breakdown = calculateCheckoutTotal(subtotalPaise, input.customer.state, discountPaise, shippingQuote.shippingPaise, walletSpentPaise);
 
     const db = supabaseAdmin();
     localOrderId = randomUUID();
@@ -98,12 +136,21 @@ export async function POST(request: Request) {
       total_paise: breakdown.totalPaise,
       tax_mode: breakdown.mode,
       idempotency_key: idempotencyKey,
+      // Referral & Wallet fields
+      referral_code_used: validatedReferralCode ?? null,
+      wallet_spent_paise: walletSpentPaise,
     });
     if (orderError) throw new Error("Could not create order record");
 
+    // Determine whether coupon or referral drove the discount for line-item calc
+    const isReferralDiscount = Boolean(validatedReferralCode);
+    const isCouponDiscount = Boolean(couponCode === ZUCADD10_CODE && !validatedReferralCode);
+
     const { error: itemsError } = await db.from("order_items").insert(resolved.map((line) => {
       const lineSubtotalPaise = (line.variant.pricePaise ?? 0) * line.quantity;
-      const lineDiscountPaise = couponCode === ZUCADD10_CODE ? Math.round(lineSubtotalPaise * 0.10) : 0;
+      const lineDiscountPaise = (isReferralDiscount || isCouponDiscount)
+        ? Math.round(lineSubtotalPaise * 0.10)
+        : 0;
       return {
         order_id: localOrderId,
         sku: line.variant.sku,
@@ -117,8 +164,44 @@ export async function POST(request: Request) {
     }));
     if (itemsError) throw new Error("Could not create order items");
 
+    // ── If wallet covers 100% of order — skip Razorpay ───────────────────────
+    if (breakdown.payablePaise <= 0) {
+      // Debit wallet immediately
+      await debitWallet({
+        email: input.customer.email,
+        orderId: localOrderId,
+        orderNumber: number,
+        debitPaise: walletSpentPaise,
+      });
+
+      // Mark order as paid
+      await db.from("orders").update({
+        status: "paid",
+        payment_status: "captured",
+        updated_at: new Date().toISOString(),
+      }).eq("id", localOrderId);
+
+      // Trigger fulfilment + notifications in background
+      await Promise.allSettled([
+        fulfilPaidOrder(localOrderId).catch((err) => console.error("Fulfilment error (wallet-only):", err)),
+        notifyPaidOrder(localOrderId).catch((err) => console.error("Notification error (wallet-only):", err)),
+      ]);
+
+      return NextResponse.json({
+        localOrderId,
+        orderNumber: number,
+        invoiceNumber: invoiceNum,
+        walletOnly: true,
+        amountPaise: 0,
+        amountRupees: 0,
+        deliveryWindow: shippingQuote.deliveryWindowText,
+        breakdown,
+      });
+    }
+
+    // ── Razorpay order for remaining payable amount ───────────────────────────
     const razorpay = await createRazorpayOrder({
-      amountPaise: breakdown.totalPaise,
+      amountPaise: breakdown.payablePaise,
       receipt: number,
       notes: {
         local_order_id: localOrderId,
@@ -127,6 +210,8 @@ export async function POST(request: Request) {
         shipping_courier: shippingQuote.courierName,
         delivery_window: shippingQuote.deliveryWindowText,
         ...(couponCode ? { coupon_code: couponCode } : {}),
+        ...(validatedReferralCode ? { referral_code: validatedReferralCode } : {}),
+        ...(walletSpentPaise > 0 ? { wallet_spent_paise: String(walletSpentPaise) } : {}),
       },
     });
 
@@ -140,10 +225,12 @@ export async function POST(request: Request) {
       orderNumber: number,
       invoiceNumber: invoiceNum,
       razorpayOrderId: razorpay.id,
-      amountPaise: breakdown.totalPaise,
-      amountRupees: breakdown.totalRupees,
+      amountPaise: breakdown.payablePaise,
+      amountRupees: breakdown.payableRupees,
       keyId: razorpayPublicKeyId(),
       couponCode: couponCode || null,
+      referralCode: validatedReferralCode || null,
+      walletSpentPaise,
       totalWeightGrams,
       deliveryWindow: shippingQuote.deliveryWindowText,
       breakdown,

@@ -4,6 +4,7 @@ import { fulfilPaidOrder } from "@/lib/order-fulfilment";
 import { notifyPaidOrder } from "@/lib/notifications";
 import { fetchRazorpayPayment, verifyRazorpayPaymentSignature } from "@/lib/razorpay";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { creditReferralReward, debitWallet } from "@/lib/referral";
 
 const schema = z.object({
   localOrderId: z.string().uuid(),
@@ -26,7 +27,9 @@ export async function POST(request: Request) {
     }
 
     const payment = await fetchRazorpayPayment(input.razorpayPaymentId);
-    if (payment.order_id !== input.razorpayOrderId || payment.amount !== order.total_paise || payment.currency !== "INR") {
+    // The Razorpay charge is total_paise minus any wallet credits applied
+    const expectedPayable = order.total_paise - (order.wallet_spent_paise ?? 0);
+    if (payment.order_id !== input.razorpayOrderId || payment.amount !== expectedPayable || payment.currency !== "INR") {
       return NextResponse.json({ error: "Payment details do not match this order." }, { status: 400 });
     }
 
@@ -55,6 +58,16 @@ export async function POST(request: Request) {
       processed_at: new Date().toISOString(),
     }, { onConflict: "provider,provider_event_id" });
 
+    // Debit wallet if credits were applied
+    if ((order.wallet_spent_paise ?? 0) > 0) {
+      await debitWallet({
+        email: order.customer_email,
+        orderId: order.id,
+        orderNumber: order.order_number,
+        debitPaise: order.wallet_spent_paise,
+      }).catch((err) => console.error("Wallet debit error in verify route:", err));
+    }
+
     const [fulfilmentResult] = await Promise.allSettled([
       fulfilPaidOrder(order.id).catch((err) => {
         console.error("Fulfilment error in verify route:", err);
@@ -62,6 +75,9 @@ export async function POST(request: Request) {
       }),
       notifyPaidOrder(order.id).catch((err) => {
         console.error("Paid order notification failed in verify route:", err);
+      }),
+      creditReferralReward(order.id).catch((err) => {
+        console.error("Referral reward credit failed in verify route:", err);
       }),
     ]);
 

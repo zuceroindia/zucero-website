@@ -4,6 +4,7 @@ import { notifyPaidOrder } from "@/lib/notifications";
 import { notifyPaymentFailed, notifyRefundProcessed } from "@/lib/payment-status-notifications";
 import { verifyRazorpaySignature } from "@/lib/razorpay";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { creditReferralReward, debitWallet } from "@/lib/referral";
 
 type RazorpayWebhook = {
   event?: string;
@@ -72,9 +73,21 @@ export async function POST(request: Request) {
         razorpay_payment_id: payment?.id ?? order.razorpay_payment_id,
         updated_at: new Date().toISOString(),
       }).eq("id", order.id);
+
+      // Debit wallet credits applied at checkout
+      if ((order.wallet_spent_paise ?? 0) > 0) {
+        await debitWallet({
+          email: order.customer_email,
+          orderId: order.id,
+          orderNumber: order.order_number,
+          debitPaise: order.wallet_spent_paise,
+        }).catch((err) => console.error("Wallet debit error in webhook:", err));
+      }
+
       await Promise.allSettled([
         fulfilPaidOrder(order.id).catch((err) => console.error("Fulfilment failed:", err)),
         notifyPaidOrder(order.id).catch((err) => console.error("Notification failed:", err)),
+        creditReferralReward(order.id).catch((err) => console.error("Referral reward failed:", err)),
       ]);
     }
 
