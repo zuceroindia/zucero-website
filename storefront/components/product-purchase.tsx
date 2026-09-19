@@ -89,13 +89,14 @@ export function ProductPurchase({
         body: JSON.stringify({ postalCode, weightGrams: variant.packedWeightGrams * quantity }),
       });
       const data = await response.json();
-      if (!response.ok || !data.configured) throw new Error("unavailable");
-      const couriers = data.result?.data?.available_courier_companies;
-      setShippingMessage(Array.isArray(couriers) && couriers.length > 0
-        ? "Delivery is available for this PIN code."
-        : "No delivery option was returned for this PIN code. Please contact us for help.");
+      if (!response.ok || !data.shippingPaise) {
+        throw new Error(data.error || "unavailable");
+      }
+      const windowStr = data.deliveryWindowText ? ` (${data.deliveryWindowText})` : "";
+      const courierStr = data.courierName ? ` via ${data.courierName}` : "";
+      setShippingMessage(`Delivery available to ${postalCode}${windowStr}${courierStr}. Delivery charge: ${formatPrice(data.shippingPaise)}.`);
     } catch {
-      setShippingMessage("We couldn’t confirm delivery right now. Please try again or contact us before ordering.");
+      setShippingMessage("We couldn’t confirm delivery for this PIN code right now. Please check the PIN code or contact us.");
     } finally {
       setChecking(false);
     }
