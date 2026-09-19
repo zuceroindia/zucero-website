@@ -9,7 +9,7 @@ import { SiteFooter } from "@/components/site-footer";
 import type { CustomerDetails } from "@/lib/customer-details";
 import { emptyCustomerDetails } from "@/lib/customer-details";
 import { INDIAN_STATES } from "@/lib/india";
-import { calculateCheckoutTotal, calculateCouponDiscount, isIntraState, normalizeCouponCode, ZUCADD10_CODE } from "@/lib/tax";
+import { calculateCheckoutTotal, isIntraState } from "@/lib/tax";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase-browser";
 import { whatsappLink } from "@/lib/whatsapp";
 
@@ -88,9 +88,8 @@ export default function CheckoutPage() {
   const [details, setDetails] = useState<CustomerDetails>(emptyCustomerDetails);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  // Unified promo/referral field
+  // Unified referral field
   const [promoInput, setPromoInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState("");
   const [appliedReferral, setAppliedReferral] = useState("");
   const [promoMessage, setPromoMessage] = useState("");
   const [promoError, setPromoError] = useState(false);
@@ -117,8 +116,8 @@ export default function CheckoutPage() {
 
   const discountPaise = useMemo(() => {
     if (appliedReferral) return Math.round(subtotalPaise * 0.10);
-    return calculateCouponDiscount(subtotalPaise, appliedCoupon);
-  }, [subtotalPaise, appliedCoupon, appliedReferral]);
+    return 0;
+  }, [subtotalPaise, appliedReferral]);
 
   const shippingPaise = shippingQuote ? shippingQuote.shippingPaise : 0;
 
@@ -309,7 +308,6 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           customer: { ...details, country: "India" },
           lines: lines.map((line) => ({ variantId: line.variantId, quantity: line.quantity })),
-          couponCode: appliedCoupon || undefined,
           referralCode: appliedReferral || undefined,
           useWallet,
         }),
@@ -606,7 +604,7 @@ export default function CheckoutPage() {
           ? "Place order (100% wallet credits)"
           : `Pay ${payableLabel} securely`;
 
-  const appliedPromo = appliedCoupon || appliedReferral;
+  const appliedPromo = appliedReferral;
 
   return <main className="store-page checkout-page"><StoreHeader /><section className="checkout-layout">
     <form className="checkout-form" onSubmit={submit}>

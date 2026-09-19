@@ -24,7 +24,7 @@ export function CollectionSection() {
     <section id="products" className="heritage-collection">
       <div id="collection-title" className="collection-anchor"><SectionDivider number="04" title="The Collection" light /></div>
       <h2 className="sr-only">Explore Our Collection</h2>
-      <header><span className="heritage-rule" /><p>Each one distinct. Each one with a story older than the brand.</p><div className="collection-launch-callout"><p className="eyebrow">Experience the goodness of the first batch</p><p className="collection-access-line">Priority access <span>·</span> Deliveries begins</p><p className="collection-coupon-offer">Get an additional discount of 10% on referral.</p></div></header>
+      <header><span className="heritage-rule" /><p>Each one distinct. Each one with a story older than the brand.</p><div className="collection-launch-callout"><p className="eyebrow">Experience the goodness of the first batch</p><p className="collection-access-line">Exclusive referral access <span>·</span> Deliveries begin</p><p className="collection-coupon-offer">Get an additional discount of 10% on referral.</p></div></header>
       <div className="heritage-product-grid">
         {products.map((product, index) => <article className="heritage-product" key={product.slug}>
           <div className="heritage-picture"><Image src={index === 0 ? "/images/carousel-khand-matka-v2.png" : "/images/collection-mishri-v2.png"} alt={product.name} fill sizes="(max-width: 760px) 88vw, 42vw" /><div className="heritage-image-title"><span>No. 0{index + 1}</span><h3>{product.name}</h3></div></div>

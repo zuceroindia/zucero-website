@@ -25,15 +25,9 @@ import { formatPrice, products } from "@/lib/catalog";
 import { INDIAN_STATES } from "@/lib/india";
 import styles from "./account.module.css";
 
-declare global {
-  interface Window {
-    Razorpay?: any;
-  }
-}
-
 function loadRazorpay(): Promise<boolean> {
   if (typeof window === "undefined") return Promise.resolve(false);
-  if (window.Razorpay) return Promise.resolve(true);
+  if (typeof (window as any).Razorpay !== "undefined") return Promise.resolve(true);
   return new Promise((resolve) => {
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -390,11 +384,12 @@ export default function OrdersPage() {
       if (!res.ok) throw new Error(data.error || "Could not start wallet top-up.");
 
       const scriptReady = await loadRazorpay();
-      if (!scriptReady || !window.Razorpay) {
+      const RazorpayConstructor = (window as any).Razorpay;
+      if (!scriptReady || !RazorpayConstructor) {
         throw new Error("Payment gateway could not load. Please check your connection.");
       }
 
-      const checkout = new window.Razorpay({
+      const checkout = new RazorpayConstructor({
         key: data.keyId,
         amount: data.amountPaise,
         currency: "INR",
@@ -442,7 +437,7 @@ export default function OrdersPage() {
     setSubSaving(true);
 
     try {
-      const targetAddress = addresses.find((a) => a.id === subAddressId) || defaultAddress;
+      const targetAddress = addresses.find((a) => a.id === subAddressId) || addresses.find((a) => a.isDefault) || addresses[0];
       if (!targetAddress) {
         throw new Error("Please save a delivery address before starting a subscription.");
       }

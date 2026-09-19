@@ -6,7 +6,7 @@ import { isIndianState } from "@/lib/india";
 import { createRazorpayOrder, razorpayPublicKeyId } from "@/lib/razorpay";
 import { getPrepaidShippingQuote } from "@/lib/shiprocket";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { calculateCheckoutTotal, calculateCouponDiscount, normalizeCouponCode, ZUCADD10_CODE } from "@/lib/tax";
+import { calculateCheckoutTotal } from "@/lib/tax";
 import { validateReferralCode, getOrCreateWallet, debitWallet } from "@/lib/referral";
 import { fulfilPaidOrder } from "@/lib/order-fulfilment";
 import { notifyPaidOrder } from "@/lib/notifications";
