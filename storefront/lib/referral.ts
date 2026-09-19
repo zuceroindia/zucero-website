@@ -12,6 +12,12 @@ export type ReferralValidationResult = {
 export type WalletInfo = {
   balancePaise: number;
   balanceRupees: number;
+  earnedReferralPaise: number;
+  earnedReferralRupees: number;
+  manualTopupPaise: number;
+  manualTopupRupees: number;
+  spentOrdersPaise: number;
+  spentOrdersRupees: number;
   walletId?: string;
   transactions?: Array<{
     id: string;
@@ -24,8 +30,8 @@ export type WalletInfo = {
 };
 
 function sanitizeNameForCode(name: string): string {
-  const first = name.trim().split(/\s+/)[0] || "FRIEND";
-  return first.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 10);
+  const first = name.trim().split(/\s+/)[0] || "SUGAR";
+  return first.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 7);
 }
 
 function randomSuffix(length = 3): string {
@@ -39,7 +45,7 @@ function randomSuffix(length = 3): string {
 
 /**
  * Retrieves or auto-creates a clean, memorable referral code for a customer.
- * e.g. "TAMANNA10" or "ZUC-TAMANNA7X"
+ * e.g. "REF-TAMANNA" or "REF-SUGAR7X"
  */
 export async function getOrCreateReferralCode(input: {
   email: string;
@@ -64,9 +70,9 @@ export async function getOrCreateReferralCode(input: {
   // 2. Ensure customer has a wallet
   await getOrCreateWallet(normalizedEmail, input.userId);
 
-  // 3. Generate candidate code
-  const baseName = sanitizeNameForCode(input.name || "SUGAR");
-  let candidate = `${baseName}10`;
+  // 3. Generate candidate code with REF- prefix
+  const baseName = sanitizeNameForCode(input.name || "ZUC");
+  let candidate = `REF-${baseName}`;
 
   // Verify uniqueness
   const { data: collision } = await db
@@ -76,7 +82,18 @@ export async function getOrCreateReferralCode(input: {
     .maybeSingle();
 
   if (collision) {
-    candidate = `ZUC-${baseName}${randomSuffix(3)}`;
+    candidate = `REF-${baseName}${randomSuffix(2)}`;
+  }
+
+  // Double check collision
+  const { data: collision2 } = await db
+    .from("referral_codes")
+    .select("id")
+    .eq("code", candidate)
+    .maybeSingle();
+
+  if (collision2) {
+    candidate = `REF-${randomSuffix(5)}`;
   }
 
   // 4. Insert new referral code
@@ -194,7 +211,7 @@ export async function getOrCreateWallet(email: string, userId?: string | null) {
 }
 
 /**
- * Returns wallet balance and recent transaction history for an email.
+ * Returns wallet balance, stream breakdown (referral vs topup), and recent transactions.
  */
 export async function getWalletInfo(email: string): Promise<WalletInfo> {
   const db = supabaseAdmin();
@@ -202,21 +219,49 @@ export async function getWalletInfo(email: string): Promise<WalletInfo> {
 
   const wallet = await getOrCreateWallet(normalizedEmail);
   if (!wallet) {
-    return { balancePaise: 0, balanceRupees: 0 };
+    return {
+      balancePaise: 0,
+      balanceRupees: 0,
+      earnedReferralPaise: 0,
+      earnedReferralRupees: 0,
+      manualTopupPaise: 0,
+      manualTopupRupees: 0,
+      spentOrdersPaise: 0,
+      spentOrdersRupees: 0,
+    };
   }
 
-  const { data: transactions } = await db
+  const { data: allTransactions } = await db
     .from("wallet_transactions")
     .select("*")
     .eq("wallet_id", wallet.id)
-    .order("created_at", { ascending: false })
-    .limit(20);
+    .order("created_at", { ascending: false });
+
+  let earnedReferralPaise = 0;
+  let manualTopupPaise = 0;
+  let spentOrdersPaise = 0;
+
+  for (const t of allTransactions || []) {
+    if (t.type === "credit_referral") {
+      earnedReferralPaise += t.amount_paise || 0;
+    } else if (t.type === "wallet_topup" || t.type === "admin_credit") {
+      manualTopupPaise += t.amount_paise || 0;
+    } else if (t.type === "debit_order" || t.type === "subscription_debit" || t.type === "admin_debit") {
+      spentOrdersPaise += Math.abs(t.amount_paise || 0);
+    }
+  }
 
   return {
     walletId: wallet.id,
     balancePaise: wallet.balance_paise || 0,
     balanceRupees: Number(((wallet.balance_paise || 0) / 100).toFixed(2)),
-    transactions: (transactions || []).map((t: any) => ({
+    earnedReferralPaise,
+    earnedReferralRupees: Number((earnedReferralPaise / 100).toFixed(2)),
+    manualTopupPaise,
+    manualTopupRupees: Number((manualTopupPaise / 100).toFixed(2)),
+    spentOrdersPaise,
+    spentOrdersRupees: Number((spentOrdersPaise / 100).toFixed(2)),
+    transactions: (allTransactions || []).slice(0, 20).map((t: any) => ({
       id: t.id,
       type: t.type,
       amountPaise: t.amount_paise,
@@ -412,4 +457,55 @@ export async function refundWalletCredits(input: {
 
   return true;
 }
+
+/**
+ * Credits wallet after a successful Razorpay top-up transaction.
+ */
+export async function creditWalletTopup(input: {
+  email: string;
+  amountPaise: number;
+  razorpayPaymentId: string;
+  razorpayOrderId?: string;
+}) {
+  if (input.amountPaise <= 0) throw new Error("Invalid top-up amount");
+
+  const db = supabaseAdmin();
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const wallet = await getOrCreateWallet(normalizedEmail);
+  if (!wallet) throw new Error("Could not access or create customer wallet");
+
+  // Prevent duplicate credit for the same payment ID
+  const desc = `Wallet Top-Up (${input.razorpayPaymentId})`;
+  const { data: existing } = await db
+    .from("wallet_transactions")
+    .select("id")
+    .eq("wallet_id", wallet.id)
+    .eq("description", desc)
+    .maybeSingle();
+
+  if (existing) {
+    return { balancePaise: wallet.balance_paise, walletId: wallet.id };
+  }
+
+  const newBalance = (wallet.balance_paise || 0) + input.amountPaise;
+
+  await db
+    .from("wallets")
+    .update({
+      balance_paise: newBalance,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", wallet.id);
+
+  await db.from("wallet_transactions").insert({
+    wallet_id: wallet.id,
+    type: "wallet_topup",
+    amount_paise: input.amountPaise,
+    balance_after_paise: newBalance,
+    description: desc,
+  });
+
+  return { balancePaise: newBalance, walletId: wallet.id };
+}
+
 

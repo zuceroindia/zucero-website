@@ -56,28 +56,21 @@ export async function POST(request: Request) {
 
     const subtotalPaise = resolved.reduce((sum, line) => sum + (line.variant.pricePaise ?? 0) * line.quantity, 0);
 
-    // ── Coupon OR Referral code ──────────────────────────────────────────────
-    const couponCode = normalizeCouponCode(input.couponCode);
-    const rawReferral = input.referralCode?.trim().toUpperCase() || "";
+    // ── Referral code (exclusively unlocks 10% discount) ───────────────────
+    const rawReferral = (input.referralCode || input.couponCode)?.trim().toUpperCase() || "";
 
     let discountPaise = 0;
     let validatedReferralCode: string | null = null;
 
     if (rawReferral) {
-      // Treat the field as a referral code — validate it
       const referralResult = await validateReferralCode(rawReferral, input.customer.email);
       if (!referralResult.valid) {
-        return NextResponse.json({ error: referralResult.error ?? "Invalid referral code." }, { status: 400 });
+        return NextResponse.json({
+          error: referralResult.error ?? "Invalid referral code. The 10% discount is exclusively unlocked by applying a valid referral code.",
+        }, { status: 400 });
       }
       validatedReferralCode = referralResult.code!;
-      // Give the referred customer 10% off
       discountPaise = Math.round(subtotalPaise * (referralResult.discountPercentage ?? 10) / 100);
-    } else if (couponCode) {
-      // Standard coupon — only ZUCADD10 accepted
-      if (couponCode !== ZUCADD10_CODE) {
-        return NextResponse.json({ error: "This coupon code is not valid." }, { status: 400 });
-      }
-      discountPaise = calculateCouponDiscount(subtotalPaise, couponCode);
     }
 
     // ── Shipping ─────────────────────────────────────────────────────────────
@@ -142,15 +135,12 @@ export async function POST(request: Request) {
     });
     if (orderError) throw new Error("Could not create order record");
 
-    // Determine whether coupon or referral drove the discount for line-item calc
+    // Referral discount per line item
     const isReferralDiscount = Boolean(validatedReferralCode);
-    const isCouponDiscount = Boolean(couponCode === ZUCADD10_CODE && !validatedReferralCode);
 
     const { error: itemsError } = await db.from("order_items").insert(resolved.map((line) => {
       const lineSubtotalPaise = (line.variant.pricePaise ?? 0) * line.quantity;
-      const lineDiscountPaise = (isReferralDiscount || isCouponDiscount)
-        ? Math.round(lineSubtotalPaise * 0.10)
-        : 0;
+      const lineDiscountPaise = isReferralDiscount ? Math.round(lineSubtotalPaise * 0.10) : 0;
       return {
         order_id: localOrderId,
         sku: line.variant.sku,

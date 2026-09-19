@@ -261,13 +261,13 @@ export default function CheckoutPage() {
   }
 
   async function handlePromo() {
-    if (appliedCoupon || appliedReferral) {
+    if (appliedReferral) {
       clearPromo();
       return;
     }
     const raw = promoInput.trim().toUpperCase();
     if (!raw) {
-      setPromoMessage("Please enter a promo or referral code.");
+      setPromoMessage("Please enter a referral code.");
       setPromoError(true);
       return;
     }
@@ -275,7 +275,6 @@ export default function CheckoutPage() {
     setPromoMessage("");
     setPromoError(false);
     try {
-      // First try referral code
       const refRes = await fetch("/api/referrals/validate", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -285,24 +284,14 @@ export default function CheckoutPage() {
       if (refData.valid) {
         setAppliedReferral(raw);
         setPromoInput(raw);
-        setPromoMessage(`Referral code applied! You get 10% off. Your friend earns 10% cashback when you pay.`);
+        setPromoMessage(`Referral code applied! You get an additional 10% discount on referral.`);
         setPromoError(false);
         return;
       }
-      // If not a referral, try as a coupon
-      const normalized = normalizeCouponCode(raw);
-      if (normalized === ZUCADD10_CODE) {
-        setAppliedCoupon(ZUCADD10_CODE);
-        setPromoInput(ZUCADD10_CODE);
-        setPromoMessage("ZUCADD10 applied. 10% discount added.");
-        setPromoError(false);
-        return;
-      }
-      // Neither worked
-      setPromoMessage(refData.error || "This code is not valid. Check for typos or try another.");
+      setPromoMessage(refData.error || "This referral code is not valid. Check for typos or try another.");
       setPromoError(true);
     } catch {
-      setPromoMessage("Could not validate code. Please try again.");
+      setPromoMessage("Could not validate referral code. Please try again.");
       setPromoError(true);
     } finally {
       setPromoLoading(false);
@@ -431,12 +420,12 @@ export default function CheckoutPage() {
       <main className="store-page">
         <StoreHeader />
         <section className="empty-cart" style={{ maxWidth: "660px", margin: "48px auto", textAlign: "left", padding: "0 24px" }}>
-          <p className="eyebrow" style={{ color: "#2f5d47" }}>Payment Confirmed</p>
+          <p className="eyebrow" style={{ color: "#2f5d47" }}>Order Successful!</p>
           <h1 style={{ fontFamily: "Georgia,serif", fontSize: "2.1rem", margin: "8px 0 16px 0", color: "#10271d" }}>
-            {completed.captured ? "Thank you for your order." : "Payment received."}
+            Your order has been placed.
           </h1>
           <p style={{ fontSize: "1.05rem", lineHeight: 1.5, color: "#10271d" }}>
-            Order <strong>{completed.orderNumber}</strong> has been confirmed. {completed.captured ? "We are preparing your parcel for dispatch." : "We are awaiting final capture confirmation."}
+            Order <strong>{completed.orderNumber}</strong> has been placed. {completed.captured ? "We are getting your parcel ready to ship." : "We are awaiting final capture confirmation."}
           </p>
 
           <div style={{ background: "#f4f7f4", borderLeft: "4px solid #10271d", padding: "16px 18px", margin: "22px 0", borderRadius: "4px" }}>
@@ -453,37 +442,42 @@ export default function CheckoutPage() {
             <div style={{
               background: "linear-gradient(135deg, #10271d 0%, #1e4d38 100%)",
               borderRadius: "10px",
-              padding: "20px 22px",
+              padding: "22px 24px",
               margin: "24px 0",
               color: "#fff",
             }}>
-              <p style={{ margin: "0 0 4px 0", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.8px", color: "#a3d5b8", fontWeight: 600 }}>
-                🎁 Your Referral Reward
+              <p style={{ margin: "0 0 6px 0", fontSize: "0.9rem", color: "#a3d5b8", fontWeight: 600 }}>
+                🌟 Share the love &amp; save together!
               </p>
-              <h2 style={{ margin: "0 0 8px 0", fontSize: "1.3rem", fontFamily: "Georgia,serif", fontWeight: 500 }}>
-                Share &amp; Earn 10% Back
+              <h2 style={{ margin: "0 0 8px 0", fontSize: "1.25rem", fontFamily: "Georgia,serif", fontWeight: 500, color: "#fff", lineHeight: 1.4 }}>
+                Give an additional 10% discount on referral to your friends and family.
               </h2>
               <p style={{ margin: "0 0 14px 0", fontSize: "0.9rem", color: "#c8e6d4", lineHeight: 1.5 }}>
-                Share your code with friends. When they place their first order, they get <strong style={{ color: "#fff" }}>10% off</strong> and you earn <strong style={{ color: "#fff" }}>10% cashback</strong> as Zucero wallet credits.
+                When your friend uses your code at checkout, they instantly get 10% off. Once their order is completed, you get 10% of their order value credited directly to your Zucero Digital Wallet!
               </p>
               <div style={{
                 background: "rgba(255,255,255,0.12)",
                 borderRadius: "6px",
-                padding: "10px 16px",
+                padding: "12px 18px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: "12px",
                 marginBottom: "14px",
               }}>
-                <span style={{ fontFamily: "monospace", fontSize: "1.4rem", fontWeight: "bold", letterSpacing: "2px", color: "#fff" }}>
-                  {completed.referralCode}
-                </span>
+                <div>
+                  <span style={{ display: "block", fontSize: "0.75rem", color: "#a3d5b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Your Unique Referral Code
+                  </span>
+                  <span style={{ fontFamily: "monospace", fontSize: "1.45rem", fontWeight: "bold", letterSpacing: "2px", color: "#fff" }}>
+                    {completed.referralCode}
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(completed.referralCode ?? "").then(() => {
-                      // Brief visual feedback
+                      alert("Referral code copied to clipboard!");
                     });
                   }}
                   style={{
@@ -491,8 +485,8 @@ export default function CheckoutPage() {
                     color: "#10271d",
                     border: "none",
                     borderRadius: "4px",
-                    padding: "6px 14px",
-                    fontSize: "0.85rem",
+                    padding: "8px 16px",
+                    fontSize: "0.88rem",
                     fontWeight: 600,
                     cursor: "pointer",
                     flexShrink: 0,
@@ -650,25 +644,25 @@ export default function CheckoutPage() {
         </fieldset>
       )}
 
-      {/* Promo / Referral Code */}
+      {/* Referral Code (Exclusively unlocks 10% discount) */}
       <fieldset>
-        <legend>Coupon or Referral Code</legend>
+        <legend>Referral Code</legend>
         <p style={{ margin: "0 0 10px 0", fontSize: "0.88rem", color: "#4a6358" }}>
-          Enter a coupon code (e.g. <strong>ZUCADD10</strong>) or a friend&apos;s referral code for 10% off.
+          Get an additional discount of 10% on referral.
         </p>
         <div className="field-grid">
-          <label className="wide"><span>Promo / Referral code</span>
+          <label className="wide"><span>Referral code</span>
             <input
               value={promoInput}
               onChange={(e) => {
                 setPromoInput(e.target.value.toUpperCase());
                 setPromoMessage("");
                 setPromoError(false);
-                if (appliedPromo) { setAppliedCoupon(""); setAppliedReferral(""); }
+                if (appliedReferral) { setAppliedReferral(""); }
               }}
-              placeholder="ZUCADD10 or your friend's code"
+              placeholder="Enter referral code (e.g. REF-XXXXX)"
               autoComplete="off"
-              disabled={Boolean(appliedPromo)}
+              disabled={Boolean(appliedReferral)}
             />
           </label>
           <button
@@ -678,7 +672,7 @@ export default function CheckoutPage() {
             disabled={promoLoading}
             style={{ alignSelf: "end" }}
           >
-            {promoLoading ? "Checking…" : appliedPromo ? "Remove" : "Apply"}
+            {promoLoading ? "Checking…" : appliedReferral ? "Remove" : "Apply code"}
           </button>
         </div>
         {promoMessage && (
@@ -708,7 +702,7 @@ export default function CheckoutPage() {
       </div>
       {discountPaise > 0 && (
         <div className="checkout-line">
-          <span>{appliedReferral ? `Referral ${appliedReferral} · 10% off` : `Coupon ${ZUCADD10_CODE} · 10% off`}</span>
+          <span>Referral discount ({appliedReferral}) · 10% off</span>
           <strong style={{ color: "#1b5e20" }}>-{formatPrice(discountPaise)}</strong>
         </div>
       )}
