@@ -105,7 +105,20 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
     const endpoint = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
 
     let components: any[] = [];
-    if (templateName === "jaspers_market_order_confirmation_v1") {
+    if (templateName === "zucero_order_confirmation_v2" || templateName === "zucero_order_confirmation") {
+      components = [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: customerName },
+            { type: "text", text: order.order_number },
+            { type: "text", text: itemsSummary || "Zucero Pure Sugar Products" },
+            { type: "text", text: `INR ${totalRupeesFormatted}` },
+            { type: "text", text: deliveryWindow },
+          ],
+        },
+      ];
+    } else if (templateName === "jaspers_market_order_confirmation_v1") {
       components = [
         {
           type: "body",
@@ -125,9 +138,9 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
           parameters: [
             { type: "text", text: customerName },
             { type: "text", text: order.order_number },
+            { type: "text", text: itemsSummary || "Zucero Pure Sugar Products" },
             { type: "text", text: `INR ${totalRupeesFormatted}` },
             { type: "text", text: deliveryWindow },
-            { type: "text", text: `${SITE_URL}/account/orders` },
           ],
         },
       ];
