@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof z.ZodError
-      ? error.errors[0]?.message || "Invalid top-up details."
+      ? (error.issues?.[0]?.message || "Invalid top-up details.")
       : error instanceof Error ? error.message : "Top-up initialization failed.";
     return NextResponse.json({ error: message }, { status: 400 });
   }

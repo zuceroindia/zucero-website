@@ -91,7 +91,7 @@ export async function POST(request: Request) {
       .from("subscriptions")
       .insert({
         customer_email: email,
-        user_id: user.id || null,
+        user_id: user?.id || null,
         product_variant_id: match.variant.id,
         product_name: match.product.name,
         variant_label: match.variant.label,
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, subscription });
   } catch (error) {
     const message = error instanceof z.ZodError
-      ? error.errors[0]?.message || "Invalid subscription details."
+      ? (error.issues?.[0]?.message || "Invalid subscription details.")
       : error instanceof Error ? error.message : "Subscription setup failed.";
     return NextResponse.json({ error: message }, { status: 400 });
   }

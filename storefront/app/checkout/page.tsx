@@ -252,10 +252,9 @@ export default function CheckoutPage() {
   }
 
   function clearPromo() {
-    setAppliedCoupon("");
     setAppliedReferral("");
     setPromoInput("");
-    setPromoMessage("Promo code removed.");
+    setPromoMessage("Referral code removed.");
     setPromoError(false);
   }
 
