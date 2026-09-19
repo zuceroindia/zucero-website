@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { products } from "@/lib/catalog";
+import { findCatalogProductAndVariant, products } from "@/lib/catalog";
 
 export type CartLine = {
   variantId: string;
@@ -38,22 +38,37 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const saved = localStorage.getItem("zucero-cart-prelaunch-v2");
         if (saved) {
           const storedLines = JSON.parse(saved) as CartLine[];
-          setLines(storedLines.map((line) => {
-            const product = products.find((item) => item.slug === line.productSlug);
-            const variant = product?.variants.find((item) => item.id === line.variantId);
-            if (!product || variant?.pricePaise === null || variant?.pricePaise === undefined) return line;
-            return {
-              ...line,
-              productName: product.name,
-              variantLabel: variant.label,
-              sku: variant.sku,
-              image: product.cartImage ?? product.image,
-              pricePaise: variant.pricePaise,
-              priceRupees: variant.priceRupees ?? variant.pricePaise / 100,
-            };
-          }));
+          const migratedLines: CartLine[] = [];
+          for (const rawLine of storedLines) {
+            const match = findCatalogProductAndVariant(rawLine.variantId);
+            if (!match) continue; // remove discontinued items that have no match
+
+            const { product, variant } = match;
+            const existingIndex = migratedLines.findIndex((l) => l.variantId === variant.id);
+            if (existingIndex >= 0) {
+              migratedLines[existingIndex].quantity = Math.min(
+                10,
+                migratedLines[existingIndex].quantity + rawLine.quantity
+              );
+            } else {
+              migratedLines.push({
+                variantId: variant.id,
+                productSlug: product.slug,
+                productName: product.name,
+                variantLabel: variant.label,
+                sku: variant.sku,
+                image: product.cartImage ?? product.image,
+                pricePaise: variant.pricePaise!,
+                priceRupees: variant.priceRupees ?? variant.pricePaise! / 100,
+                quantity: Math.min(10, Math.max(1, rawLine.quantity)),
+              });
+            }
+          }
+          setLines(migratedLines);
         }
-      } catch { localStorage.removeItem("zucero-cart-prelaunch-v2"); }
+      } catch {
+        localStorage.removeItem("zucero-cart-prelaunch-v2");
+      }
       setReady(true);
     });
   }, []);

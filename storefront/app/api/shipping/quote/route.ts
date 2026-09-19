@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { products } from "@/lib/catalog";
+import { findCatalogProductAndVariant, products } from "@/lib/catalog";
 import { getPrepaidShippingQuote } from "@/lib/shiprocket";
 
 const lineSchema = z.object({
@@ -16,11 +16,8 @@ const inputSchema = z.object({
 }).refine((value) => value.weightGrams || value.lines?.length, { message: "Shipping weight is required" });
 
 function catalogVariant(variantId: string) {
-  for (const product of products) {
-    const variant = product.variants.find((item) => item.id === variantId);
-    if (variant) return variant;
-  }
-  return null;
+  const match = findCatalogProductAndVariant(variantId);
+  return match?.variant ?? null;
 }
 
 export async function POST(request: Request) {

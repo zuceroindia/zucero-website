@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { products } from "@/lib/catalog";
+import { findCatalogProductAndVariant, products } from "@/lib/catalog";
 import { isIndianState } from "@/lib/india";
 import { createRazorpayOrder, razorpayPublicKeyId } from "@/lib/razorpay";
 import { getPrepaidShippingQuote } from "@/lib/shiprocket";
@@ -28,11 +28,7 @@ const schema = z.object({
 });
 
 function catalogLine(variantId: string) {
-  for (const product of products) {
-    const variant = product.variants.find((item) => item.id === variantId);
-    if (variant && variant.pricePaise !== null) return { product, variant };
-  }
-  return null;
+  return findCatalogProductAndVariant(variantId);
 }
 
 function orderNumber() {
@@ -49,8 +45,8 @@ export async function POST(request: Request) {
 
     const resolved = input.lines.map((line) => {
       const match = catalogLine(line.variantId);
-      if (!match) throw new Error("A product in your bag is no longer available");
-      return { ...line, ...match };
+      if (!match) throw new Error("A product in your bag is no longer available. Please update your bag.");
+      return { ...line, variantId: match.variant.id, ...match };
     });
 
     const subtotalPaise = resolved.reduce((sum, line) => sum + (line.variant.pricePaise ?? 0) * line.quantity, 0);

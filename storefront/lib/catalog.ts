@@ -146,3 +146,37 @@ export function paiseToRupees(paise: number | null | undefined): number {
 export function rupeesToPaise(rupees: number | null | undefined): number {
   return Math.round((rupees ?? 0) * 100);
 }
+
+export const LEGACY_VARIANT_ALIASES: Record<string, string> = {
+  "khand-490": "khand-330",
+  "khand-990": "khand-580",
+  "mishri-250": "mishri-280",
+  "mishri-500": "mishri-580",
+};
+
+export const LEGACY_SKU_ALIASES: Record<string, string> = {
+  "ZUC-KHA-490": "ZUC-KHA-330",
+  "ZUC-KHA-990": "ZUC-KHA-580",
+  "ZUC-MIS-250": "ZUC-MIS-280",
+  "ZUC-MIS-500": "ZUC-MIS-580",
+};
+
+export function resolveVariantId(variantId: string): string {
+  return LEGACY_VARIANT_ALIASES[variantId] || variantId;
+}
+
+export function resolveSku(sku: string): string {
+  return LEGACY_SKU_ALIASES[sku] || sku;
+}
+
+export function findCatalogProductAndVariant(variantId: string) {
+  const resolvedId = resolveVariantId(variantId);
+  for (const product of products) {
+    const variant = product.variants.find((item) => item.id === resolvedId);
+    if (variant && variant.pricePaise !== null) {
+      return { product, variant };
+    }
+  }
+  return null;
+}
+

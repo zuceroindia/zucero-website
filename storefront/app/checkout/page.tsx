@@ -380,7 +380,10 @@ export default function CheckoutPage() {
       <button className="button button-dark checkout-button" type="submit" disabled={checkoutDisabled}>{checkoutLabel}</button>
     </form>
     <aside className="checkout-summary">
-      <p className="eyebrow">Your order</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "8px" }}>
+        <p className="eyebrow" style={{ margin: 0 }}>Your order</p>
+        <Link href="/cart" style={{ fontSize: "0.85rem", color: "#2f5d47", textDecoration: "underline" }}>Edit bag</Link>
+      </div>
       {lines.map((line) => (
         <div className="checkout-line" key={line.variantId}>
           <span>{line.productName} · {line.variantLabel} × {line.quantity}</span>

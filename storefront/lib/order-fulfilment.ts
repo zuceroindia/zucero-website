@@ -1,4 +1,4 @@
-import { products } from "@/lib/catalog";
+import { products, resolveSku } from "@/lib/catalog";
 import { createShiprocketOrder } from "@/lib/shiprocket";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
@@ -21,8 +21,9 @@ function splitName(value: string) {
 }
 
 function catalogVariantBySku(sku: string) {
+  const resolvedSku = resolveSku(sku);
   for (const product of products) {
-    const variant = product.variants.find((item) => item.sku === sku);
+    const variant = product.variants.find((item) => item.sku === resolvedSku);
     if (variant) return { product, variant };
   }
   return null;
