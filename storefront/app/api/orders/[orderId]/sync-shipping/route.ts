@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { notifyShipmentStatus } from "@/lib/notifications";
+import { isAuthorizedAdminOrInternal } from "@/lib/api-auth";
 
 const SHIPROCKET_API_BASE = "https://apiv2.shiprocket.in/v1/external";
 let cachedToken: { value: string; expiresAt: number } | null = null;
@@ -28,6 +29,11 @@ export async function POST(
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
+    const isAuthorized = await isAuthorizedAdminOrInternal(request);
+    if (!isAuthorized) {
+      return NextResponse.json({ error: "Unauthorized. Admin or secret key required." }, { status: 401 });
+    }
+
     const { orderId } = await params;
     const db = supabaseAdmin();
 

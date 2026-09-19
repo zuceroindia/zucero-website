@@ -112,6 +112,7 @@ export default function CheckoutPage() {
     customerEmail?: string;
     customerName?: string;
     referralCode?: string;
+    invoiceToken?: string;
   } | null>(null);
 
   const discountPaise = useMemo(() => {
@@ -349,6 +350,7 @@ export default function CheckoutPage() {
           customerEmail: details.email,
           customerName: details.fullName,
           referralCode,
+          invoiceToken: order.invoiceToken,
         });
         setLoading(false);
         return;
@@ -399,6 +401,7 @@ export default function CheckoutPage() {
               customerEmail: details.email,
               customerName: details.fullName,
               referralCode,
+              invoiceToken: order.invoiceToken,
             });
           } catch (verificationError) {
             setError(verificationError instanceof Error ? verificationError.message : "Payment confirmation failed. Please contact us with your payment ID.");
@@ -548,7 +551,7 @@ export default function CheckoutPage() {
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", margin: "22px 0" }}>
             <a
               className="button button-dark"
-              href={`/api/orders/${completed.localOrderId}/invoice`}
+              href={`/api/orders/${completed.localOrderId}/invoice${completed.invoiceToken ? `?token=${encodeURIComponent(completed.invoiceToken)}` : ""}`}
               target="_blank"
               rel="noreferrer"
               style={{ display: "inline-flex", alignItems: "center", gap: "8px", textDecoration: "none" }}

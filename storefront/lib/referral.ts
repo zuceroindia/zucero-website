@@ -361,3 +361,55 @@ export async function debitWallet(input: {
 
   return true;
 }
+
+/**
+ * Refunds spent wallet credits back to a customer if an order is refunded or cancelled.
+ */
+export async function refundWalletCredits(input: {
+  email: string;
+  orderId: string;
+  orderNumber: string;
+  refundPaise: number;
+}) {
+  if (input.refundPaise <= 0) return true;
+
+  const db = supabaseAdmin();
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const wallet = await getOrCreateWallet(normalizedEmail);
+  if (!wallet) return false;
+
+  // Prevent duplicate refunds
+  const { data: existingRefund } = await db
+    .from("wallet_transactions")
+    .select("id")
+    .eq("wallet_id", wallet.id)
+    .eq("order_id", input.orderId)
+    .eq("type", "refund")
+    .maybeSingle();
+
+  if (existingRefund) {
+    return true;
+  }
+
+  const newBalance = (wallet.balance_paise || 0) + input.refundPaise;
+
+  await db
+    .from("wallets")
+    .update({
+      balance_paise: newBalance,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", wallet.id);
+
+  await db.from("wallet_transactions").insert({
+    wallet_id: wallet.id,
+    order_id: input.orderId,
+    type: "refund",
+    amount_paise: input.refundPaise,
+    balance_after_paise: newBalance,
+    description: `Refunded wallet credits for order ${input.orderNumber}`,
+  });
+
+  return true;
+}
+

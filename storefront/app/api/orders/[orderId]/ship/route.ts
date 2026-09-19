@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { notifyShipmentStatus } from "@/lib/notifications";
+import { isAuthorizedAdminOrInternal } from "@/lib/api-auth";
 
 const schema = z.object({
   awb: z.string().min(4).max(50),
@@ -15,6 +16,11 @@ export async function POST(
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
+    const isAuthorized = await isAuthorizedAdminOrInternal(request);
+    if (!isAuthorized) {
+      return NextResponse.json({ error: "Unauthorized. Admin or secret key required." }, { status: 401 });
+    }
+
     const { orderId } = await params;
     const body = schema.parse(await request.json());
     const db = supabaseAdmin();
