@@ -12,6 +12,6 @@ export async function GET() {
     hasSupabaseSecret: Boolean(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY),
     hasShiprocketEmail: Boolean(process.env.SHIPROCKET_EMAIL),
     hasRazorpayKey: Boolean(process.env.RAZORPAY_KEY_ID),
-    shiprocketWebhookSecret: process.env.SHIPROCKET_WEBHOOK_SECRET ?? null,
+    hasShiprocketWebhookSecret: Boolean(process.env.SHIPROCKET_WEBHOOK_SECRET),
   });
 }
