@@ -143,7 +143,7 @@ export class SimplePdfDocument {
 }
 
 export function generateInvoicePdfBuffer(order: InvoiceOrder, items: InvoiceItem[]): Buffer {
-  const sellerGstin = process.env.SELLER_GSTIN?.trim() || "06AAACT0000A1Z5 (Registered)";
+  const sellerGstin = process.env.SELLER_GSTIN?.trim() || "06AANCT1861C1ZF";
   const invoiceNumber = `INV-${order.order_number}`;
   const invoiceDate = new Date(order.created_at).toLocaleDateString("en-IN", {
     day: "numeric",
