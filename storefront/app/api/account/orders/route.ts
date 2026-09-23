@@ -9,13 +9,21 @@ function titleStatus(value: string | null | undefined) {
   return status.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function extractTracking(payload: any) {
-  const data = payload?.tracking_data ?? payload ?? {};
+type TrackingPayload = Record<string, unknown> & {
+  tracking_data?: Record<string, unknown>;
+  shipment_track?: Record<string, unknown> | Array<Record<string, unknown>>;
+};
+type OrderRow = Record<string, unknown> & { id: string; order_number: string; status?: string; tracking_awb?: string; courier_name?: string; tracking_url?: string; estimated_delivery_window?: string; invoice_number?: string; shipping_address?: Record<string, unknown> };
+type ItemRow = Record<string, unknown> & { order_id: string };
+
+function extractTracking(payload: TrackingPayload) {
+  const data = (payload.tracking_data ?? payload) as TrackingPayload;
   const firstTrack = Array.isArray(data.shipment_track) ? data.shipment_track[0] : data.shipment_track;
-  const status = firstTrack?.current_status ?? data.current_status ?? data.shipment_status ?? data.track_status ?? null;
-  const courier = firstTrack?.courier_name ?? data.courier_name ?? data.courier ?? null;
-  const url = data.track_url ?? data.tracking_url ?? null;
-  const edd = firstTrack?.edd ?? data.expected_date ?? data.edd ?? null;
+  const value = (...candidates: unknown[]) => candidates.find((candidate) => typeof candidate === "string") as string | undefined;
+  const status = value(firstTrack?.current_status, data.current_status, data.shipment_status, data.track_status) ?? null;
+  const courier = value(firstTrack?.courier_name, data.courier_name, data.courier) ?? null;
+  const url = value(data.track_url, data.tracking_url) ?? null;
+  const edd = value(firstTrack?.edd, data.expected_date, data.edd) ?? null;
   return { status, courier, url, edd };
 }
 
@@ -47,12 +55,14 @@ export async function GET() {
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: "Could not load your orders." }, { status: 500 });
 
-  const ids = (orders ?? []).map((order: any) => order.id);
+  const orderRows = (orders ?? []) as OrderRow[];
+  const ids = orderRows.map((order) => order.id);
   const { data: items } = ids.length
     ? await db.from("order_items").select("order_id,sku,product_name,variant_label,quantity,unit_price_paise,line_total_paise").in("order_id", ids)
-    : { data: [] as any[] };
+    : { data: [] as ItemRow[] };
 
-  const enriched = await Promise.all((orders ?? []).map(async (order: any) => {
+  const itemRows = (items ?? []) as ItemRow[];
+  const enriched = await Promise.all(orderRows.map(async (order) => {
     let liveStatus: string | null = null;
     let liveCourier: string | null = null;
     let liveTrackingUrl: string | null = null;
@@ -85,7 +95,7 @@ export async function GET() {
       ["shipped", "delivered", "out_for_delivery"].includes(String(liveStatus || order.status).toLowerCase())
     );
 
-    const addr = (order.shipping_address || {}) as Record<string, any>;
+    const addr = order.shipping_address ?? {};
     const deliveryWindow = isShipped
       ? (accurateDelivery || order.estimated_delivery_window || addr.estimated_delivery_window || "Shipment in transit (5–7 days)")
       : "5–7 days";
@@ -98,7 +108,7 @@ export async function GET() {
       display_status: titleStatus(liveStatus || order.status),
       courier_name: liveCourier || order.courier_name,
       tracking_url: liveTrackingUrl || order.tracking_url,
-      items: (items ?? []).filter((item: any) => item.order_id === order.id),
+      items: itemRows.filter((item) => item.order_id === order.id),
     };
   }));
 

@@ -1,5 +1,4 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { formatPrice } from "@/lib/catalog";
 
 export type InvoiceOrder = {
   id: string;
@@ -246,11 +245,21 @@ export function generateInvoicePdfBuffer(order: InvoiceOrder, items: InvoiceItem
 
   // --- Items Table Rows ---
   let curY = tableY - 20;
+  let allocatedDiscountPaise = 0;
   items.forEach((item, index) => {
     const rateRupees = (item.unit_price_paise / 100).toFixed(2);
-    const lineTotalRupees = (item.line_total_paise / 100).toFixed(2);
-    const lineTaxRupees = (item.tax_paise / 100).toFixed(2);
-    const taxableRupees = ((item.line_total_paise - item.tax_paise) / 100).toFixed(2);
+    // Catalog prices are tax-exclusive. Allocate any order-level referral
+    // discount proportionally, then calculate GST on the discounted value.
+    const lineDiscountPaise = index === items.length - 1
+      ? order.discount_paise - allocatedDiscountPaise
+      : Math.round(order.discount_paise * item.line_total_paise / Math.max(1, order.subtotal_paise));
+    allocatedDiscountPaise += lineDiscountPaise;
+    const taxablePaise = Math.max(0, item.line_total_paise - lineDiscountPaise);
+    const lineTaxPaise = Math.round(taxablePaise * 0.05);
+    const lineGrossPaise = taxablePaise + lineTaxPaise;
+    const lineTotalRupees = (lineGrossPaise / 100).toFixed(2);
+    const lineTaxRupees = (lineTaxPaise / 100).toFixed(2);
+    const taxableRupees = (taxablePaise / 100).toFixed(2);
     const hsn = item.sku.includes("KHA") ? "1701" : "1702";
 
     text(40, curY, String(index + 1), "F1", 8.5);
@@ -347,9 +356,10 @@ export async function generateInvoiceForOrder(orderId: string): Promise<{ buffer
   }
 
   const { data: items } = await db.from("order_items").select("*").eq("order_id", orderId);
+  const shippingAddress = order.shipping_address as { estimated_delivery_window?: string | null } | null;
   const invoiceOrder: InvoiceOrder = {
     ...order,
-    estimated_delivery_window: order.estimated_delivery_window || (order.shipping_address as any)?.estimated_delivery_window || null,
+    estimated_delivery_window: order.estimated_delivery_window || shippingAddress?.estimated_delivery_window || null,
   };
 
   const buffer = generateInvoicePdfBuffer(invoiceOrder, (items as InvoiceItem[]) ?? []);

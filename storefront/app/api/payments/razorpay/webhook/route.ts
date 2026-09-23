@@ -15,6 +15,15 @@ type RazorpayWebhook = {
     refund?: { entity?: { id?: string; payment_id?: string; status?: string; amount?: number } };
   };
 };
+type StoredOrder = {
+  id: string;
+  order_number: string;
+  customer_email: string;
+  status: string;
+  payment_status: string;
+  razorpay_payment_id?: string | null;
+  wallet_spent_paise?: number | null;
+};
 
 export async function POST(request: Request) {
   const signature = request.headers.get("x-razorpay-signature");
@@ -51,7 +60,7 @@ export async function POST(request: Request) {
     }
 
     // Lookup order by razorpay_order_id OR razorpay_payment_id
-    let order: any = null;
+    let order: StoredOrder | null = null;
     if (razorpayOrderId && razorpayPaymentId) {
       const { data } = await db
         .from("orders")
@@ -118,11 +127,12 @@ export async function POST(request: Request) {
 
       // Refund spent wallet credits back to customer wallet
       if ((order.wallet_spent_paise ?? 0) > 0) {
+        const refundPaise = order.wallet_spent_paise ?? 0;
         await refundWalletCredits({
           email: order.customer_email,
           orderId: order.id,
           orderNumber: order.order_number,
-          refundPaise: order.wallet_spent_paise,
+          refundPaise,
         }).catch((err) => console.error("Wallet refund error:", err));
       }
 
@@ -140,11 +150,12 @@ export async function POST(request: Request) {
 
       // Debit wallet credits applied at checkout
       if ((order.wallet_spent_paise ?? 0) > 0) {
+        const debitPaise = order.wallet_spent_paise ?? 0;
         await debitWallet({
           email: order.customer_email,
           orderId: order.id,
           orderNumber: order.order_number,
-          debitPaise: order.wallet_spent_paise,
+          debitPaise,
         }).catch((err) => console.error("Wallet debit error in webhook:", err));
       }
 

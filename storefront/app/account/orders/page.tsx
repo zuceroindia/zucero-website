@@ -4,17 +4,12 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Calendar,
-  Check,
-  Copy,
-  CreditCard,
   Home,
   LogOut,
   MapPin,
   Package,
   Plus,
   Repeat,
-  Share2,
   UserRound,
   Wallet,
 } from "lucide-react";
@@ -27,7 +22,7 @@ import styles from "./account.module.css";
 
 function loadRazorpay(): Promise<boolean> {
   if (typeof window === "undefined") return Promise.resolve(false);
-  if (typeof (window as any).Razorpay !== "undefined") return Promise.resolve(true);
+  if (getRazorpayConstructor()) return Promise.resolve(true);
   return new Promise((resolve) => {
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -38,6 +33,23 @@ function loadRazorpay(): Promise<boolean> {
 }
 
 type OrderItem = { sku: string; product_name: string; variant_label: string; quantity: number; line_total_paise: number };
+type RazorpayResponse = { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string };
+type RazorpayOptions = {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  prefill: { name: string; email: string; contact: string };
+  handler: (payment: RazorpayResponse) => Promise<void>;
+  modal: { ondismiss: () => void };
+};
+type RazorpayConstructor = new (options: RazorpayOptions) => { open: () => void };
+
+function getRazorpayConstructor() {
+  return Reflect.get(window, "Razorpay") as RazorpayConstructor | undefined;
+}
 type Order = {
   id: string;
   order_number: string;
@@ -82,7 +94,7 @@ type Subscription = {
   interval_weeks: number | null;
   status: "active" | "paused" | "cancelled";
   next_billing_date: string;
-  shipping_address: any;
+  shipping_address: { addressLine1?: string; city?: string; postalCode?: string };
   created_at: string;
 };
 
@@ -191,9 +203,9 @@ export default function OrdersPage() {
       setFullName(typeof userMetadata.full_name === "string" ? userMetadata.full_name : "");
       setPhone(typeof userMetadata.phone === "string" ? cleanPhone(userMetadata.phone) : "");
       setAddresses(safeAddresses);
-      if (safeAddresses.length > 0 && !subAddressId) {
+      if (safeAddresses.length > 0) {
         const def = safeAddresses.find((a) => a.isDefault) || safeAddresses[0];
-        setSubAddressId(def.id);
+        setSubAddressId((current) => current || def.id);
       }
 
       // Fetch Orders
@@ -205,7 +217,7 @@ export default function OrdersPage() {
         .catch(() => {});
 
       // Fetch Wallet info
-      const walletPromise = fetch(`/api/wallet/balance?email=${encodeURIComponent(userEmail)}`, { cache: "no-store" })
+      const walletPromise = fetch("/api/wallet/balance", { cache: "no-store" })
         .then((r) => r.json())
         .then((payload) => {
           if (active && payload.wallet) setWallet(payload.wallet);
@@ -287,8 +299,17 @@ export default function OrdersPage() {
 
   function beginEditAddress(address: SavedAddress) {
     setEditingAddressId(address.id);
-    const { id: _id, isDefault: _isDefault, ...rest } = address;
-    setAddressForm(rest);
+    setAddressForm({
+      label: address.label,
+      fullName: address.fullName,
+      phone: address.phone,
+      addressLine1: address.addressLine1,
+      addressLine2: address.addressLine2,
+      city: address.city,
+      state: address.state,
+      postalCode: address.postalCode,
+      country: address.country,
+    });
     setMessage("");
     setError("");
   }
@@ -378,18 +399,18 @@ export default function OrdersPage() {
       const res = await fetch("/api/wallet/topup/create-order", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ amountRupees, email }),
+        body: JSON.stringify({ amountRupees }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not start wallet top-up.");
 
       const scriptReady = await loadRazorpay();
-      const RazorpayConstructor = (window as any).Razorpay;
-      if (!scriptReady || !RazorpayConstructor) {
+      const RazorpayCheckout = getRazorpayConstructor();
+      if (!scriptReady || !RazorpayCheckout) {
         throw new Error("Payment gateway could not load. Please check your connection.");
       }
 
-      const checkout = new RazorpayConstructor({
+      const checkout = new RazorpayCheckout({
         key: data.keyId,
         amount: data.amountPaise,
         currency: "INR",
@@ -397,7 +418,7 @@ export default function OrdersPage() {
         description: `Add ₹${amountRupees} to wallet balance`,
         order_id: data.razorpayOrderId,
         prefill: { name: fullName, email, contact: phone },
-        handler: async (payment: any) => {
+        handler: async (payment: RazorpayResponse) => {
           try {
             const verifyRes = await fetch("/api/wallet/topup/verify", {
               method: "POST",
@@ -406,7 +427,6 @@ export default function OrdersPage() {
                 razorpayOrderId: payment.razorpay_order_id,
                 razorpayPaymentId: payment.razorpay_payment_id,
                 razorpaySignature: payment.razorpay_signature,
-                email,
               }),
             });
             const verifyData = await verifyRes.json();
@@ -414,8 +434,8 @@ export default function OrdersPage() {
             setWallet(verifyData.wallet);
             setMessage(`₹${amountRupees} added to your digital wallet!`);
             setCustomTopup("");
-          } catch (err: any) {
-            setError(err.message || "Failed to confirm wallet credit.");
+          } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Failed to confirm wallet credit.");
           } finally {
             setTopupLoading(false);
           }
@@ -423,8 +443,8 @@ export default function OrdersPage() {
         modal: { ondismiss: () => setTopupLoading(false) },
       });
       checkout.open();
-    } catch (err: any) {
-      setError(err.message || "Wallet top-up failed.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Wallet top-up failed.");
       setTopupLoading(false);
     }
   }
@@ -469,8 +489,8 @@ export default function OrdersPage() {
       setSubscriptions([data.subscription, ...subscriptions]);
       setShowAddSubscription(false);
       setMessage("Subscription activated! Recurring orders will draw from your wallet automatically.");
-    } catch (err: any) {
-      setError(err.message || "Could not activate subscription.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Could not activate subscription.");
     } finally {
       setSubSaving(false);
     }
@@ -492,14 +512,12 @@ export default function OrdersPage() {
 
       setSubscriptions(subscriptions.map((s) => (s.id === id ? data.subscription : s)));
       setMessage(`Subscription ${status === "active" ? "resumed" : status}.`);
-    } catch (err: any) {
-      setError(err.message || "Subscription update failed.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Subscription update failed.");
     }
   }
 
   const latestOrder = orders[0];
-  const defaultAddress = addresses.find((address) => address.isDefault) ?? addresses[0];
-
   const viralShareText = referralCode
     ? `Hey! I just ordered from Zucero (The Good Sugar Co.) — pure, chemical-free sugarcane sweetness. Use my referral code *${referralCode}* at checkout to get an additional *10% discount* on referral! Shop at www.thegoodsugar.in 🍃`
     : "";

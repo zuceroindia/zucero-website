@@ -29,6 +29,21 @@ export type EmailAttachment = {
   type?: string;
   disposition?: string;
 };
+type OrderItemSnapshot = {
+  product_name: string;
+  variant_label: string;
+  quantity: number;
+  line_total_paise: number;
+};
+type ShippingAddressSnapshot = {
+  fullName?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  estimated_delivery_window?: string;
+};
 
 async function sendEmail(input: {
   to: string;
@@ -52,7 +67,7 @@ async function sendEmail(input: {
       }))
     : undefined;
 
-  const payload: Record<string, any> = {
+  const payload: Record<string, unknown> = {
     from,
     to: [input.to],
     subject: input.subject,
@@ -116,17 +131,17 @@ async function orderSnapshot(orderId: string) {
   return { order, items: items ?? [] };
 }
 
-function itemsHtml(items: any[]) {
+function itemsHtml(items: OrderItemSnapshot[]) {
   return items.map((item) => `<tr><td style="padding:8px 0;border-bottom:1px solid #eee">${escapeHtml(item.product_name)} · ${escapeHtml(item.variant_label)} × ${escapeHtml(item.quantity)}</td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right">${escapeHtml(money(item.line_total_paise))}</td></tr>`).join("");
 }
 
-function itemsText(items: any[]) {
+function itemsText(items: OrderItemSnapshot[]) {
   return items.map((item) => `${item.product_name} · ${item.variant_label} × ${item.quantity} — ${money(item.line_total_paise)}`).join("\n");
 }
 
 export async function notifyPaidOrder(orderId: string) {
   const { order, items } = await orderSnapshot(orderId);
-  const address = (order.shipping_address ?? {}) as Record<string, any>;
+  const address = (order.shipping_address ?? {}) as ShippingAddressSnapshot;
   const merchantEmail = process.env.ORDER_NOTIFICATION_EMAIL?.trim() || DEFAULT_MERCHANT_EMAIL;
   const accountUrl = `${SITE_URL}/account/orders`;
   const deliveryWindow = order.estimated_delivery_window || address.estimated_delivery_window || "5–7 days";
@@ -237,7 +252,7 @@ export async function notifyShipmentStatus(orderId: string, status: string) {
   const { order, items } = await orderSnapshot(orderId);
   const normalized = status.trim() || "Shipment updated";
   const merchantEmail = process.env.ORDER_NOTIFICATION_EMAIL?.trim() || DEFAULT_MERCHANT_EMAIL;
-  const address = (order.shipping_address ?? {}) as Record<string, any>;
+  const address = (order.shipping_address ?? {}) as ShippingAddressSnapshot;
   const accountUrl = `${SITE_URL}/account/orders`;
   const trackingUrl = order.tracking_url || (order.tracking_awb ? `https://shiprocket.co/tracking/${order.tracking_awb}` : accountUrl);
   const keyStatus = normalized.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 80);

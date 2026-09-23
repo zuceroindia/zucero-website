@@ -10,6 +10,7 @@ import { calculateCheckoutTotal } from "@/lib/tax";
 import { validateReferralCode, getOrCreateWallet, debitWallet } from "@/lib/referral";
 import { fulfilPaidOrder } from "@/lib/order-fulfilment";
 import { notifyPaidOrder } from "@/lib/notifications";
+import { authenticatedEmail } from "@/lib/server-auth";
 
 const schema = z.object({
   customer: z.object({
@@ -90,6 +91,10 @@ export async function POST(request: Request) {
     // ── Wallet ───────────────────────────────────────────────────────────────
     let walletSpentPaise = 0;
     if (input.useWallet) {
+      const sessionEmail = await authenticatedEmail();
+      if (!sessionEmail || sessionEmail !== input.customer.email.trim().toLowerCase()) {
+        return NextResponse.json({ error: "Please sign in with this email address to use its wallet credits." }, { status: 401 });
+      }
       const wallet = await getOrCreateWallet(input.customer.email.trim().toLowerCase());
       if (wallet && wallet.balance_paise > 0) {
         const breakdown0 = calculateCheckoutTotal(subtotalPaise, input.customer.state, discountPaise, shippingQuote.shippingPaise);

@@ -261,7 +261,13 @@ export async function getWalletInfo(email: string): Promise<WalletInfo> {
     manualTopupRupees: Number((manualTopupPaise / 100).toFixed(2)),
     spentOrdersPaise,
     spentOrdersRupees: Number((spentOrdersPaise / 100).toFixed(2)),
-    transactions: (allTransactions || []).slice(0, 20).map((t: any) => ({
+    transactions: (allTransactions || []).slice(0, 20).map((t: {
+      id: string;
+      type: string;
+      amount_paise: number;
+      description: string | null;
+      created_at: string;
+    }) => ({
       id: t.id,
       type: t.type,
       amountPaise: t.amount_paise,
@@ -295,6 +301,22 @@ export async function creditReferralReward(orderId: string) {
     return false;
   }
 
+  // Atomically claim this order before touching balances. Razorpay's browser
+  // verification and webhook can arrive together; only one may credit it.
+  const { data: claimedOrder, error: claimError } = await db
+    .from("orders")
+    .update({ referral_reward_credited: true, updated_at: new Date().toISOString() })
+    .eq("id", order.id)
+    .eq("referral_reward_credited", false)
+    .select("id")
+    .maybeSingle();
+  if (claimError) throw new Error(`Could not reserve referral reward: ${claimError.message}`);
+  if (!claimedOrder) return false;
+
+  const releaseClaim = async () => {
+    await db.from("orders").update({ referral_reward_credited: false, updated_at: new Date().toISOString() }).eq("id", order.id);
+  };
+
   // 3. Find referral code owner
   const { data: refCode } = await db
     .from("referral_codes")
@@ -304,18 +326,23 @@ export async function creditReferralReward(orderId: string) {
 
   if (!refCode) {
     console.warn(`[Referral] Referral code ${order.referral_code_used} not found in database.`);
+    await releaseClaim();
     return false;
   }
 
   // Calculate 10% of subtotal (or total paid)
   const rewardRate = refCode.reward_percentage || 10;
   const rewardPaise = Math.round((order.subtotal_paise * rewardRate) / 100);
-  if (rewardPaise <= 0) return false;
+  if (rewardPaise <= 0) {
+    await releaseClaim();
+    return false;
+  }
 
   // 4. Ensure referrer's wallet exists
   const referrerWallet = await getOrCreateWallet(refCode.owner_email, refCode.user_id);
   if (!referrerWallet) {
     console.error("[Referral] Failed to retrieve referrer wallet for", refCode.owner_email);
+    await releaseClaim();
     return false;
   }
 
@@ -351,15 +378,6 @@ export async function creditReferralReward(orderId: string) {
     })
     .eq("id", refCode.id);
 
-  // 8. Mark order as rewarded
-  await db
-    .from("orders")
-    .update({
-      referral_reward_credited: true,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", order.id);
-
   console.info(`[Referral] Successfully credited ₹${rewardRupees} to ${refCode.owner_email} for order ${order.order_number}`);
   return true;
 }
@@ -380,6 +398,14 @@ export async function debitWallet(input: {
   const wallet = await getOrCreateWallet(normalizedEmail);
   if (!wallet) throw new Error("Customer wallet not found for debit");
 
+  const { data: existingDebit } = await db.from("wallet_transactions")
+    .select("id")
+    .eq("wallet_id", wallet.id)
+    .eq("order_id", input.orderId)
+    .eq("type", "debit_order")
+    .maybeSingle();
+  if (existingDebit) return true;
+
   const currentBalance = wallet.balance_paise || 0;
   if (currentBalance < input.debitPaise) {
     throw new Error(`Insufficient wallet balance. Available: ₹${(currentBalance / 100).toFixed(2)}`);
@@ -387,15 +413,24 @@ export async function debitWallet(input: {
 
   const newBalance = currentBalance - input.debitPaise;
 
-  await db
+  const { data: updatedWallet, error: updateError } = await db
     .from("wallets")
     .update({
       balance_paise: newBalance,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", wallet.id);
+    .eq("id", wallet.id)
+    .eq("balance_paise", currentBalance)
+    .select("id")
+    .maybeSingle();
+  if (updateError) throw new Error(`Could not debit wallet: ${updateError.message}`);
+  if (!updatedWallet) {
+    const { data: racedDebit } = await db.from("wallet_transactions").select("id").eq("wallet_id", wallet.id).eq("order_id", input.orderId).eq("type", "debit_order").maybeSingle();
+    if (racedDebit) return true;
+    throw new Error("Wallet balance changed while processing. Please retry.");
+  }
 
-  await db.from("wallet_transactions").insert({
+  const { error: transactionError } = await db.from("wallet_transactions").insert({
     wallet_id: wallet.id,
     order_id: input.orderId,
     type: "debit_order",
@@ -403,6 +438,11 @@ export async function debitWallet(input: {
     balance_after_paise: newBalance,
     description: `Applied on order ${input.orderNumber}`,
   });
+  if (transactionError) {
+    await db.from("wallets").update({ balance_paise: currentBalance, updated_at: new Date().toISOString() }).eq("id", wallet.id).eq("balance_paise", newBalance);
+    if (transactionError.code === "23505") return true;
+    throw new Error(`Could not record wallet debit: ${transactionError.message}`);
+  }
 
   return true;
 }
@@ -507,5 +547,3 @@ export async function creditWalletTopup(input: {
 
   return { balancePaise: newBalance, walletId: wallet.id };
 }
-
-

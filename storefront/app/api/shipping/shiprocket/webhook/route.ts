@@ -7,6 +7,12 @@ function text(value: unknown) {
   return typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
 }
 
+function record(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
+}
+
+type ShippingOrder = { id: string; shiprocket_order_id?: string | null };
+
 function normalizeStatus(value: string) {
   const status = value.toLowerCase();
   if (status.includes("delivered")) return "delivered";
@@ -37,10 +43,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const payload = (await request.json().catch(() => ({}))) as Record<string, any>;
-    const dataObj = (typeof payload.data === "object" && payload.data !== null ? payload.data : null)
-      ?? (typeof payload.shipment === "object" && payload.shipment !== null ? payload.shipment : null)
-      ?? payload;
+    const payload = record(await request.json().catch(() => ({})));
+    const dataObj = Object.keys(record(payload.data)).length
+      ? record(payload.data)
+      : Object.keys(record(payload.shipment)).length ? record(payload.shipment) : payload;
 
     const awb = text(dataObj.awb ?? dataObj.awb_code ?? dataObj.AWB ?? dataObj.tracking_number ?? payload.awb ?? payload.awb_code);
     const shiprocketOrderId = text(dataObj.sr_order_id ?? dataObj.shiprocket_order_id ?? payload.sr_order_id ?? payload.shiprocket_order_id);
@@ -52,7 +58,7 @@ export async function POST(request: Request) {
     const accurateEdd = formatAccurateEdd(edd);
 
     const db = supabaseAdmin();
-    let order: any = null;
+    let order: ShippingOrder | null = null;
     if (awb) {
       const { data } = await db.from("orders").select("*").eq("tracking_awb", awb).maybeSingle();
       order = data;

@@ -85,7 +85,9 @@ export function formatAccurateEdd(rawDate: unknown): string | null {
   return `Expected by ${str}`;
 }
 
-export function getFallbackDeliveryEstimate(destinationState?: string, baseDate = new Date()): { minDays: number; maxDays: number; windowText: string } {
+export function getFallbackDeliveryEstimate(_destinationState?: string, _baseDate = new Date()): { minDays: number; maxDays: number; windowText: string } {
+  void _destinationState;
+  void _baseDate;
   const minDays = 5;
   const maxDays = 7;
 
@@ -96,7 +98,8 @@ export function getFallbackDeliveryEstimate(destinationState?: string, baseDate 
   };
 }
 
-export function selectPrepaidShippingQuote(result: unknown, fallbackWeightKg: number, destinationState?: string): ShippingQuote | null {
+export function selectPrepaidShippingQuote(result: unknown, fallbackWeightKg: number, _destinationState?: string): ShippingQuote | null {
+  void _destinationState;
   if (!result || typeof result !== "object") return null;
   const data = (result as Record<string, unknown>).data;
   if (!data || typeof data !== "object") return null;

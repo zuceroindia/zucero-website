@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { findCatalogProductAndVariant, products } from "@/lib/catalog";
+import { findCatalogProductAndVariant } from "@/lib/catalog";
 
 export type CartLine = {
   variantId: string;

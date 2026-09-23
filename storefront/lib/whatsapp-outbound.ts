@@ -1,7 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { WHATSAPP_NUMBER, whatsappLink } from "@/lib/whatsapp";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.thegoodsugar.in";
+import { whatsappLink } from "@/lib/whatsapp";
 
 export type OutboundWhatsAppResult = {
   success: boolean;
@@ -9,6 +7,9 @@ export type OutboundWhatsAppResult = {
   reason?: string;
   error?: string;
 };
+type WhatsAppAddress = { phone?: string; fullName?: string; estimated_delivery_window?: string };
+type WhatsAppItem = { product_name: string; variant_label: string; quantity: number };
+type MetaWhatsAppResponse = { messages?: Array<{ id?: string }>; error?: unknown };
 
 /**
  * Normalizes phone number to international E.164 without '+' for Meta WhatsApp API.
@@ -56,7 +57,7 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
   }
 
   const { data: items } = await db.from("order_items").select("*").eq("order_id", orderId);
-  const address = (order.shipping_address || {}) as Record<string, any>;
+  const address = (order.shipping_address || {}) as WhatsAppAddress;
   const rawPhone = order.customer_phone || address.phone;
   if (!rawPhone) {
     console.warn(`[WhatsApp Outbound] No phone number available for order ${order.order_number}`);
@@ -69,9 +70,8 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
   const totalRupeesFormatted = (order.total_rupees !== null && order.total_rupees !== undefined)
     ? Number(order.total_rupees).toFixed(2)
     : (order.total_paise / 100).toFixed(2);
-  const totalRupees = Math.round(order.total_paise / 100);
   const itemsSummary = (items || [])
-    .map((item: any) => `${item.product_name} (${item.variant_label}) × ${item.quantity}`)
+    .map((item: WhatsAppItem) => `${item.product_name} (${item.variant_label}) × ${item.quantity}`)
     .join(", ");
 
   const apiToken = process.env.WHATSAPP_API_TOKEN?.trim();
@@ -104,7 +104,7 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
     // Attempt sending via Meta WhatsApp Cloud API template
     const endpoint = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
 
-    let components: any[] = [];
+    let components: Array<Record<string, unknown>> = [];
     if (templateName === "zucero_order_confirmation_v2" || templateName === "zucero_order_confirmation") {
       components = [
         {
@@ -146,7 +146,7 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
       ];
     }
 
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       messaging_product: "whatsapp",
       recipient_type: "individual",
       to: recipient,
@@ -168,7 +168,7 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
       cache: "no-store",
     });
 
-    const result = await response.json();
+    const result = await response.json() as MetaWhatsAppResponse;
 
     if (!response.ok) {
       console.error(`[WhatsApp Outbound] Meta API error for order ${order.order_number}:`, result);

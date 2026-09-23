@@ -1,44 +1,20 @@
 import { NextResponse } from "next/server";
 import { getWalletInfo } from "@/lib/referral";
+import { authenticatedEmail } from "@/lib/server-auth";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const url = new URL(request.url);
-    const email = url.searchParams.get("email")?.trim().toLowerCase();
-
-    if (!email || !email.includes("@")) {
-      const empty = {
-        balancePaise: 0,
-        balanceRupees: 0,
-        earnedReferralPaise: 0,
-        earnedReferralRupees: 0,
-        manualTopupPaise: 0,
-        manualTopupRupees: 0,
-        spentOrdersPaise: 0,
-        spentOrdersRupees: 0,
-        transactions: [],
-      };
-      return NextResponse.json({ ...empty, wallet: empty });
-    }
+    const email = await authenticatedEmail();
+    if (!email) return NextResponse.json({ error: "Please sign in to view wallet credits." }, { status: 401 });
 
     const info = await getWalletInfo(email);
     return NextResponse.json({
       ...info,
       wallet: info,
+      email,
     });
   } catch (error) {
     console.error("Wallet balance query failed:", error);
-    const empty = {
-      balancePaise: 0,
-      balanceRupees: 0,
-      earnedReferralPaise: 0,
-      earnedReferralRupees: 0,
-      manualTopupPaise: 0,
-      manualTopupRupees: 0,
-      spentOrdersPaise: 0,
-      spentOrdersRupees: 0,
-      transactions: [],
-    };
-    return NextResponse.json({ ...empty, wallet: empty });
+    return NextResponse.json({ error: "Could not load wallet credits." }, { status: 500 });
   }
 }

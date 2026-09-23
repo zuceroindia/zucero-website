@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { findCatalogProductAndVariant, products } from "@/lib/catalog";
+import { findCatalogProductAndVariant } from "@/lib/catalog";
 import { getPrepaidShippingQuote } from "@/lib/shiprocket";
 
 const lineSchema = z.object({

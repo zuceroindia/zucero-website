@@ -5,7 +5,7 @@ import { ProductDetailView } from "@/components/product-detail-view";
 import { notFound } from "next/navigation";
 import { StoreHeader } from "@/components/store-header";
 import { SiteFooter } from "@/components/site-footer";
-import { products, formatPrice } from "@/lib/catalog";
+import { products } from "@/lib/catalog";
 import { absoluteUrl, safeJsonLd } from "@/lib/seo";
 
 export function generateStaticParams() { return products.map(({ slug }) => ({ slug })); }

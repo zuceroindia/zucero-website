@@ -29,6 +29,13 @@ function catalogVariantBySku(sku: string) {
   return null;
 }
 
+type FulfilmentItem = {
+  sku: string;
+  product_name: string;
+  quantity: number;
+  unit_price_paise: number;
+};
+
 export async function fulfilPaidOrder(orderId: string) {
   const db = supabaseAdmin();
 
@@ -77,7 +84,8 @@ export async function fulfilPaidOrder(orderId: string) {
   const pickupLocation = process.env.SHIPROCKET_PICKUP_LOCATION;
   if (!pickupLocation) throw new Error("Shiprocket pickup location is not configured");
 
-  const packageWeightGrams = items.reduce((total: number, item: any) => {
+  const fulfilmentItems = items as FulfilmentItem[];
+  const packageWeightGrams = fulfilmentItems.reduce((total: number, item) => {
     const match = catalogVariantBySku(item.sku);
     return total + (match?.variant.packedWeightGrams ?? match?.variant.weightGrams ?? 0) * item.quantity;
   }, 0);
@@ -97,7 +105,7 @@ export async function fulfilPaidOrder(orderId: string) {
     billing_email: claimed.customer_email,
     billing_phone: phone10(claimed.customer_phone),
     shipping_is_billing: true,
-    order_items: items.map((item: any) => {
+    order_items: fulfilmentItems.map((item) => {
       const match = catalogVariantBySku(item.sku);
       return {
         name: item.product_name,

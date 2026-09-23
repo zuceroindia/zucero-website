@@ -51,22 +51,22 @@ type ShippingQuote = {
   deliveryWindowText?: string;
 };
 
-declare global {
-  interface Window {
-    Razorpay?: new (options: RazorpayOptions) => { open: () => void };
-  }
+type RazorpayConstructor = new (options: RazorpayOptions) => { open: () => void };
+
+function getRazorpayConstructor() {
+  return Reflect.get(window, "Razorpay") as RazorpayConstructor | undefined;
 }
 
 function loadRazorpay() {
   return new Promise<boolean>((resolve) => {
-    if (window.Razorpay) return resolve(true);
+    if (getRazorpayConstructor()) return resolve(true);
     const existing = document.querySelector<HTMLScriptElement>('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
     if (existing) {
-      if (window.Razorpay) return resolve(true);
-      const timeout = window.setTimeout(() => resolve(Boolean(window.Razorpay)), 5000);
+      if (getRazorpayConstructor()) return resolve(true);
+      const timeout = window.setTimeout(() => resolve(Boolean(getRazorpayConstructor())), 5000);
       existing.addEventListener("load", () => {
         window.clearTimeout(timeout);
-        resolve(Boolean(window.Razorpay));
+        resolve(Boolean(getRazorpayConstructor()));
       }, { once: true });
       existing.addEventListener("error", () => {
         window.clearTimeout(timeout);
@@ -77,7 +77,7 @@ function loadRazorpay() {
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
-    script.onload = () => resolve(Boolean(window.Razorpay));
+    script.onload = () => resolve(Boolean(getRazorpayConstructor()));
     script.onerror = () => resolve(false);
     document.body.appendChild(script);
   });
@@ -160,14 +160,19 @@ export default function CheckoutPage() {
   }, []);
 
   // Fetch wallet balance when email is entered
-  const fetchWalletBalance = useCallback(async (email: string) => {
-    if (!email || !email.includes("@")) return;
+  const fetchWalletBalance = useCallback(async (checkoutEmail: string) => {
+    if (!checkoutEmail || !checkoutEmail.includes("@")) return;
     setWalletLoading(true);
     try {
-      const res = await fetch(`/api/wallet/balance?email=${encodeURIComponent(email)}`);
+      const res = await fetch("/api/wallet/balance", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
-        setWalletBalancePaise(data.balancePaise ?? 0);
+        const matchesSession = data.email?.toLowerCase() === checkoutEmail.trim().toLowerCase();
+        setWalletBalancePaise(matchesSession ? data.balancePaise ?? 0 : 0);
+        if (!matchesSession) setUseWallet(false);
+      } else if (res.status === 401) {
+        setWalletBalancePaise(0);
+        setUseWallet(false);
       }
     } catch {
       // Silently fail — wallet is optional
@@ -177,26 +182,21 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
-    if (!details.email || !details.email.includes("@")) {
-      setWalletBalancePaise(0);
-      setUseWallet(false);
-      return;
-    }
+    if (!details.email || !details.email.includes("@")) return;
     const timer = window.setTimeout(() => fetchWalletBalance(details.email), 600);
     return () => window.clearTimeout(timer);
   }, [details.email, fetchWalletBalance]);
 
   // Shipping quote
   useEffect(() => {
-    setShippingQuote(null);
-    setShippingError("");
-    if (details.postalCode.length !== 6 || !lines.length) {
-      setShippingLoading(false);
-      return;
-    }
-
     const controller = new AbortController();
     const timeout = window.setTimeout(async () => {
+      setShippingQuote(null);
+      setShippingError("");
+      if (details.postalCode.length !== 6 || !lines.length) {
+        setShippingLoading(false);
+        return;
+      }
       setShippingLoading(true);
       try {
         const response = await fetch("/api/shipping/quote", {
@@ -218,7 +218,7 @@ export default function CheckoutPage() {
           courierName: result.courierName,
           deliveryWindowText: result.deliveryWindowText,
         });
-      } catch (quoteError) {
+      } catch {
         if (controller.signal.aborted) return;
         const normState = (details.state ?? "").trim().toLowerCase();
         let fallbackShippingPaise = 11000;
@@ -238,7 +238,7 @@ export default function CheckoutPage() {
       } finally {
         if (!controller.signal.aborted) setShippingLoading(false);
       }
-    }, 350);
+    }, details.postalCode.length === 6 && lines.length ? 350 : 0);
 
     return () => {
       window.clearTimeout(timeout);
@@ -248,6 +248,14 @@ export default function CheckoutPage() {
 
   function update(field: keyof CustomerDetails, value: string) {
     setError("");
+    if (field === "email" && (!value || !value.includes("@"))) {
+      setWalletBalancePaise(0);
+      setUseWallet(false);
+    }
+    if (field === "postalCode" || field === "state") {
+      setShippingQuote(null);
+      setShippingError("");
+    }
     setDetails((current) => ({ ...current, [field]: value }));
   }
 
@@ -323,7 +331,7 @@ export default function CheckoutPage() {
           const refRes = await fetch("/api/referrals/generate", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ email: details.email, name: details.fullName, phone: details.phone }),
+            body: JSON.stringify({ orderId: order.localOrderId, token: order.invoiceToken }),
           });
           const refData = await refRes.json();
           referralCode = refData.code;
@@ -343,9 +351,10 @@ export default function CheckoutPage() {
       }
 
       const scriptReady = await loadRazorpay();
-      if (!scriptReady || !window.Razorpay) throw new Error("Secure payment window could not load. Please try again.");
+      const RazorpayCheckout = getRazorpayConstructor();
+      if (!scriptReady || !RazorpayCheckout) throw new Error("Secure payment window could not load. Please try again.");
 
-      const checkout = new window.Razorpay({
+      const checkout = new RazorpayCheckout({
         key: order.keyId,
         amount: order.amountPaise,
         currency: "INR",
@@ -374,7 +383,7 @@ export default function CheckoutPage() {
               const refRes = await fetch("/api/referrals/generate", {
                 method: "POST",
                 headers: { "content-type": "application/json" },
-                body: JSON.stringify({ email: details.email, name: details.fullName, phone: details.phone }),
+                body: JSON.stringify({ orderId: order.localOrderId, token: order.invoiceToken }),
               });
               const refData = await refRes.json();
               referralCode = refData.code;
@@ -602,8 +611,6 @@ export default function CheckoutPage() {
         : quote.payablePaise <= 0
           ? "Place order (100% wallet credits)"
           : `Pay ${payableLabel} securely`;
-
-  const appliedPromo = appliedReferral;
 
   return <main className="store-page checkout-page"><StoreHeader /><section className="checkout-layout">
     <form className="checkout-form" onSubmit={submit}>
