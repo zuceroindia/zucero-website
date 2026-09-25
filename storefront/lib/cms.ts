@@ -50,6 +50,25 @@ export type CMSSectionLayout = {
   image: string;
   imageAlt: string;
   imagePosition: "left" | "right" | "top" | "bottom" | "none";
+  contentMaxWidthPx?: number;
+  minHeightPx?: number;
+  paddingTopPx?: number;
+  paddingBottomPx?: number;
+  paddingInlinePx?: number;
+  imageHeightPx?: number;
+};
+
+export type CMSLayoutSizing = {
+  sectionPaddingYPx: number;
+  sectionPaddingXPx: number;
+  contentMaxWidthPx: number;
+  cardPaddingPx: number;
+  cardRadiusPx: number;
+  cardGapPx: number;
+  cardMinWidthPx: number;
+  cardImageHeightPx: number;
+  carouselCardWidthPx: number;
+  carouselCardHeightPx: number;
 };
 
 export type CMSUploadedFont = {
@@ -231,6 +250,7 @@ export type CMSConfig = {
   branding: CMSBranding;
   productDetail: CMSProductDetail;
   sectionLayouts: Record<string, CMSSectionLayout>;
+  layoutSizing: CMSLayoutSizing;
   policies: CMSPolicies;
   guides: CMSGuides;
   typography: CMSTypography;
@@ -441,6 +461,18 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
     recommendationHeading: "You may also like",
     recommendationPricePrefix: "From",
     recommendationCtaText: "View product",
+  },
+  layoutSizing: {
+    sectionPaddingYPx: 0,
+    sectionPaddingXPx: 0,
+    contentMaxWidthPx: 0,
+    cardPaddingPx: 0,
+    cardRadiusPx: 0,
+    cardGapPx: 0,
+    cardMinWidthPx: 0,
+    cardImageHeightPx: 0,
+    carouselCardWidthPx: 0,
+    carouselCardHeightPx: 0,
   },
   sectionLayouts: {
     "homepage.hero": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
@@ -741,6 +773,10 @@ export function mergeWithDefaultCMS(partial?: Partial<CMSConfig> | null): CMSCon
     sectionLayouts: {
       ...DEFAULT_CMS_CONFIG.sectionLayouts,
       ...(partial.sectionLayouts ?? {}),
+    },
+    layoutSizing: {
+      ...DEFAULT_CMS_CONFIG.layoutSizing,
+      ...(partial.layoutSizing ?? {}),
     },
     policies: {
       shipping: {
