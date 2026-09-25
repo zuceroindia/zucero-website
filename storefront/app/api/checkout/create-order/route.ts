@@ -8,7 +8,7 @@ import { createRazorpayOrder, razorpayPublicKeyId } from "@/lib/razorpay";
 import { getPrepaidShippingQuote } from "@/lib/shiprocket";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { calculateCheckoutTotal } from "@/lib/tax";
-import { creditReferralReward, debitWallet, getOrCreateWallet, refundWalletCredits, validateReferralCode } from "@/lib/referral";
+import { creditReferralReward, debitWallet, getOrCreateReferralCode, getOrCreateWallet, refundWalletCredits, validateReferralCode } from "@/lib/referral";
 import { validateDiscountCoupon } from "@/lib/coupons";
 import { fulfilPaidOrder } from "@/lib/order-fulfilment";
 import { notifyPaidOrder } from "@/lib/notifications";
@@ -210,6 +210,18 @@ export async function POST(request: Request) {
         creditReferralReward(localOrderId).catch((err) => console.error("Referral credit error (wallet-only):", err)),
       ]);
 
+      let referralCode: string | null = null;
+      try {
+        const referral = await getOrCreateReferralCode({
+          email: input.customer.email,
+          name: input.customer.fullName,
+          phone: input.customer.phone,
+        });
+        referralCode = referral?.code ?? null;
+      } catch (referralError) {
+        console.error("Referral code creation failed after wallet-paid order:", referralError);
+      }
+
       return NextResponse.json({
         localOrderId,
         orderNumber: number,
@@ -218,6 +230,7 @@ export async function POST(request: Request) {
         walletOnly: true,
         amountPaise: 0,
         amountRupees: 0,
+        referralCode,
         deliveryWindow: shippingQuote.deliveryWindowText,
         breakdown,
       });
