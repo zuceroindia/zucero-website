@@ -4,31 +4,26 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-const stories = [
-  { image: "artisan_hands.webp", title: "Good is traditional.", copy: "Made with respect for craft.", href: "/#process", alt: "Traditional sugar-making by hand" },
-  { image: "carousel-khand-matka-v2.png", title: "Good is pure.", copy: "Khand, closer to its source.", href: "/products/desi-khand", alt: "Fine brown Desi Khand spilling from a black clay pot" },
-  { image: "carousel-dew-leaf-v2.png", title: "Good begins in nature.", copy: "Begin with sugarcane.", href: "/#nature", alt: "A dew drop resting on a green sugarcane leaf at sunrise" },
-  { image: "carousel-mishri-v2.png", title: "Good is transparent.", copy: "Crystal by crystal.", href: "/products/dhage-wali-mishri", alt: "Natural amber-brown Mishri crystals in warm sunlight" },
-  { image: "tea_ritual.webp", title: "Good is a choice.", copy: "Choose better. Choose Zucero.", href: "/products", alt: "An everyday tea ritual with natural sweetness" },
-  { image: "carousel-gud-tradition.png", title: "Gud is tradition.", copy: "Sweetness rooted in Indian homes.", href: "/#process", alt: "Traditional Gud pieces arranged on a brass plate" },
-] as const;
+import { useCMS } from "@/components/cms-provider";
 
 export function StoryCarousel() {
+  const { config } = useCMS();
+  const stories = config.homepage.storyCarousel;
   const viewportRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
   const moveTo = useCallback((index: number) => {
+    if (!stories.length) return;
     const nextIndex = (index + stories.length) % stories.length;
     const viewport = viewportRef.current;
     const card = viewport?.children[nextIndex] as HTMLElement | undefined;
     if (viewport && card) viewport.scrollTo({ left: card.offsetLeft, behavior: "smooth" });
     setActiveIndex(nextIndex);
-  }, []);
+  }, [stories.length]);
 
   useEffect(() => {
-    if (paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (paused || !stories.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = window.setInterval(() => setActiveIndex((current) => {
       const next = (current + 1) % stories.length;
       const viewport = viewportRef.current;
@@ -37,14 +32,14 @@ export function StoryCarousel() {
       return next;
     }), 7500);
     return () => window.clearInterval(timer);
-  }, [paused]);
+  }, [paused, stories.length]);
 
   return (
     <section id="carousel" className="story-carousel" aria-label="Zucero stories" onFocus={() => setPaused(true)} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false); }}>
       <div className="carousel-viewport" ref={viewportRef}>
         {stories.map((story) => (
-          <Link className="marquee-image" href={story.href} key={story.title}>
-            <Image src={`/images/${story.image}`} alt={story.alt} width={768} height={512} sizes="(max-width: 640px) 82vw, 360px" />
+          <Link className="marquee-image" href={story.href || "#"} key={story.id}>
+            <Image src={story.image} alt={story.alt || story.title} width={768} height={512} sizes="(max-width: 640px) 82vw, 360px" />
             <span><strong>{story.title}</strong><small>{story.copy}</small></span>
           </Link>
         ))}
