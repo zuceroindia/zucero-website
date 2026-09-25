@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { isAuthorizedAdminOrInternal } from "@/lib/api-auth";
+import { isAuthorizedCmsRequest } from "@/lib/squargraph-control-cms-auth";
 import {
   getLiveCMSConfig,
   getCMSCommits,
@@ -12,7 +12,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  if (!(await isAuthorizedAdminOrInternal(request))) {
+  if (!(await isAuthorizedCmsRequest(request, "read"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!(await isAuthorizedAdminOrInternal(request))) {
+  if (!(await isAuthorizedCmsRequest(request, "publish"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  if (!(await isAuthorizedAdminOrInternal(request))) {
+  if (!(await isAuthorizedCmsRequest(request, "publish"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
