@@ -1609,6 +1609,33 @@ export default function OrdersPage() {
                     <p>Keep your contact details up to date.</p>
                   </div>
                 </div>
+                <div
+                  style={{
+                    marginBottom: "18px",
+                    padding: "16px 18px",
+                    borderRadius: "8px",
+                    border: referralCode ? "1px solid #a9d4b4" : "1px dashed var(--line)",
+                    background: referralCode ? "#f2f8f3" : "#fbfaf6",
+                  }}
+                >
+                  <span style={{ display: "block", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)" }}>
+                    Referral code
+                  </span>
+                  {referralCode ? (
+                    <>
+                      <strong style={{ display: "block", marginTop: "5px", fontFamily: "monospace", fontSize: "1.35rem", letterSpacing: "1.5px", color: "#1c5132" }}>
+                        {referralCode}
+                      </strong>
+                      <p style={{ margin: "6px 0 0", fontSize: "0.84rem", color: "var(--muted)" }}>
+                        Unlocked after your successful prepaid order. Share it with friends and family for the Zucero referral benefit.
+                      </p>
+                    </>
+                  ) : (
+                    <p style={{ margin: "6px 0 0", fontSize: "0.84rem", color: "var(--muted)" }}>
+                      Your unique referral code will appear here automatically after your first successfully paid prepaid order.
+                    </p>
+                  )}
+                </div>
                 <form onSubmit={saveProfile}>
                   <div className={styles.formGrid}>
                     <label className={styles.wide}>
