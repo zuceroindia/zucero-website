@@ -992,10 +992,10 @@ export function AdminCMSEditor() {
                             showToast("error", "Keep at least one story slide.");
                             return;
                           }
+                          if (!confirm(`Delete story slide ${idx + 1}: ${story.title || "Untitled"}?`)) return;
                           const next = config.homepage.storyCarousel.filter((_, i) => i !== idx);
                           setConfig({ ...config, homepage: { ...config.homepage, storyCarousel: next } });
                         }}
-                        style={{ padding: "0.38rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "5px", cursor: "pointer" }}
                         title="Delete slide"
                         style={{ padding: "0.38rem 0.55rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "5px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", fontWeight: 700 }}
                       ><Trash2 size={14} /> Delete Slide</button>
@@ -2058,7 +2058,7 @@ export function AdminCMSEditor() {
                   onClick={removeCurrentProduct}
                   style={{ width: "100%", padding: "0.55rem 0.8rem", borderRadius: "6px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", fontWeight: 700, cursor: "pointer" }}
                 >
-                  Remove This Product
+                  Delete This Product
                 </button>
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
@@ -2365,10 +2365,13 @@ export function AdminCMSEditor() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeGalleryPhoto(pIdx)}
-                      style={{ padding: "0.4rem", borderRadius: "4px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", cursor: "pointer" }}
+                      onClick={() => {
+                        if (!confirm(`Delete gallery photo ${pIdx + 1}?`)) return;
+                        removeGalleryPhoto(pIdx);
+                      }}
+                      style={{ padding: "0.4rem 0.55rem", borderRadius: "4px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", fontWeight: 700 }}
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={14} /> Delete Photo
                     </button>
                   </div>
                 </div>
