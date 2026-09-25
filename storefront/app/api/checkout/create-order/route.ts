@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { findCatalogProductAndVariant } from "@/lib/catalog";
+import { getLiveCMSConfig } from "@/lib/cms";
 import { isIndianState } from "@/lib/india";
 import { createRazorpayOrder, razorpayPublicKeyId } from "@/lib/razorpay";
 import { getPrepaidShippingQuote } from "@/lib/shiprocket";
@@ -49,8 +50,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Please select a valid Indian state or union territory." }, { status: 400 });
     }
 
+    const cms = await getLiveCMSConfig();
     const resolved = input.lines.map((line) => {
-      const match = catalogLine(line.variantId);
+      const match = findCatalogProductAndVariant(line.variantId, cms.products);
       if (!match) throw new Error("A product in your bag is no longer available. Please update your bag.");
       return { ...line, variantId: match.variant.id, ...match };
     });

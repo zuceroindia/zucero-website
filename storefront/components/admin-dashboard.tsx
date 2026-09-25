@@ -16,10 +16,13 @@ import {
   X,
   Phone,
   Mail,
+  Globe,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { AdminCMSEditor } from "@/components/admin-cms-editor";
 import styles from "@/app/admin/admin.module.css";
 
-type Tab = "overview" | "orders" | "customers" | "export";
+type Tab = "overview" | "orders" | "customers" | "export" | "cms";
 
 type Metrics = {
   totalRevenueRupees: string;
@@ -100,7 +103,9 @@ type Customer = {
 };
 
 export function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") as Tab | null;
+  const [activeTab, setActiveTab] = useState<Tab>(tabParam === "cms" ? "cms" : "overview");
   const [isPending, startTransition] = useTransition();
 
   // Metrics
@@ -369,7 +374,18 @@ export function AdminDashboard() {
           <Download size={16} />
           Supabase Data Export
         </button>
+        <button
+          type="button"
+          className={`${styles.tabBtn} ${activeTab === "cms" ? styles.activeTab : ""}`}
+          onClick={() => setActiveTab("cms")}
+        >
+          <Globe size={16} />
+          Update Live Website
+        </button>
       </nav>
+
+      {/* ─── TAB: CMS (UPDATE LIVE WEBSITE) ─── */}
+      {activeTab === "cms" && <AdminCMSEditor />}
 
       {/* ─── TAB 1: OVERVIEW ─── */}
       {activeTab === "overview" && (

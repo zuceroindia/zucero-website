@@ -89,9 +89,15 @@ const websiteJsonLd = {
   publisher: { "@id": `${SITE_URL}/#organization` },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+import { CMSProvider } from "@/components/cms-provider";
+import { getLiveCMSConfig } from "@/lib/cms";
+
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const initialCMS = await getLiveCMSConfig();
   return <html lang="en-IN"><body>
-    <CartProvider>{children}<BackToTop /><PublicWhatsAppWidget /></CartProvider>
+    <CMSProvider initialConfig={initialCMS}>
+      <CartProvider>{children}<BackToTop /><PublicWhatsAppWidget /></CartProvider>
+    </CMSProvider>
     <GoogleAnalytics />
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationJsonLd) }} />
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(websiteJsonLd) }} />

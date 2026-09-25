@@ -169,9 +169,10 @@ export function resolveSku(sku: string): string {
   return LEGACY_SKU_ALIASES[sku] || sku;
 }
 
-export function findCatalogProductAndVariant(variantId: string) {
+export function findCatalogProductAndVariant(variantId: string, customProducts?: Product[]) {
   const resolvedId = resolveVariantId(variantId);
-  for (const product of products) {
+  const list = customProducts && customProducts.length > 0 ? customProducts : products;
+  for (const product of list) {
     const variant = product.variants.find((item) => item.id === resolvedId);
     if (variant && variant.pricePaise !== null) {
       return { product, variant };

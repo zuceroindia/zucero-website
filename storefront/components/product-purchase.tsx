@@ -3,12 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Ban, CandyOff, Check, CookingPot, Gem, Leaf, Minus, Plus, ShoppingBag, Sparkles, Sun, Truck } from "lucide-react";
-import type { Product } from "@/lib/catalog";
+import type { Product, ProductVariant } from "@/lib/catalog";
 import { formatPrice } from "@/lib/catalog";
 import { useCart } from "@/components/cart-provider";
+import { useCMS } from "@/components/cms-provider";
 
 export function ProductPurchase({
-  product,
+  product: initialProduct,
   selectedVariantId,
   onSelectVariant,
 }: {
@@ -17,6 +18,8 @@ export function ProductPurchase({
   onSelectVariant?: (id: string) => void;
 }) {
   const router = useRouter();
+  const { config: cmsConfig, getProduct } = useCMS();
+  const product = getProduct(initialProduct.slug) ?? initialProduct;
   const [internalVariantId, setInternalVariantId] = useState(product.variants[0].id);
   const variantId = selectedVariantId ?? internalVariantId;
   const setVariant = (id: string) => {
@@ -29,10 +32,12 @@ export function ProductPurchase({
   const [postalCode, setPostalCode] = useState("");
   const [shippingMessage, setShippingMessage] = useState("");
   const [checking, setChecking] = useState(false);
-  const variant = product.variants.find((item) => item.id === variantId)!;
+  const variant = product.variants.find((item: ProductVariant) => item.id === variantId) ?? product.variants[0];
   const readyForSale = variant.pricePaise !== null;
   const isKhand = product.slug === "desi-khand";
   const offerPrice = variant.pricePaise === null ? "Price to be confirmed" : formatPrice(variant.pricePaise);
+  const introPriceText = cmsConfig.promotions.introductoryPriceText;
+  const referralOfferText = cmsConfig.promotions.referralOfferText;
   const benefits = isKhand
     ? [
         { title: "Sun-dried", Icon: Sun },
@@ -109,17 +114,17 @@ export function ProductPurchase({
     <aside className="featured-prebook-offer">
       <span>Experience the goodness of the first batch · {variant.label}</span>
       <strong>{offerPrice}</strong>
-      <p><Sparkles size={18} aria-hidden="true" /> Introductory price for first 100 orders only</p>
+      <p><Sparkles size={18} aria-hidden="true" /> {introPriceText}</p>
     </aside>
-    <p className="coupon-offer">Get an additional discount of 10% on referral.</p>
+    <p className="coupon-offer">{referralOfferText}</p>
     <div className="pdp-khand-benefits">{benefits.map(({ title, Icon }) => <article key={title}><Icon aria-hidden="true" /><h3>{title}</h3></article>)}</div>
-    <p className="pdp-ingredients"><strong>Ingredients:</strong> Sugar cane Juice, Desi Cow Milk and Desi Cow Ghee</p>
+    <p className="pdp-ingredients"><strong>Ingredients:</strong> {product.ingredients}</p>
     <div className="purchase-block">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.4rem" }}>
         <span>Selected size: {variant.label}</span>
-        <span style={{ fontSize: "0.74rem", color: "#8a6616", fontWeight: 600, letterSpacing: "0.02em" }}>Introductory price for first 100 orders only</span>
+        <span style={{ fontSize: "0.74rem", color: "#8a6616", fontWeight: 600, letterSpacing: "0.02em" }}>{introPriceText}</span>
       </div>
-      <div className="variant-row pdp-sizes">{product.variants.map((item) => <button key={item.id} type="button" aria-pressed={variantId === item.id} className={variantId === item.id ? "active" : ""} onClick={() => { setVariant(item.id); setShippingMessage(""); }}><strong>{item.label}</strong><small>{formatPrice(item.pricePaise)}</small></button>)}</div>
+      <div className="variant-row pdp-sizes">{product.variants.map((item: ProductVariant) => <button key={item.id} type="button" aria-pressed={variantId === item.id} className={variantId === item.id ? "active" : ""} onClick={() => { setVariant(item.id); setShippingMessage(""); }}><strong>{item.label}</strong><small>{formatPrice(item.pricePaise)}</small></button>)}</div>
     </div>
     <div className="purchase-actions">
       <div className="quantity-picker" aria-label="Quantity"><button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Minus size={16} /></button><span>{quantity}</span><button type="button" onClick={() => setQuantity(Math.min(10, quantity + 1))} aria-label="Increase quantity"><Plus size={16} /></button></div>
@@ -128,6 +133,6 @@ export function ProductPurchase({
     <button type="button" className="button button-gold pdp-buy-now" disabled={!readyForSale} onClick={buyNow}>Buy now</button>
     {!readyForSale && <p className="pdp-tax-note">Ordering opens once the final launch prices are confirmed.</p>}
     <form className="pdp-delivery" onSubmit={checkDelivery}><label htmlFor="delivery-pin"><Truck size={18} /> Check delivery availability</label><div><input id="delivery-pin" value={postalCode} onChange={e => { setPostalCode(e.target.value.replace(/\D/g, "").slice(0, 6)); setShippingMessage(""); }} inputMode="numeric" autoComplete="postal-code" pattern="[0-9]{6}" minLength={6} maxLength={6} placeholder="Enter 6-digit PIN code" required /><button type="submit" disabled={checking}>{checking ? "Checking…" : "Check"}</button></div><p role="status">{shippingMessage}</p></form>
-    <div className="pdp-sticky-buy"><span>{product.name}<small>{variant.label} · {formatPrice(variant.pricePaise)} · <span style={{ color: "#d8b456" }}>Introductory price for first 100 orders only</span></small></span><button type="button" className="button button-dark" disabled={!readyForSale} onClick={buyNow}>Buy now</button></div>
+    <div className="pdp-sticky-buy"><span>{product.name}<small>{variant.label} · {formatPrice(variant.pricePaise)} · <span style={{ color: "#d8b456" }}>{introPriceText}</span></small></span><button type="button" className="button button-dark" disabled={!readyForSale} onClick={buyNow}>Buy now</button></div>
   </div>;
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, useCallback, type FormEvent } from "react";
 import { StoreHeader } from "@/components/store-header";
 import { useCart } from "@/components/cart-provider";
+import { useCMS } from "@/components/cms-provider";
 import { formatPrice } from "@/lib/catalog";
 import { SiteFooter } from "@/components/site-footer";
 import type { CustomerDetails } from "@/lib/customer-details";
@@ -85,6 +86,7 @@ function loadRazorpay() {
 
 export default function CheckoutPage() {
   const { lines, subtotalPaise, clear } = useCart();
+  const { config: cmsConfig } = useCMS();
   const [details, setDetails] = useState<CustomerDetails>(emptyCustomerDetails);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -706,7 +708,7 @@ export default function CheckoutPage() {
       <div className="checkout-line">
         <div>
           <span>Product subtotal</span>
-          <div style={{ fontSize: "0.72rem", color: "#8a6616", fontWeight: 600 }}>Introductory price for first 100 orders only</div>
+          <div style={{ fontSize: "0.72rem", color: "#8a6616", fontWeight: 600 }}>{cmsConfig.promotions.introductoryPriceText}</div>
         </div>
         <strong>{formatPrice(subtotalPaise)}</strong>
       </div>
