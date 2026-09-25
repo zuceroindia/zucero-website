@@ -13,6 +13,7 @@ export function DynamicContactContent() {
       eyebrow={contact.eyebrow || "Human support"}
       title={contact.title || "Talk to Zucero"}
       intro={contact.intro || "Questions about products, orders, wholesale, or the launch are welcome."}
+      layout={config.sectionLayouts?.["contact.page"]}
     >
       <div className="contact-grid">
         <aside className="contact-details">
