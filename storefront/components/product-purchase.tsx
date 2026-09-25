@@ -35,6 +35,7 @@ export function ProductPurchase({
   const variant = product.variants.find((item: ProductVariant) => item.id === variantId) ?? product.variants[0];
   const readyForSale = (variant.pricePaise ?? 0) > 0;
   const isKhand = product.slug === "desi-khand";
+  const isMishri = product.slug === "dhage-wali-mishri";
   const offerPrice = (variant.pricePaise ?? 0) <= 0 ? "Price to be confirmed" : formatPrice(variant.pricePaise);
   const introPriceText = cmsConfig.promotions.introductoryPriceText;
   const referralOfferText = cmsConfig.promotions.referralOfferText;
@@ -46,16 +47,23 @@ export function ProductPurchase({
         { title: "Traditional iron vessel craft", Icon: CookingPot },
         { title: "Natural character, preserved", Icon: Leaf },
       ]
-    : [
-        { title: "Khand-based", Icon: Leaf },
-        { title: "Thread-crafted", Icon: Sparkles },
-        { title: "Crystal by crystal", Icon: Gem },
-        { title: "No added flavours", Icon: Ban },
-        { title: "No added sweeteners", Icon: CandyOff },
-      ];
+    : isMishri
+      ? [
+          { title: "Khand-based", Icon: Leaf },
+          { title: "Thread-crafted", Icon: Sparkles },
+          { title: "Crystal by crystal", Icon: Gem },
+          { title: "No added flavours", Icon: Ban },
+          { title: "No added sweeteners", Icon: CandyOff },
+        ]
+      : [
+          { title: "Clear ingredients", Icon: Leaf },
+          { title: "Pack details visible", Icon: Check },
+          { title: "Multiple sizes supported", Icon: Sparkles },
+        ];
 
   function cartLine() {
-    if (variant.pricePaise === null) return null;
+    const pricePaise = variant.pricePaise ?? 0;
+    if (pricePaise <= 0) return null;
     return {
       variantId: variant.id,
       productSlug: product.slug,
@@ -63,8 +71,8 @@ export function ProductPurchase({
       variantLabel: variant.label,
       sku: variant.sku,
       image: product.cartImage ?? product.image,
-      pricePaise: variant.pricePaise,
-      priceRupees: variant.priceRupees ?? variant.pricePaise / 100,
+      pricePaise,
+      priceRupees: variant.priceRupees ?? pricePaise / 100,
     };
   }
 

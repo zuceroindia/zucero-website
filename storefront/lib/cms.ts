@@ -581,8 +581,18 @@ export function mergeWithDefaultCMS(partial?: Partial<CMSConfig> | null): CMSCon
               variants: Array.isArray(p.variants)
                 ? p.variants.map((v: Partial<ProductVariant>, vIdx: number) => {
                     const defVar = defProd.variants?.find((dv: ProductVariant) => dv.id === v.id) ?? defProd.variants?.[vIdx] ?? (v as ProductVariant);
-                    const priceRupees = typeof v.priceRupees === "number" ? v.priceRupees : (v.pricePaise ?? 0) / 100;
-                    const pricePaise = typeof v.pricePaise === "number" ? v.pricePaise : Math.round(priceRupees * 100);
+                    const hasPriceRupees = typeof v.priceRupees === "number";
+                    const hasPricePaise = typeof v.pricePaise === "number";
+                    const priceRupees = hasPriceRupees
+                      ? v.priceRupees!
+                      : hasPricePaise
+                        ? v.pricePaise! / 100
+                        : null;
+                    const pricePaise = hasPricePaise
+                      ? v.pricePaise!
+                      : hasPriceRupees
+                        ? Math.round(v.priceRupees! * 100)
+                        : null;
                     return {
                       ...defVar,
                       ...v,
