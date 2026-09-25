@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAuthorizedAdminOrInternal } from "@/lib/api-auth";
+import { isAuthorizedCmsRequest } from "@/lib/squargraph-control-cms-auth";
 import {
   createDiscountCoupon,
   deleteDiscountCoupon,
@@ -10,7 +10,7 @@ import {
 export const dynamic = "force-dynamic";
 
 async function authorized(request: Request) {
-  return isAuthorizedAdminOrInternal(request);
+  return isAuthorizedCmsRequest(request, "publish");
 }
 
 export async function GET(request: Request) {
