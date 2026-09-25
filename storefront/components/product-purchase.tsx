@@ -62,7 +62,8 @@ export function ProductPurchase({
         ];
 
   function cartLine() {
-    if ((variant.pricePaise ?? 0) <= 0) return null;
+    const pricePaise = variant.pricePaise ?? 0;
+    if (pricePaise <= 0) return null;
     return {
       variantId: variant.id,
       productSlug: product.slug,
@@ -70,8 +71,8 @@ export function ProductPurchase({
       variantLabel: variant.label,
       sku: variant.sku,
       image: product.cartImage ?? product.image,
-      pricePaise: variant.pricePaise,
-      priceRupees: variant.priceRupees ?? variant.pricePaise / 100,
+      pricePaise,
+      priceRupees: variant.priceRupees ?? pricePaise / 100,
     };
   }
 
