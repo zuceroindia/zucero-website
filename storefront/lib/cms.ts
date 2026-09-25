@@ -301,9 +301,9 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
     collectionBannerSubtitle: "Introductory price for first 100 orders only · Deliveries begin",
   },
   typography: {
-    bodyFont: "Manrope",
+    bodyFont: "Outfit",
     headingFont: "Cormorant Garamond",
-    accentFont: "Manrope",
+    accentFont: "Outfit",
     bodyWeight: 400,
     headingWeight: 400,
     bodySizePx: 0,
