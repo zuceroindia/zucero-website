@@ -9,6 +9,7 @@ import { useCMS } from "@/components/cms-provider";
 export function StoryCarousel() {
   const { config } = useCMS();
   const stories = config.homepage.storyCarousel;
+  const textAlign = config.sectionLayouts?.["homepage.storyCarousel"]?.textAlign || "left";
   const viewportRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -40,7 +41,7 @@ export function StoryCarousel() {
         {stories.map((story) => (
           <Link className="marquee-image" href={story.href || "#"} key={story.id}>
             <Image src={story.image} alt={story.alt || story.title} width={768} height={512} sizes="(max-width: 640px) 82vw, 360px" />
-            <span><strong>{story.title}</strong><small>{story.copy}</small></span>
+            <span style={{ textAlign }}><strong>{story.title}</strong><small>{story.copy}</small></span>
           </Link>
         ))}
       </div>
