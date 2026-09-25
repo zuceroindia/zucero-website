@@ -53,6 +53,43 @@ export function CMSProvider({
     [config.products]
   );
 
+  const layoutSizingCss = React.useMemo(() => {
+    const l = config.layoutSizing ?? DEFAULT_CMS_CONFIG.layoutSizing;
+    const rules = [
+      l.contentMaxWidthPx > 0
+        ? `.section-shell,.content-shell,.heritage-philosophy,.heritage-founder,.heritage-rituals,.heritage-journal,.heritage-collection,.problem>.section-copy{max-width:${l.contentMaxWidthPx}px!important;margin-left:auto!important;margin-right:auto!important;}`
+        : "",
+      l.sectionPaddingYPx > 0
+        ? `main section:not(.hero):not(.story-carousel){padding-top:${l.sectionPaddingYPx}px!important;padding-bottom:${l.sectionPaddingYPx}px!important;}`
+        : "",
+      l.sectionPaddingXPx > 0
+        ? `main section:not(.hero):not(.story-carousel){padding-left:${l.sectionPaddingXPx}px!important;padding-right:${l.sectionPaddingXPx}px!important;}`
+        : "",
+      l.cardPaddingPx > 0
+        ? `.heritage-product-details,.why-highlight,.collection-launch-callout,.account-card,.checkout-summary,.order-card,.prelaunch-card,.pdp-difference article,.proof-grid article,.process-grid article,.heritage-ritual-grid article,.admin-card{padding:${l.cardPaddingPx}px!important;}`
+        : "",
+      l.cardRadiusPx > 0
+        ? `.heritage-product,.heritage-picture,.heritage-product-details,.why-highlight,.collection-launch-callout,.account-card,.checkout-summary,.order-card,.prelaunch-card,.pdp-difference article,.proof-grid article,.process-grid article,.heritage-ritual-grid article,.marquee-image{border-radius:${l.cardRadiusPx}px!important;overflow:hidden;}`
+        : "",
+      l.cardGapPx > 0
+        ? `.heritage-product-grid,.heritage-ritual-grid,.heritage-journal-grid,.proof-grid,.process-grid,.pdp-difference-grid,.account-grid{gap:${l.cardGapPx}px!important;}`
+        : "",
+      l.cardMinWidthPx > 0
+        ? `.heritage-product-grid,.heritage-ritual-grid,.heritage-journal-grid,.proof-grid,.process-grid,.pdp-difference-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,${l.cardMinWidthPx}px),1fr))!important;}`
+        : "",
+      l.cardImageHeightPx > 0
+        ? `.heritage-picture,.prelaunch-card img,.pdp-difference article img{height:${l.cardImageHeightPx}px!important;min-height:${l.cardImageHeightPx}px!important;aspect-ratio:auto!important;}`
+        : "",
+      l.carouselCardWidthPx > 0
+        ? `.carousel-viewport .marquee-image{width:${l.carouselCardWidthPx}px!important;flex-basis:${l.carouselCardWidthPx}px!important;}`
+        : "",
+      l.carouselCardHeightPx > 0
+        ? `.carousel-viewport .marquee-image{height:${l.carouselCardHeightPx}px!important;max-height:none!important;}`
+        : "",
+    ].filter(Boolean).join("\n");
+    return rules;
+  }, [config.layoutSizing]);
+
   const typographyCss = React.useMemo(() => {
     const t = config.typography ?? DEFAULT_CMS_CONFIG.typography;
     const fontFaces = (t.uploadedFonts || []).map((font) => {
@@ -82,6 +119,7 @@ export function CMSProvider({
   return (
     <CMSContext.Provider value={{ config, getProduct, refresh }}>
       <style data-zucero-cms-typography>{typographyCss}</style>
+      <style data-zucero-cms-layout-sizing>{layoutSizingCss}</style>
       {children}
     </CMSContext.Provider>
   );
