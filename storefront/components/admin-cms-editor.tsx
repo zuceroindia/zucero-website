@@ -720,6 +720,7 @@ export function AdminCMSEditor() {
               ["paddingTopPx", "Top padding"],
               ["paddingBottomPx", "Bottom padding"],
               ["paddingInlinePx", "Side padding"],
+              ["imageWidthPx", "Section image width"],
               ["imageHeightPx", "Section image height"],
             ].map(([key, label]) => {
               const typedKey = key as keyof CMSSectionLayout;
