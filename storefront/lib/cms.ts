@@ -40,8 +40,16 @@ export type CMSCustomHomepageSection = {
   body: string;
   image: string;
   imageAlt: string;
-  imagePosition: "left" | "right" | "none";
+  imagePosition: "left" | "right" | "top" | "bottom" | "none";
+  textAlign: "left" | "center" | "right";
   theme: "light" | "dark" | "green";
+};
+
+export type CMSSectionLayout = {
+  textAlign: "left" | "center" | "right";
+  image: string;
+  imageAlt: string;
+  imagePosition: "left" | "right" | "top" | "bottom" | "none";
 };
 
 export type CMSUploadedFont = {
@@ -222,6 +230,7 @@ export type CMSConfig = {
   footer: CMSFooter;
   branding: CMSBranding;
   productDetail: CMSProductDetail;
+  sectionLayouts: Record<string, CMSSectionLayout>;
   policies: CMSPolicies;
   guides: CMSGuides;
   typography: CMSTypography;
@@ -432,6 +441,32 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
     recommendationHeading: "You may also like",
     recommendationPricePrefix: "From",
     recommendationCtaText: "View product",
+  },
+  sectionLayouts: {
+    "homepage.hero": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "homepage.storyCarousel": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "homepage.highlights": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "homepage.problem": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "homepage.nature": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "homepage.craft": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "homepage.collection": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "homepage.philosophy": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "homepage.slowSweetness": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "homepage.founder": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "homepage.rituals": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "homepage.journal": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "homepage.whyZucero": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "homepage.launchList": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "ourStory.page": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "contact.page": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "policy.shipping": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "policy.returns": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "policy.refunds": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "policy.privacy": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "policy.terms": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "guide.desiKhand": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "guide.sugarAlternatives": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
+    "product.recommendation": { textAlign: "left", image: "", imageAlt: "", imagePosition: "none" },
   },
   policies: {
     shipping: {
@@ -702,6 +737,10 @@ export function mergeWithDefaultCMS(partial?: Partial<CMSConfig> | null): CMSCon
     productDetail: {
       ...DEFAULT_CMS_CONFIG.productDetail,
       ...(partial.productDetail ?? {}),
+    },
+    sectionLayouts: {
+      ...DEFAULT_CMS_CONFIG.sectionLayouts,
+      ...(partial.sectionLayouts ?? {}),
     },
     policies: {
       shipping: {
