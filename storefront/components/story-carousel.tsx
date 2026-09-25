@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCMS } from "@/components/cms-provider";
 import { cmsSectionStyle } from "@/components/cms-section-frame";
+import { cmsSectionStyle } from "@/components/cms-section-frame";
 
 export function StoryCarousel() {
   const { config } = useCMS();
