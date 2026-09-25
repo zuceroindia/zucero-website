@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { AdminCouponManager } from "@/components/admin-coupon-manager";
 import { AdminTypographyManager } from "@/components/admin-typography-manager";
+import { AdminLayoutSizingManager } from "@/components/admin-layout-sizing-manager";
 import type {
   CMSCommit,
   CMSConfig,
@@ -51,6 +52,7 @@ type MainTab =
   | "branding"
   | "promotions"
   | "typography"
+  | "layoutSizing"
   | "rawJson"
   | "commits";
 
@@ -655,6 +657,37 @@ export function AdminCMSEditor() {
           )}
         </div>
 
+        <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px dashed #d8cba9" }}>
+          <h4 style={{ margin: "0 0 0.7rem", fontSize: "0.86rem", color: "#102218" }}>Section Size Overrides</h4>
+          <p style={{ margin: "0 0 0.8rem", fontSize: "0.75rem", color: "#776e61" }}>
+            Use 0 to keep the current/global responsive size.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: "0.75rem" }}>
+            {[
+              ["contentMaxWidthPx", "Content max width"],
+              ["minHeightPx", "Minimum height"],
+              ["paddingTopPx", "Top padding"],
+              ["paddingBottomPx", "Bottom padding"],
+              ["paddingInlinePx", "Side padding"],
+              ["imageHeightPx", "Section image height"],
+            ].map(([key, label]) => (
+              <div key={key}>
+                <label style={labelStyle}>{label} (px)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={2400}
+                  style={inputStyle}
+                  value={Number(current[key as keyof CMSSectionLayout] || 0)}
+                  onChange={(e) => updateLayout({
+                    [key]: Math.max(0, Number(e.target.value) || 0),
+                  } as Partial<CMSSectionLayout>)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
         {imageEnabled && (
           <div style={{ marginTop: "1rem" }}>
             <label style={labelStyle}>Optional Section Image</label>
@@ -953,6 +986,7 @@ export function AdminCMSEditor() {
           { id: "branding", label: "🎨 Brand, Logo & Elements", icon: ImageIcon },
           { id: "promotions", label: "🏷️ Promotions", icon: Sparkles },
           { id: "typography", label: "🔤 Fonts & Typography", icon: Sparkles },
+          { id: "layoutSizing", label: "📐 Layout & Sizes", icon: Layers },
           { id: "rawJson", label: "💻 Raw JSON Editor", icon: Code },
           { id: "commits", label: "📜 Commit History", icon: History },
         ].map((tab) => {
@@ -3459,6 +3493,18 @@ export function AdminCMSEditor() {
           <AdminTypographyManager
             typography={config.typography}
             onChange={(typography) => setConfig({ ...config, typography })}
+          />
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* GLOBAL LAYOUT & SIZES TAB                                                 */}
+      {/* ========================================================================= */}
+      {activeTab === "layoutSizing" && (
+        <div style={cardStyle}>
+          <AdminLayoutSizingManager
+            value={config.layoutSizing}
+            onChange={(layoutSizing) => setConfig({ ...config, layoutSizing })}
           />
         </div>
       )}
