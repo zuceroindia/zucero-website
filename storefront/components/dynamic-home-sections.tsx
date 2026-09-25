@@ -15,6 +15,7 @@ export function DynamicHeroSection() {
   const { config } = useCMS();
   const hp = config.homepage;
   const layout = config.sectionLayouts?.["homepage.hero"];
+  const highlightsLayout = config.sectionLayouts?.["homepage.highlights"];
   const textAlign = cmsTextAlign(layout);
   const contentJustify = textAlign === "center" ? "center" : textAlign === "right" ? "flex-end" : "flex-start";
 
@@ -84,7 +85,7 @@ export function DynamicHeroSection() {
           ))}
         </div>
       </div>
-      <div className="hero-proofs" aria-label="Product highlights">
+      <div className="hero-proofs" style={{ ...cmsSectionStyle(highlightsLayout), textAlign: cmsTextAlign(highlightsLayout) }} aria-label="Product highlights">
         <div className="hero-proofs-track">
           {[...highlights, ...highlights].map((item, index) => {
             const Icon = highlightIcons[index % highlightIcons.length] || Leaf;
