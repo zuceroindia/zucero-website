@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Home,
+  LayoutDashboard,
   LogOut,
   MapPin,
   MessageCircle,
@@ -611,26 +612,48 @@ export default function OrdersPage() {
               <UserRound size={17} /> Profile
             </button>
             {email.toLowerCase() === "zucero.thegoodsugar@gmail.com" && (
-              <Link
-                href="/admin/whatsapp"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.55rem",
-                  padding: "0.75rem 1rem",
-                  background: "#143727",
-                  color: "#d8b456",
-                  borderRadius: "6px",
-                  textDecoration: "none",
-                  fontWeight: 600,
-                  fontSize: "0.85rem",
-                  marginTop: "0.75rem",
-                  border: "1px solid rgba(216, 180, 86, 0.4)",
-                  transition: "background 0.15s ease",
-                }}
-              >
-                <MessageCircle size={17} color="#d8b456" /> WhatsApp Admin
-              </Link>
+              <>
+                <Link
+                  href="/admin"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.55rem",
+                    padding: "0.75rem 1rem",
+                    background: "#143727",
+                    color: "#d8b456",
+                    borderRadius: "6px",
+                    textDecoration: "none",
+                    fontWeight: 600,
+                    fontSize: "0.85rem",
+                    marginTop: "0.75rem",
+                    border: "1px solid rgba(216, 180, 86, 0.4)",
+                    transition: "background 0.15s ease",
+                  }}
+                >
+                  <LayoutDashboard size={17} color="#d8b456" /> Master Admin
+                </Link>
+                <Link
+                  href="/admin/whatsapp"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.55rem",
+                    padding: "0.75rem 1rem",
+                    background: "#143727",
+                    color: "#d8b456",
+                    borderRadius: "6px",
+                    textDecoration: "none",
+                    fontWeight: 600,
+                    fontSize: "0.85rem",
+                    marginTop: "0.4rem",
+                    border: "1px solid rgba(216, 180, 86, 0.4)",
+                    transition: "background 0.15s ease",
+                  }}
+                >
+                  <MessageCircle size={17} color="#d8b456" /> WhatsApp CRM
+                </Link>
+              </>
             )}
           </nav>
 

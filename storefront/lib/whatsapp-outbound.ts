@@ -90,21 +90,23 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
   // If Meta API credentials are not yet set in environment:
   if (!apiToken || !phoneNumberId) {
     console.info(`[WhatsApp Outbound] Meta WhatsApp API credentials (WHATSAPP_API_TOKEN / WHATSAPP_PHONE_NUMBER_ID) not configured. Order ${order.order_number} confirmation registered for manual/direct wa.me dispatch.`);
-    await db.from("payment_events").insert({
-      provider: "whatsapp",
-      provider_event_id: `outbound:unconfigured:${order.id}`,
-      event_type: "whatsapp.pending_credentials",
-      payload: {
-        order_id: order.id,
-        order_number: order.order_number,
-        recipient,
-        customerName,
-        deliveryWindow,
-        totalRupees: totalRupeesFormatted,
-        itemsSummary,
-      },
-      processed_at: new Date().toISOString(),
-    }).catch(() => {});
+    try {
+      await db.from("payment_events").insert({
+        provider: "whatsapp",
+        provider_event_id: `outbound:unconfigured:${order.id}`,
+        event_type: "whatsapp.pending_credentials",
+        payload: {
+          order_id: order.id,
+          order_number: order.order_number,
+          recipient,
+          customerName,
+          deliveryWindow,
+          totalRupees: totalRupeesFormatted,
+          itemsSummary,
+        },
+        processed_at: new Date().toISOString(),
+      });
+    } catch {}
     return { success: false, reason: "credentials_not_configured" };
   }
 
@@ -180,14 +182,17 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
 
     if (!response.ok) {
       console.error(`[WhatsApp Outbound] Meta API error for order ${order.order_number}:`, result);
-      await db.from("payment_events").insert({
-        provider: "whatsapp",
-        provider_event_id: `outbound:failed:${order.id}:${Date.now()}`,
-        event_type: "whatsapp.send_error",
-        payload: { error: result, recipient, order_id: order.id },
-        processed_at: new Date().toISOString(),
-      }).catch(() => {});
-      return { success: false, error: JSON.stringify(result) };
+      try {
+        await db.from("payment_events").insert({
+          provider: "whatsapp",
+          provider_event_id: `outbound:failed:${order.id}:${Date.now()}`,
+          event_type: "whatsapp.send_error",
+          payload: { error: result, recipient, order_id: order.id },
+          processed_at: new Date().toISOString(),
+        });
+      } catch {}
+      const metaErr = (result.error as { message?: string })?.message;
+      return { success: false, error: metaErr || JSON.stringify(result) };
     }
 
     const messageId = result.messages?.[0]?.id;
@@ -196,29 +201,37 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
     const formattedBody = `Hello ${customerName}, thank you for ordering with Zucero! Your order ${order.order_number} for ${itemsSummary || "Zucero Pure Sugar Products"} has been received. Total: INR ${totalRupeesFormatted}. Expected delivery: ${deliveryWindow}. We will share your live tracking link as soon as your order is dispatched.`;
 
     if (messageId) {
-      await recordOutboundWhatsAppMessage({
-        recipient,
-        customerName,
-        bodyText: formattedBody,
-        metaMessageId: messageId,
-        messageType: "template",
-        rawPayload: result as Record<string, unknown>,
-      }).catch((err) => console.error("[WhatsApp Outbound] Failed to record in admin inbox:", err));
+      try {
+        await recordOutboundWhatsAppMessage({
+          recipient,
+          customerName,
+          bodyText: formattedBody,
+          metaMessageId: messageId,
+          messageType: "template",
+          rawPayload: result as Record<string, unknown>,
+        });
+      } catch (err) {
+        console.error("[WhatsApp Outbound] Failed to record in admin inbox:", err);
+      }
     }
 
-    await db.from("payment_events").insert({
-      provider: "whatsapp",
-      provider_event_id: `outbound:sent:${order.id}:${messageId || Date.now()}`,
-      event_type: "whatsapp.sent",
-      payload: { messageId, recipient, order_id: order.id },
-      processed_at: new Date().toISOString(),
-    }).catch(() => {});
+    try {
+      await db.from("payment_events").insert({
+        provider: "whatsapp",
+        provider_event_id: `outbound:sent:${order.id}:${messageId || Date.now()}`,
+        event_type: "whatsapp.sent",
+        payload: { messageId, recipient, order_id: order.id },
+        processed_at: new Date().toISOString(),
+      });
+    } catch {}
 
     // Try updating orders table if column exists
-    await db.from("orders").update({
-      whatsapp_status: "sent",
-      updated_at: new Date().toISOString(),
-    }).eq("id", order.id).catch(() => {});
+    try {
+      await db.from("orders").update({
+        whatsapp_status: "sent",
+        updated_at: new Date().toISOString(),
+      }).eq("id", order.id);
+    } catch {}
 
     return { success: true, messageId };
   } catch (error) {
