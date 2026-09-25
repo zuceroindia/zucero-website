@@ -836,3 +836,10 @@ main section[id]{scroll-margin-top:calc(var(--nav-height) + 18px)}
   .heritage-craft{padding-top:28px}
   .heritage-craft .craft-caption{padding-top:1.75rem}
 }
+
+
+/* CMS-created editorial sections */
+.cms-custom-section{width:100%}
+@media(max-width:900px){
+  .cms-custom-section{grid-template-columns:1fr!important}
+}
