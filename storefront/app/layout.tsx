@@ -47,7 +47,7 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  icons: { icon: "/images/zucero-favicon.webp", apple: "/images/zucero-favicon.webp" },
+  icons: { icon: "/api/site-icon", apple: "/api/site-icon" },
 };
 
 const organizationJsonLd = {
@@ -58,7 +58,7 @@ const organizationJsonLd = {
   alternateName: "Zucero — The Good Sugar",
   legalName: "TIARA TRIVERSE PRIVATE LIMITED",
   url: SITE_URL,
-  logo: `${SITE_URL}/images/zucero-highres-logo.png`,
+  logo: `${SITE_URL}/api/site-logo`,
   image: DEFAULT_OG_IMAGE,
   email: "zucero.thegoodsugar@gmail.com",
   telephone: "+91 87963 49977",
