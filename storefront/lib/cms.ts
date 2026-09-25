@@ -35,6 +35,29 @@ export type CMSCustomHomepageSection = {
   theme: "light" | "dark" | "green";
 };
 
+export type CMSUploadedFont = {
+  id: string;
+  name: string;
+  url: string;
+  format: "woff2" | "woff" | "ttf" | "otf";
+};
+
+export type CMSTypography = {
+  bodyFont: string;
+  headingFont: string;
+  accentFont: string;
+  bodyWeight: number;
+  headingWeight: number;
+  bodySizePx: number;
+  h1SizePx: number;
+  h2SizePx: number;
+  h3SizePx: number;
+  navSizePx: number;
+  buttonSizePx: number;
+  uploadedFonts: CMSUploadedFont[];
+  advancedCss: string;
+};
+
 export type CMSPromotions = {
   introductoryPriceText: string;
   referralOfferText: string;
@@ -171,6 +194,7 @@ export type CMSConfig = {
   footer: CMSFooter;
   policies: CMSPolicies;
   guides: CMSGuides;
+  typography: CMSTypography;
   customPages?: Record<string, { title: string; contentHtml: string }>;
   updatedAt: string;
 };
@@ -275,6 +299,21 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
     popupDescription: "Share the goodness of Zucero with friends and family.",
     collectionBannerEyebrow: "Experience the goodness of the first batch",
     collectionBannerSubtitle: "Introductory price for first 100 orders only · Deliveries begin",
+  },
+  typography: {
+    bodyFont: "Manrope",
+    headingFont: "Cormorant Garamond",
+    accentFont: "Manrope",
+    bodyWeight: 400,
+    headingWeight: 400,
+    bodySizePx: 0,
+    h1SizePx: 0,
+    h2SizePx: 0,
+    h3SizePx: 0,
+    navSizePx: 0,
+    buttonSizePx: 0,
+    uploadedFonts: [],
+    advancedCss: "",
   },
   ourStory: {
     eyebrow: "Tamanna Sharma · The founder’s story",
@@ -618,6 +657,13 @@ export function mergeWithDefaultCMS(partial?: Partial<CMSConfig> | null): CMSCon
           ? partial.policies.terms.sections
           : DEFAULT_CMS_CONFIG.policies.terms.sections,
       },
+    },
+    typography: {
+      ...DEFAULT_CMS_CONFIG.typography,
+      ...(partial.typography ?? {}),
+      uploadedFonts: Array.isArray(partial.typography?.uploadedFonts)
+        ? partial.typography.uploadedFonts
+        : DEFAULT_CMS_CONFIG.typography.uploadedFonts,
     },
     guides: {
       desiKhand: {
