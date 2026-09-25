@@ -156,6 +156,29 @@ export function AdminCMSEditor() {
       showToast("error", "Please fix the JSON errors before committing.");
       return;
     }
+
+    const slugs = config.products.map((product) => product.slug.trim());
+    if (slugs.some((slug) => !slug) || new Set(slugs).size !== slugs.length) {
+      showToast("error", "Every product needs a unique, non-empty URL slug.");
+      return;
+    }
+
+    const allVariants = config.products.flatMap((product) => product.variants);
+    if (config.products.some((product) => product.variants.length === 0)) {
+      showToast("error", "Every product needs at least one size / variant.");
+      return;
+    }
+    const variantIds = allVariants.map((variant) => variant.id.trim());
+    const skus = allVariants.map((variant) => variant.sku.trim().toUpperCase());
+    if (variantIds.some((id) => !id) || new Set(variantIds).size !== variantIds.length) {
+      showToast("error", "Every product variant needs a unique Variant ID.");
+      return;
+    }
+    if (skus.some((sku) => !sku) || new Set(skus).size !== skus.length) {
+      showToast("error", "Every product variant needs a unique SKU.");
+      return;
+    }
+
     setSaving(true);
     try {
       const message =
@@ -356,8 +379,8 @@ export function AdminCMSEditor() {
           netWeightGrams: 500,
           weightGrams: 750,
           packedWeightGrams: 750,
-          pricePaise: 0,
-          priceRupees: 0,
+          pricePaise: null,
+          priceRupees: null,
           hsn: "1701",
           galleryPhotos: [],
         },
@@ -1714,12 +1737,18 @@ export function AdminCMSEditor() {
                       <input
                         type="number"
                         style={{ ...inputStyle, fontWeight: 700, color: "#8a6616" }}
-                        value={typeof v.priceRupees === "number" ? v.priceRupees : (v.pricePaise ?? 0) / 100}
+                        value={typeof v.priceRupees === "number" ? v.priceRupees : ""}
+                        placeholder="Enter selling price"
                         onChange={(e) => {
-                          const rupees = parseFloat(e.target.value) || 0;
+                          const raw = e.target.value;
+                          if (!raw) {
+                            updateVariantField(vIdx, { priceRupees: null, pricePaise: null });
+                            return;
+                          }
+                          const rupees = parseFloat(raw);
                           updateVariantField(vIdx, {
-                            priceRupees: rupees,
-                            pricePaise: Math.round(rupees * 100),
+                            priceRupees: Number.isFinite(rupees) ? rupees : null,
+                            pricePaise: Number.isFinite(rupees) ? Math.round(rupees * 100) : null,
                           });
                         }}
                       />
