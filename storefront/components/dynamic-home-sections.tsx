@@ -237,7 +237,7 @@ export function DynamicCustomSections() {
         const splitImage = section.imagePosition === "left" || section.imagePosition === "right";
 
         const copy = (
-          <div style={{ padding: "clamp(3.5rem,7vw,7rem)", display: "flex", flexDirection: "column", justifyContent: "center", textAlign: section.textAlign || "left" }}>
+          <div style={{ padding: "clamp(3.5rem,7vw,7rem)", display: "flex", flexDirection: "column", justifyContent: "center", textAlign: sectionLayout?.textAlign || section.textAlign || "left" }}>
             {section.eyebrow && (
               <p className="eyebrow" style={{ color: dark ? "#d8b456" : undefined }}>
                 {section.eyebrow}
