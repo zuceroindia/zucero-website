@@ -42,6 +42,13 @@ export type CMSCustomHomepageSection = {
   imageAlt: string;
   imagePosition: "left" | "right" | "top" | "bottom" | "none";
   textAlign: "left" | "center" | "right";
+  contentMaxWidthPx?: number;
+  minHeightPx?: number;
+  paddingTopPx?: number;
+  paddingBottomPx?: number;
+  paddingInlinePx?: number;
+  imageWidthPx?: number;
+  imageHeightPx?: number;
   theme: "light" | "dark" | "green";
 };
 
