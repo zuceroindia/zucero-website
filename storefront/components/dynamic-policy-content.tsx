@@ -19,7 +19,7 @@ export function DynamicPolicyContent({
   }
 
   return (
-    <ContentPage eyebrow={policy.eyebrow} title={policy.title} intro={policy.intro}>
+    <ContentPage eyebrow={policy.eyebrow} title={policy.title} intro={policy.intro} layout={config.sectionLayouts?.[`policy.${policyKey}`]}>
       {policy.sections?.map((section, idx) => (
         <section key={`${section.heading}-${idx}`} style={{ marginBottom: "1.75rem" }}>
           <h2>{section.heading}</h2>
