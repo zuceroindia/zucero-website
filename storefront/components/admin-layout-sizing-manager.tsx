@@ -46,6 +46,7 @@ export function AdminLayoutSizingManager({
     ["cardRadiusPx", "Card Corner Radius", "Rounds cards and image cards. Use 0 to preserve theme."],
     ["cardGapPx", "Grid / Card Gap", "Controls spacing between cards in common card grids."],
     ["cardMinWidthPx", "Minimum Card Width", "Controls how wide cards should be before the grid wraps."],
+    ["cardMinHeightPx", "Minimum Card Height", "Keeps common cards at or above this height."],
     ["cardImageHeightPx", "Card Image Height", "Overrides common card/media image height."],
     ["carouselCardWidthPx", "Story Carousel Card Width", "Controls the width of each GOOD IS carousel card."],
     ["carouselCardHeightPx", "Story Carousel Card Height", "Controls the height of each GOOD IS carousel card."],
