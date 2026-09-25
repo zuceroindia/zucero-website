@@ -121,7 +121,7 @@ export function Header() {
     )}
     <header ref={headerRef} className={`site-header ${lightBackground && !open ? "nav-on-light" : "nav-on-dark"} ${scrolled || open ? "is-scrolled" : "is-at-top"}`}>
       <Link href="/" className="brand" aria-label="Zucero home" onClick={() => setOpen(false)}>
-        <Image src="/images/zucero-highres-logo.png" alt="Zucero — The Good Sugar" width={180} height={120} priority />
+        <Image src={config.branding?.headerLogo || "/images/zucero-highres-logo.png"} alt="Zucero — The Good Sugar" width={180} height={120} priority />
       </Link>
       <nav id="primary-navigation" className={open ? "nav open" : "nav"} aria-label="Primary navigation">
         {navLinks.map(({ label, href }) => <Link key={href} href={href} onClick={(event) => { setOpen(false); followSection(event, href); }}>{label}</Link>)}
