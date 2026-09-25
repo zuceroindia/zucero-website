@@ -3627,6 +3627,7 @@ export function AdminCMSEditor() {
         <div style={cardStyle}>
           <AdminTypographyManager
             typography={config.typography}
+            currentTypography={originalConfig?.typography || config.typography}
             onChange={(typography) => setConfig({ ...config, typography })}
           />
         </div>
