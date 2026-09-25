@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { StoreHeader } from "@/components/store-header";
+import { AdminHeader } from "@/components/admin-header";
 import { AdminWhatsAppInbox } from "@/components/admin-whatsapp-inbox";
 
 export const metadata: Metadata = {
-  title: "WhatsApp Inbox",
+  title: "WhatsApp Inbox | Zucero Admin",
   robots: { index: false, follow: false },
 };
 
@@ -23,5 +23,10 @@ export default async function AdminWhatsAppPage() {
   const merchantEmail = (process.env.ORDER_NOTIFICATION_EMAIL || "zucero.thegoodsugar@gmail.com").toLowerCase();
   if (data.user?.email?.toLowerCase() !== merchantEmail) redirect("/account?redirect=/admin/whatsapp");
 
-  return <main className="store-page" data-admin-page="true"><StoreHeader /><AdminWhatsAppInbox /></main>;
+  return (
+    <div data-admin-page="true" style={{ background: "#ebe5d8", minHeight: "100vh" }}>
+      <AdminHeader />
+      <AdminWhatsAppInbox />
+    </div>
+  );
 }

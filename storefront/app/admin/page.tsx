@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { StoreHeader } from "@/components/store-header";
-import { SiteFooter } from "@/components/site-footer";
+import { AdminHeader } from "@/components/admin-header";
 import { AdminDashboard } from "@/components/admin-dashboard";
 
 export const metadata: Metadata = {
@@ -30,10 +29,9 @@ export default async function AdminPage() {
   }
 
   return (
-    <main className="store-page" data-admin-page="true">
-      <StoreHeader />
+    <div data-admin-page="true" style={{ background: "#ebe5d8", minHeight: "100vh" }}>
+      <AdminHeader />
       <AdminDashboard />
-      <SiteFooter />
-    </main>
+    </div>
   );
 }

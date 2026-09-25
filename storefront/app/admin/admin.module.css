@@ -7,8 +7,8 @@
 }
 
 .shell {
-  min-height: calc(100svh - 104px);
-  padding: 140px 4vw 4rem;
+  min-height: calc(100svh - 64px);
+  padding: 1.5rem 4vw 4rem;
   background: #ebe5d8;
   font-family: inherit;
 }
@@ -574,7 +574,7 @@
 
 @media (max-width: 768px) {
   .shell {
-    padding: 115px 16px 2.5rem;
+    padding: 1rem 16px 2.5rem;
   }
 }
 

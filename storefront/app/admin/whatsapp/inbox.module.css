@@ -7,8 +7,8 @@
 }
 
 .shell {
-  min-height: calc(100svh - 104px);
-  padding: 140px 4vw 3rem;
+  min-height: calc(100svh - 64px);
+  padding: 1.5rem 4vw 3rem;
   background: #ebe5d8;
 }
 
@@ -848,7 +848,7 @@
 /* --- Mobile Media Queries --- */
 @media (max-width: 768px) {
   .shell {
-    padding: 115px 12px 1.5rem;
+    padding: 1rem 12px 1.5rem;
   }
   .heading {
     padding: 0 4vw;

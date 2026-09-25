@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./account-extras.css";
 import { CartProvider } from "@/components/cart-provider";
-import { MessageCircle } from "lucide-react";
-import { whatsappLink } from "@/lib/whatsapp";
 import { BackToTop } from "@/components/back-to-top";
+import { PublicWhatsAppWidget } from "@/components/public-whatsapp-widget";
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_URL, coreKeywords, safeJsonLd, socialProfiles } from "@/lib/seo";
 
@@ -92,7 +91,7 @@ const websiteJsonLd = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return <html lang="en-IN"><body>
-    <CartProvider>{children}<BackToTop /><aside aria-label="WhatsApp contact"><a href={whatsappLink()} className="whatsapp-contact" aria-label="Chat with Zucero on WhatsApp at +91 87963 49977"><MessageCircle size={24} /><span>WhatsApp</span></a></aside></CartProvider>
+    <CartProvider>{children}<BackToTop /><PublicWhatsAppWidget /></CartProvider>
     <GoogleAnalytics />
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationJsonLd) }} />
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(websiteJsonLd) }} />
