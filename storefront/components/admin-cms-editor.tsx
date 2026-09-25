@@ -27,6 +27,7 @@ import {
   User,
 } from "lucide-react";
 import { AdminCouponManager } from "@/components/admin-coupon-manager";
+import { AdminTypographyManager } from "@/components/admin-typography-manager";
 import type {
   CMSCommit,
   CMSConfig,
@@ -34,6 +35,7 @@ import type {
   CMSHighlight,
   CMSNavLink,
   CMSSectionBlock,
+  Product,
   ProductVariant,
 } from "@/lib/cms";
 
@@ -46,6 +48,7 @@ type MainTab =
   | "guides"
   | "headerFooter"
   | "promotions"
+  | "typography"
   | "rawJson"
   | "commits";
 
@@ -58,7 +61,8 @@ type HomeSubTab =
   | "philosophy"
   | "founder"
   | "whyZucero"
-  | "launchList";
+  | "launchList"
+  | "customSections";
 
 type PolicySubTab = "shipping" | "returns" | "refunds" | "privacy" | "terms";
 type GuideSubTab = "desiKhand" | "sugarAlternatives";
@@ -335,6 +339,78 @@ export function AdminCMSEditor() {
     showToast("success", `Copied gallery photos to all variants of ${currentProduct.name}`);
   };
 
+  const addNewProduct = () => {
+    const suffix = Date.now().toString(36);
+    const product: Product = {
+      slug: `new-product-${suffix}`,
+      name: "New Product",
+      eyebrow: "New Zucero product",
+      description: "Add your product description here.",
+      image: "/images/zucero-highres-logo.png",
+      ingredients: "Add ingredients here.",
+      variants: [
+        {
+          id: `new-${suffix}-1`,
+          label: "500 g",
+          sku: `ZUC-NEW-${suffix.toUpperCase()}`,
+          netWeightGrams: 500,
+          weightGrams: 750,
+          packedWeightGrams: 750,
+          pricePaise: 0,
+          priceRupees: 0,
+          hsn: "1701",
+          galleryPhotos: [],
+        },
+      ],
+    };
+    const products = [...config.products, product];
+    setConfig({ ...config, products });
+    setSelectedProductIdx(products.length - 1);
+    setSelectedVariantIdx(0);
+    showToast("success", "New product added. Complete its details, images, price and SKU, then Save & Commit.");
+  };
+
+  const removeCurrentProduct = () => {
+    if (config.products.length <= 1) {
+      showToast("error", "At least one product must remain in the collection.");
+      return;
+    }
+    if (!confirm(`Remove ${currentProduct.name} from the live collection?`)) return;
+    const products = config.products.filter((_, idx) => idx !== selectedProductIdx);
+    setConfig({ ...config, products });
+    setSelectedProductIdx(Math.max(0, selectedProductIdx - 1));
+    setSelectedVariantIdx(0);
+  };
+
+  const addVariant = () => {
+    const suffix = Date.now().toString(36);
+    const nextVariant: ProductVariant = {
+      id: `${currentProduct.slug}-${suffix}`,
+      label: "New size",
+      sku: `ZUC-${suffix.toUpperCase()}`,
+      netWeightGrams: 500,
+      weightGrams: 750,
+      packedWeightGrams: 750,
+      pricePaise: 0,
+      priceRupees: 0,
+      hsn: "1701",
+      galleryPhotos: [],
+    };
+    const variants = [...currentProduct.variants, nextVariant];
+    updateProductField("variants", variants);
+    setSelectedVariantIdx(variants.length - 1);
+  };
+
+  const removeVariant = (vIdx: number) => {
+    if (currentProduct.variants.length <= 1) {
+      showToast("error", "A product needs at least one size/variant.");
+      return;
+    }
+    const variants = currentProduct.variants.filter((_, idx) => idx !== vIdx);
+    updateProductField("variants", variants);
+    setSelectedVariantIdx(0);
+  };
+
   // Helper styles
   const inputStyle = {
     width: "100%",
@@ -549,6 +625,7 @@ export function AdminCMSEditor() {
           { id: "guides", label: "📚 Guides & Educational", icon: Layers },
           { id: "headerFooter", label: "📢 Header & Footer", icon: Sparkles },
           { id: "promotions", label: "🏷️ Promotions", icon: Sparkles },
+          { id: "typography", label: "🔤 Fonts & Typography", icon: Sparkles },
           { id: "rawJson", label: "💻 Raw JSON Editor", icon: Code },
           { id: "commits", label: "📜 Commit History", icon: History },
         ].map((tab) => {
@@ -623,6 +700,7 @@ export function AdminCMSEditor() {
               { id: "founder", label: "06 · Founder Story" },
               { id: "whyZucero", label: "10 · Why Zucero" },
               { id: "launchList", label: "11 · Launch List" },
+              { id: "customSections", label: "➕ Custom Sections" },
             ].map((sub) => (
               <button
                 key={sub.id}
@@ -1257,6 +1335,170 @@ export function AdminCMSEditor() {
               </div>
             </div>
           )}
+
+          {homeSubTab === "customSections" && (
+            <div style={{ display: "grid", gap: "1rem" }}>
+              <div style={{ ...cardStyle, display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", color: "#102218" }}>Custom Homepage Sections</h3>
+                  <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: "#665e52" }}>
+                    Add as many editorial sections as you need. Each can have text, an optional image, layout and theme.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const section = {
+                      id: `section_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                      enabled: true,
+                      eyebrow: "New Section",
+                      title: "Add your section headline",
+                      body: "Add your section copy here.",
+                      image: "",
+                      imageAlt: "",
+                      imagePosition: "right" as const,
+                      theme: "light" as const,
+                    };
+                    setConfig({
+                      ...config,
+                      homepage: {
+                        ...config.homepage,
+                        customSections: [...(config.homepage.customSections || []), section],
+                      },
+                    });
+                  }}
+                  style={{ padding: "0.55rem 0.9rem", border: 0, borderRadius: "6px", background: "#102218", color: "#fff", fontWeight: 700, cursor: "pointer" }}
+                >
+                  + Add Section
+                </button>
+              </div>
+
+              {(config.homepage.customSections || []).map((section, idx) => (
+                <div key={section.id} style={cardStyle}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap" }}>
+                    <strong style={{ color: "#102218" }}>Custom Section {idx + 1}</strong>
+                    <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                      <label style={{ fontSize: "0.78rem", fontWeight: 600 }}>
+                        <input
+                          type="checkbox"
+                          checked={section.enabled}
+                          onChange={(e) => {
+                            const next = [...config.homepage.customSections];
+                            next[idx] = { ...section, enabled: e.target.checked };
+                            setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                          }}
+                        />{" "}Live
+                      </label>
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => {
+                          const next = [...config.homepage.customSections];
+                          [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                          setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                        }}
+                        style={{ padding: "0.35rem", border: "1px solid #dcd4c4", background: "#fff", borderRadius: "4px" }}
+                      ><ArrowUp size={14} /></button>
+                      <button
+                        type="button"
+                        disabled={idx === config.homepage.customSections.length - 1}
+                        onClick={() => {
+                          const next = [...config.homepage.customSections];
+                          [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+                          setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                        }}
+                        style={{ padding: "0.35rem", border: "1px solid #dcd4c4", background: "#fff", borderRadius: "4px" }}
+                      ><ArrowDown size={14} /></button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = config.homepage.customSections.filter((_, i) => i !== idx);
+                          setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                        }}
+                        style={{ padding: "0.35rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "4px" }}
+                      ><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: "0.8rem" }}>
+                    <div>
+                      <label style={labelStyle}>Eyebrow</label>
+                      <input style={inputStyle} value={section.eyebrow} onChange={(e) => {
+                        const next = [...config.homepage.customSections]; next[idx] = { ...section, eyebrow: e.target.value };
+                        setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                      }} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Headline</label>
+                      <input style={inputStyle} value={section.title} onChange={(e) => {
+                        const next = [...config.homepage.customSections]; next[idx] = { ...section, title: e.target.value };
+                        setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                      }} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Theme</label>
+                      <select style={inputStyle} value={section.theme} onChange={(e) => {
+                        const next = [...config.homepage.customSections]; next[idx] = { ...section, theme: e.target.value as "light" | "dark" | "green" };
+                        setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                      }}>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                        <option value="green">Zucero Green</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Image position</label>
+                      <select style={inputStyle} value={section.imagePosition} onChange={(e) => {
+                        const next = [...config.homepage.customSections]; next[idx] = { ...section, imagePosition: e.target.value as "left" | "right" | "none" };
+                        setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                      }}>
+                        <option value="left">Image left</option>
+                        <option value="right">Image right</option>
+                        <option value="none">No image</option>
+                      </select>
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={labelStyle}>Body copy</label>
+                      <textarea style={textareaStyle} value={section.body} onChange={(e) => {
+                        const next = [...config.homepage.customSections]; next[idx] = { ...section, body: e.target.value };
+                        setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                      }} />
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={labelStyle}>Section image</label>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <input style={inputStyle} value={section.image} onChange={(e) => {
+                          const next = [...config.homepage.customSections]; next[idx] = { ...section, image: e.target.value };
+                          setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                        }} />
+                        <label style={{ padding: "0.5rem 0.75rem", borderRadius: "6px", background: "#f4ede0", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                          <Upload size={14} /> Upload
+                          <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleImageUpload(file, (url) => {
+                              const next = [...config.homepage.customSections]; next[idx] = { ...section, image: url };
+                              setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                            });
+                          }} />
+                        </label>
+                      </div>
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={labelStyle}>Image alt text</label>
+                      <input style={inputStyle} value={section.imageAlt} onChange={(e) => {
+                        const next = [...config.homepage.customSections]; next[idx] = { ...section, imageAlt: e.target.value };
+                        setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                      }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {(config.homepage.customSections || []).length === 0 && (
+                <div style={{ ...cardStyle, color: "#665e52", fontSize: "0.85rem" }}>No custom sections yet. Click “Add Section” to create one.</div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1268,6 +1510,13 @@ export function AdminCMSEditor() {
           {/* Product Switcher Bar */}
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
             <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#8a6616" }}>Select Product:</span>
+            <button
+              type="button"
+              onClick={addNewProduct}
+              style={{ padding: "0.45rem 0.8rem", borderRadius: "6px", border: "1px solid #d8b456", background: "#fffdf7", color: "#8a6616", fontWeight: 700, cursor: "pointer" }}
+            >
+              + Add Product
+            </button>
             {config.products.map((p, idx) => (
               <button
                 key={p.slug}
@@ -1313,6 +1562,23 @@ export function AdminCMSEditor() {
                   value={currentProduct.eyebrow}
                   onChange={(e) => updateProductField("eyebrow", e.target.value)}
                 />
+              </div>
+              <div>
+                <label style={labelStyle}>Product URL Slug</label>
+                <input
+                  style={inputStyle}
+                  value={currentProduct.slug}
+                  onChange={(e) => updateProductField("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-"))}
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "end" }}>
+                <button
+                  type="button"
+                  onClick={removeCurrentProduct}
+                  style={{ width: "100%", padding: "0.55rem 0.8rem", borderRadius: "6px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", fontWeight: 700, cursor: "pointer" }}
+                >
+                  Remove This Product
+                </button>
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={labelStyle}>Hero Product Image URL</label>
@@ -1378,6 +1644,13 @@ export function AdminCMSEditor() {
             <p style={{ margin: "0 0 1rem", fontSize: "0.82rem", color: "#665e52" }}>
               Updating prices here updates the Product Detail Page, Shopping Cart Drawer, and Razorpay Checkout calculations.
             </p>
+            <button
+              type="button"
+              onClick={addVariant}
+              style={{ marginBottom: "1rem", padding: "0.45rem 0.8rem", borderRadius: "6px", border: "1px solid #d8b456", background: "#fffdf7", color: "#8a6616", fontWeight: 700, cursor: "pointer" }}
+            >
+              + Add Size / Variant
+            </button>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
               {currentProduct.variants.map((v: ProductVariant, vIdx: number) => (
@@ -1421,6 +1694,22 @@ export function AdminCMSEditor() {
                       />
                     </div>
                     <div>
+                      <label style={labelStyle}>Variant ID</label>
+                      <input style={inputStyle} value={v.id} onChange={(e) => updateVariantField(vIdx, { id: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>SKU</label>
+                      <input style={inputStyle} value={v.sku} onChange={(e) => updateVariantField(vIdx, { sku: e.target.value.toUpperCase() })} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Net Weight in Grams</label>
+                      <input type="number" style={inputStyle} value={v.netWeightGrams || 0} onChange={(e) => updateVariantField(vIdx, { netWeightGrams: parseInt(e.target.value, 10) || 0 })} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>HSN</label>
+                      <input style={inputStyle} value={v.hsn || ""} onChange={(e) => updateVariantField(vIdx, { hsn: e.target.value })} />
+                    </div>
+                    <div>
                       <label style={labelStyle}>Price in ₹ (Rupees)</label>
                       <input
                         type="number"
@@ -1449,6 +1738,13 @@ export function AdminCMSEditor() {
                         }
                       />
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => removeVariant(vIdx)}
+                      style={{ padding: "0.4rem 0.65rem", borderRadius: "5px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                    >
+                      Remove Variant
+                    </button>
                   </div>
                 </div>
               ))}
@@ -2279,7 +2575,19 @@ export function AdminCMSEditor() {
       )}
 
       {/* ========================================================================= */}
-      {/* 9. RAW JSON TAB                                                           */}
+      {/* 9. TYPOGRAPHY TAB                                                         */}
+      {/* ========================================================================= */}
+      {activeTab === "typography" && (
+        <div style={cardStyle}>
+          <AdminTypographyManager
+            typography={config.typography}
+            onChange={(typography) => setConfig({ ...config, typography })}
+          />
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 10. RAW JSON TAB                                                          */}
       {/* ========================================================================= */}
       {activeTab === "rawJson" && (
         <div style={cardStyle}>
