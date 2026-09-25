@@ -918,6 +918,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
+                  {renderImagePreview(config.homepage.heroPosterImage, "Homepage hero poster")}
                 </div>
               </div>
             </div>
@@ -1489,6 +1490,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
+                  {renderImagePreview(config.homepage.natureSolutionImage, "Nature solution image")}
                 </div>
                 <div>
                   <label style={labelStyle}>Paragraphs</label>
@@ -1577,6 +1579,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
+                  {renderImagePreview(config.homepage.craftImage, "Artisan craft image")}
                 </div>
               </div>
             </div>
@@ -1706,6 +1709,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
+                  {renderImagePreview(config.homepage.founderImage, config.homepage.founderName || "Founder portrait")}
                 </div>
                 <div style={{ gridColumn: "1 / -1" }}>
                   <label style={labelStyle}>Founder Story Lead</label>
@@ -1887,11 +1891,12 @@ export function AdminCMSEditor() {
                       <button
                         type="button"
                         onClick={() => {
+                          if (!confirm(`Delete custom section ${idx + 1}?`)) return;
                           const next = config.homepage.customSections.filter((_, i) => i !== idx);
                           setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
                         }}
-                        style={{ padding: "0.35rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "4px" }}
-                      ><Trash2 size={14} /></button>
+                        style={{ padding: "0.35rem 0.55rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "4px", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                      ><Trash2 size={14} /> Delete Section</button>
                     </div>
                   </div>
 
@@ -1957,6 +1962,7 @@ export function AdminCMSEditor() {
                           }} />
                         </label>
                       </div>
+                  {renderImagePreview(section.image, section.imageAlt || section.title || "Custom section image")}
                     </div>
                     <div style={{ gridColumn: "1 / -1" }}>
                       <label style={labelStyle}>Image alt text</label>
@@ -2091,6 +2097,7 @@ export function AdminCMSEditor() {
                     />
                   </label>
                 </div>
+                  {renderImagePreview(currentProduct.image, currentProduct.name)}
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={labelStyle}>Short Description</label>
