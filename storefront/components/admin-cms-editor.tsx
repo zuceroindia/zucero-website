@@ -389,10 +389,20 @@ export function AdminCMSEditor() {
       ],
     };
     const products = [...config.products, product];
-    setConfig({ ...config, products });
+    setConfig({
+      ...config,
+      products,
+      homepage: {
+        ...config.homepage,
+        collectionProductStories: {
+          ...(config.homepage.collectionProductStories || {}),
+          [product.slug]: "Add the collection story for this product.",
+        },
+      },
+    });
     setSelectedProductIdx(products.length - 1);
     setSelectedVariantIdx(0);
-    showToast("success", "New product added. Complete its details, images, price and SKU, then Save & Commit.");
+    showToast("success", "New collection product added. Complete its collection copy and image here, then set sizes, price and SKU in Products & Prices before publishing.");
   };
 
   const removeCurrentProduct = () => {
@@ -1037,6 +1047,32 @@ export function AdminCMSEditor() {
                   </div>
                 </div>
               ))}
+
+              <div style={{ ...cardStyle, textAlign: "center", borderStyle: "dashed" }}>
+                <p style={{ margin: "0 0 0.75rem", fontSize: "0.82rem", color: "#665e52" }}>
+                  Add another image/story card to the horizontal carousel.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = [
+                      ...(config.homepage.storyCarousel || []),
+                      {
+                        id: `story_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                        image: "/images/zucero-highres-logo.png",
+                        title: "Good is...",
+                        copy: "Add your story caption.",
+                        href: "/",
+                        alt: "Zucero story image",
+                      },
+                    ];
+                    setConfig({ ...config, homepage: { ...config.homepage, storyCarousel: next } });
+                  }}
+                  style={{ padding: "0.6rem 1rem", border: "1px solid #d8b456", borderRadius: "6px", background: "#fffdf7", color: "#8a6616", fontWeight: 700, cursor: "pointer" }}
+                >
+                  + Add Another Story Slide
+                </button>
+              </div>
             </div>
           )}
 
@@ -1044,11 +1080,20 @@ export function AdminCMSEditor() {
           {homeSubTab === "collection" && (
             <div style={{ display: "grid", gap: "1rem" }}>
               <div style={cardStyle}>
-                <h3 style={{ margin: "0 0 0.3rem", fontSize: "1.05rem", color: "#102218" }}>
-                  Collection Page — Intro &amp; Section Copy
-                </h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap", marginBottom: "0.3rem" }}>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", color: "#102218" }}>
+                    Collection Page — Intro &amp; Section Copy
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={addNewProduct}
+                    style={{ padding: "0.55rem 0.9rem", border: 0, borderRadius: "6px", background: "#102218", color: "#fff", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    + Add Collection Product / Card
+                  </button>
+                </div>
                 <p style={{ margin: "0 0 1rem", fontSize: "0.82rem", color: "#665e52" }}>
-                  These settings update the Collection block on the homepage and the /products Collection page.
+                  These settings update the Collection block on the homepage and the /products Collection page. Use “Add Collection Product / Card” to create another product card directly here.
                 </p>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: "0.8rem" }}>
                   <div>
@@ -1186,6 +1231,19 @@ export function AdminCMSEditor() {
                   </div>
                 </div>
               ))}
+
+              <div style={{ ...cardStyle, textAlign: "center", borderStyle: "dashed" }}>
+                <p style={{ margin: "0 0 0.75rem", fontSize: "0.82rem", color: "#665e52" }}>
+                  Need another product in The Collection?
+                </p>
+                <button
+                  type="button"
+                  onClick={addNewProduct}
+                  style={{ padding: "0.6rem 1rem", border: "1px solid #d8b456", borderRadius: "6px", background: "#fffdf7", color: "#8a6616", fontWeight: 700, cursor: "pointer" }}
+                >
+                  + Add Another Collection Product / Card
+                </button>
+              </div>
             </div>
           )}
 
