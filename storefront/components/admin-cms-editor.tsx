@@ -2765,11 +2765,16 @@ export function AdminCMSEditor() {
                     border: "1px solid #e6decb",
                   }}
                 >
-                  <img
-                    src={photo.src}
-                    alt={photo.label}
-                    style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "6px" }}
-                  />
+                  <div style={{ flex: "0 1 560px", minWidth: "280px" }}>
+                    {renderImagePreview(
+                      photo.src,
+                      photo.label,
+                      originalConfig?.products
+                        ?.find((item) => item.slug === currentProduct.slug)
+                        ?.variants?.find((variant) => variant.id === currentVariant.id)
+                        ?.galleryPhotos?.[pIdx]?.src
+                    )}
+                  </div>
                   <div style={{ flex: 1 }}>
                     <input
                       style={inputStyle}
