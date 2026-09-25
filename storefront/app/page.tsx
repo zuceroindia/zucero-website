@@ -35,6 +35,7 @@ import {
   DynamicHeroSection,
   DynamicProblemSection,
   DynamicNatureSection,
+  DynamicCustomSections,
   DynamicWhyZuceroSection,
   DynamicLaunchListSection,
 } from "@/components/dynamic-home-sections";
@@ -47,6 +48,7 @@ export default function Home() {
       <DynamicProblemSection />
       <DynamicNatureSection />
       <HeritageSections philosophy={<PhilosophySection />} />
+      <DynamicCustomSections />
       <DynamicWhyZuceroSection />
       <DynamicLaunchListSection />
       <SiteFooter />
