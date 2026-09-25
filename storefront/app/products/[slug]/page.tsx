@@ -7,7 +7,7 @@ import { StoreHeader } from "@/components/store-header";
 import { SiteFooter } from "@/components/site-footer";
 import { products } from "@/lib/catalog";
 import { getLiveCMSConfig } from "@/lib/cms";
-import { absoluteUrl, safeJsonLd } from "@/lib/seo";
+import { absoluteUrl, DEFAULT_OG_IMAGE, safeJsonLd } from "@/lib/seo";
 
 export function generateStaticParams() { return products.map(({ slug }) => ({ slug })); }
 
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     : isMishri
       ? "Explore Zucero Original Khand Dhaga Mishri, slowly crystallised using the traditional thread technique. See ingredients, approved 280 g & 580 g sizes, pricing and product information."
       : product.description;
-  const image = absoluteUrl(product.image);
+  const image = DEFAULT_OG_IMAGE;
   const url = absoluteUrl(`/products/${product.slug}`);
 
   return {
