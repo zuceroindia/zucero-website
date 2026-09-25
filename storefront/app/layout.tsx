@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: "Desi Khand & Traditional Sugar Alternatives | Zucero",
     description: "Traditional Indian sweetness from sugarcane, with clear ingredients, honest product information and a modern approach to Desi Khand and Khand Mishri.",
-    images: [{ url: DEFAULT_OG_IMAGE, width: 1600, height: 900, alt: "Zucero — The Good Sugar" }],
+    images: [{ url: DEFAULT_OG_IMAGE, alt: "Zucero — The Good Sugar" }],
   },
   twitter: {
     card: "summary_large_image",
