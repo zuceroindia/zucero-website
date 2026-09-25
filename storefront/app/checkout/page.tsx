@@ -90,9 +90,11 @@ export default function CheckoutPage() {
   const [details, setDetails] = useState<CustomerDetails>(emptyCustomerDetails);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  // Unified referral field
+  // Unified discount / referral field
   const [promoInput, setPromoInput] = useState("");
-  const [appliedReferral, setAppliedReferral] = useState("");
+  const [appliedPromoCode, setAppliedPromoCode] = useState("");
+  const [appliedPromoType, setAppliedPromoType] = useState<"coupon" | "referral" | "">("");
+  const [appliedDiscountPercentage, setAppliedDiscountPercentage] = useState(0);
   const [promoMessage, setPromoMessage] = useState("");
   const [promoError, setPromoError] = useState(false);
   const [promoLoading, setPromoLoading] = useState(false);
@@ -117,9 +119,11 @@ export default function CheckoutPage() {
   } | null>(null);
 
   const discountPaise = useMemo(() => {
-    if (appliedReferral) return Math.round(subtotalPaise * 0.10);
+    if (appliedPromoCode && appliedDiscountPercentage > 0) {
+      return Math.round(subtotalPaise * appliedDiscountPercentage / 100);
+    }
     return 0;
-  }, [subtotalPaise, appliedReferral]);
+  }, [subtotalPaise, appliedPromoCode, appliedDiscountPercentage]);
 
   const shippingPaise = shippingQuote ? shippingQuote.shippingPaise : 0;
 
@@ -262,20 +266,22 @@ export default function CheckoutPage() {
   }
 
   function clearPromo() {
-    setAppliedReferral("");
+    setAppliedPromoCode("");
+    setAppliedPromoType("");
+    setAppliedDiscountPercentage(0);
     setPromoInput("");
-    setPromoMessage("Referral code removed.");
+    setPromoMessage("Discount code removed.");
     setPromoError(false);
   }
 
   async function handlePromo() {
-    if (appliedReferral) {
+    if (appliedPromoCode) {
       clearPromo();
       return;
     }
     const raw = promoInput.trim().toUpperCase();
     if (!raw) {
-      setPromoMessage("Please enter a referral code.");
+      setPromoMessage("Please enter a discount or referral code.");
       setPromoError(true);
       return;
     }
@@ -283,6 +289,23 @@ export default function CheckoutPage() {
     setPromoMessage("");
     setPromoError(false);
     try {
+      const couponRes = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code: raw }),
+      });
+      const couponData = await couponRes.json();
+      if (couponRes.ok && couponData.valid) {
+        const percentage = Number(couponData.discountPercentage) || 0;
+        setAppliedPromoCode(couponData.code || raw);
+        setAppliedPromoType("coupon");
+        setAppliedDiscountPercentage(percentage);
+        setPromoInput(couponData.code || raw);
+        setPromoMessage(`Discount code applied! ${percentage}% off your product subtotal.`);
+        setPromoError(false);
+        return;
+      }
+
       const refRes = await fetch("/api/referrals/validate", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -290,16 +313,20 @@ export default function CheckoutPage() {
       });
       const refData = await refRes.json();
       if (refData.valid) {
-        setAppliedReferral(raw);
+        const percentage = Number(refData.discountPercentage) || 10;
+        setAppliedPromoCode(raw);
+        setAppliedPromoType("referral");
+        setAppliedDiscountPercentage(percentage);
         setPromoInput(raw);
-        setPromoMessage(`Referral code applied! You get an additional 10% discount on referral.`);
+        setPromoMessage(`Referral code applied! You get an additional ${percentage}% discount.`);
         setPromoError(false);
         return;
       }
-      setPromoMessage(refData.error || "This referral code is not valid. Check for typos or try another.");
+
+      setPromoMessage(refData.error || couponData.error || "This code is not valid. Check for typos or try another.");
       setPromoError(true);
     } catch {
-      setPromoMessage("Could not validate referral code. Please try again.");
+      setPromoMessage("Could not validate this code. Please try again.");
       setPromoError(true);
     } finally {
       setPromoLoading(false);
@@ -317,7 +344,8 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           customer: { ...details, country: "India" },
           lines: lines.map((line) => ({ variantId: line.variantId, quantity: line.quantity })),
-          referralCode: appliedReferral || undefined,
+          couponCode: appliedPromoType === "coupon" ? appliedPromoCode : undefined,
+          referralCode: appliedPromoType === "referral" ? appliedPromoCode : undefined,
           useWallet,
         }),
       });
@@ -650,25 +678,29 @@ export default function CheckoutPage() {
         </fieldset>
       )}
 
-      {/* Referral Code (Exclusively unlocks 10% discount) */}
+      {/* Discount / Referral Code */}
       <fieldset>
-        <legend>Referral Code</legend>
+        <legend>Discount or Referral Code</legend>
         <p style={{ margin: "0 0 10px 0", fontSize: "0.88rem", color: "#4a6358" }}>
-          Get an additional discount of 10% on referral.
+          Enter a Zucero discount coupon or referral code. Only one code can be applied per order.
         </p>
         <div className="field-grid">
-          <label className="wide"><span>Referral code</span>
+          <label className="wide"><span>Code</span>
             <input
               value={promoInput}
               onChange={(e) => {
                 setPromoInput(e.target.value.toUpperCase());
                 setPromoMessage("");
                 setPromoError(false);
-                if (appliedReferral) { setAppliedReferral(""); }
+                if (appliedPromoCode) {
+                  setAppliedPromoCode("");
+                  setAppliedPromoType("");
+                  setAppliedDiscountPercentage(0);
+                }
               }}
-              placeholder="Enter referral code (e.g. REF-XXXXX)"
+              placeholder="Enter discount or referral code"
               autoComplete="off"
-              disabled={Boolean(appliedReferral)}
+              disabled={Boolean(appliedPromoCode)}
             />
           </label>
           <button
@@ -678,7 +710,7 @@ export default function CheckoutPage() {
             disabled={promoLoading}
             style={{ alignSelf: "end" }}
           >
-            {promoLoading ? "Checking…" : appliedReferral ? "Remove" : "Apply code"}
+            {promoLoading ? "Checking…" : appliedPromoCode ? "Remove" : "Apply code"}
           </button>
         </div>
         {promoMessage && (
@@ -714,7 +746,9 @@ export default function CheckoutPage() {
       </div>
       {discountPaise > 0 && (
         <div className="checkout-line">
-          <span>Referral discount ({appliedReferral}) · 10% off</span>
+          <span>
+            {appliedPromoType === "coupon" ? "Coupon discount" : "Referral discount"} ({appliedPromoCode}) · {appliedDiscountPercentage}% off
+          </span>
           <strong style={{ color: "#1b5e20" }}>-{formatPrice(discountPaise)}</strong>
         </div>
       )}

@@ -45,7 +45,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
+      success: true,
       url: publicData.publicUrl,
+      publicUrl: publicData.publicUrl,
       fileName: cleanName,
     });
   } catch (err) {
