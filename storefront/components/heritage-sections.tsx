@@ -35,7 +35,7 @@ export function CollectionSection() {
       </p>
     </div>
     <section id="products" className="heritage-collection">
-      <div id="collection-title" className="collection-anchor"><SectionDivider number="04" title="The Collection" light /></div>
+      <div id="collection-title" className="collection-anchor"><SectionDivider number={config.homepage.collectionSectionNumber || "04"} title={config.homepage.collectionSectionTitle || "The Collection"} light /></div>
       <h2 className="sr-only">Explore Our Collection</h2>
       <header>
         <span className="heritage-rule" />
@@ -64,7 +64,7 @@ export function CollectionSection() {
             <p className="eyebrow">{product.eyebrow}</p>
             <span className="heritage-rule" />
             <div className="heritage-product-story">
-              <p>{index ? "A centuries-old tradition of crystallised sweetness." : "Before refined sugar, there was Khand — a centuries-old Indian tradition of sweetness."}</p>
+              <p>{config.homepage.collectionProductStories?.[product.slug] || (index ? "A centuries-old tradition of crystallised sweetness." : "Before refined sugar, there was Khand — a centuries-old Indian tradition of sweetness.")}</p>
               <p>{product.description}</p>
             </div>
             <p className="heritage-sizes">{product.variants.map((v: ProductVariant) => `${v.label} · ₹${(v.pricePaise ?? 0) / 100}`).join(" / ")}</p>
