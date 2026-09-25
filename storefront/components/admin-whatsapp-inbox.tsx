@@ -34,6 +34,7 @@ type Message = {
   body: string;
   status: string;
   error_code: string | null;
+  error_message?: string | null;
   sent_at: string;
 };
 
@@ -381,7 +382,14 @@ export function AdminWhatsAppInbox() {
   function renderStatus(message: Message) {
     if (message.direction !== "outbound") return null;
     if (message.error_code || message.status === "failed") {
-      return <span className={styles.statusFailed}>⚠️ Failed</span>;
+      const tooltip =
+        message.error_message ||
+        "Freeform message rejected by Meta (24h customer window expired). Use 'Meta Template' in the order panel above.";
+      return (
+        <span className={styles.statusFailed} title={tooltip}>
+          ⚠️ Failed
+        </span>
+      );
     }
     if (message.status === "read") {
       return (
@@ -751,6 +759,9 @@ export function AdminWhatsAppInbox() {
                   <Send size={16} />
                 </button>
               </form>
+              <p className={styles.windowNote}>
+                💡 Freeform messages require the customer to have contacted within 24 hours. Outside 24h, click <strong>&quot;Meta Template&quot;</strong> in the order panel above.
+              </p>
             </>
           )}
         </section>

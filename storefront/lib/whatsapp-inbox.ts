@@ -343,10 +343,13 @@ export async function fetchCustomerOrdersForWaId(waId: string): Promise<Customer
   const last10 = digits.slice(-10);
   if (last10.length < 10) return [];
 
+  const f5 = last10.slice(0, 5);
+  const l5 = last10.slice(5);
+
   const { data: orders } = await db
     .from("orders")
     .select("id, order_number, created_at, status, payment_status, total_paise, subtotal_paise, tax_paise, shipping_paise, discount_paise, wallet_spent_paise, tracking_awb, courier_name, tracking_url, estimated_delivery_window, customer_phone, customer_email, shipping_address")
-    .or(`customer_phone.ilike.%${last10}%,shipping_address->>phone.ilike.%${last10}%`)
+    .or(`customer_phone.ilike.%${last10}%,customer_phone.ilike.%${f5}%${l5}%,shipping_address->>phone.ilike.%${last10}%,shipping_address->>phone.ilike.%${f5}%${l5}%`)
     .order("created_at", { ascending: false })
     .limit(10);
 

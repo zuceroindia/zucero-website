@@ -21,25 +21,22 @@ export async function GET(request: Request) {
     // 2. Fetch all wallets
     const { data: wallets } = await db
       .from("wallets")
-      .select("customer_email, balance_paise, total_earned_paise, total_spent_paise, updated_at");
+      .select("email, balance_paise");
 
     // 3. Fetch all referral codes
     const { data: referralCodes } = await db
       .from("referral_codes")
-      .select("code, owner_email, uses_count, total_discount_given_paise");
+      .select("code, owner_email, total_earned_paise");
 
-    const walletsMap = new Map<string, { balancePaise: number; earnedPaise: number }>();
-    for (const w of wallets || []) {
-      if (w.customer_email) {
-        walletsMap.set(w.customer_email.toLowerCase(), {
-          balancePaise: w.balance_paise || 0,
-          earnedPaise: w.total_earned_paise || 0,
-        });
+    const walletsMap = new Map<string, number>();
+    for (const w of (wallets || []) as Array<{ email?: string; balance_paise?: number }>) {
+      if (w.email) {
+        walletsMap.set(w.email.toLowerCase(), w.balance_paise || 0);
       }
     }
 
     const refMap = new Map<string, string>();
-    for (const r of referralCodes || []) {
+    for (const r of (referralCodes || []) as Array<{ code: string; owner_email?: string }>) {
       if (r.owner_email) {
         refMap.set(r.owner_email.toLowerCase(), r.code);
       }
@@ -81,14 +78,13 @@ export async function GET(request: Request) {
           existing.firstOrderDate = o.created_at;
         }
       } else {
-        const wallet = walletsMap.get(email);
         customersMap.set(email, {
           email,
           fullName: name,
           phone,
           ordersCount: 1,
           totalSpentRupees: isPaid ? ((o.total_paise || 0) / 100).toFixed(2) : "0.00",
-          walletBalanceRupees: wallet ? (wallet.balancePaise / 100).toFixed(2) : "0.00",
+          walletBalanceRupees: (((walletsMap.get(email) || 0)) / 100).toFixed(2),
           referralCode: refMap.get(email) || "-",
           firstOrderDate: o.created_at,
           lastOrderDate: o.created_at,

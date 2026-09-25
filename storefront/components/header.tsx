@@ -107,7 +107,7 @@ export function Header() {
         <button ref={menuButtonRef} className="icon-button mobile-menu" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} aria-controls="primary-navigation" onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button>
       </div>
     </header>
-      {showPriorityNotice && !collectionInView && (
+      {showPriorityNotice && !collectionInView && !pathname?.startsWith("/admin") && (
         <aside className="priority-popup" aria-label="Exclusive referral offer">
           <button type="button" aria-label="Dismiss referral offer" onClick={() => setShowPriorityNotice(false)}><X size={16} /></button>
           <Link href="/products#collection-title"><Gem aria-hidden="true" /><span><strong>Exclusive Referral Offer</strong><small>Get an additional discount of 10% on referral</small></span><ArrowRight aria-hidden="true" /></Link>

@@ -23,5 +23,5 @@ export default async function AdminWhatsAppPage() {
   const merchantEmail = (process.env.ORDER_NOTIFICATION_EMAIL || "zucero.thegoodsugar@gmail.com").toLowerCase();
   if (data.user?.email?.toLowerCase() !== merchantEmail) redirect("/account?redirect=/admin/whatsapp");
 
-  return <main className="store-page"><StoreHeader /><AdminWhatsAppInbox /></main>;
+  return <main className="store-page" data-admin-page="true"><StoreHeader /><AdminWhatsAppInbox /></main>;
 }

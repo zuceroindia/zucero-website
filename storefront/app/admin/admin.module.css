@@ -1,6 +1,14 @@
+:global(.whatsapp-contact),
+:global(.priority-popup),
+:global(.back-to-top) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .shell {
   min-height: calc(100svh - 104px);
-  padding: clamp(1.5rem, 3vw, 3rem) 4vw 4rem;
+  padding: 140px 4vw 4rem;
   background: #ebe5d8;
   font-family: inherit;
 }
@@ -562,5 +570,11 @@
   font-size: 0.74rem;
   color: #137333;
   font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .shell {
+    padding: 115px 16px 2.5rem;
+  }
 }
 

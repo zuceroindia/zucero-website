@@ -50,15 +50,21 @@ export async function GET(request: Request) {
       }
     }
 
-    // 2. Fetch Wallets summary
+    // 2. Fetch Wallets and Referrals summary
     const { data: wallets } = await db
       .from("wallets")
-      .select("balance_paise, total_earned_paise, total_spent_paise");
+      .select("balance_paise");
     let totalWalletBalancePaise = 0;
-    let totalEarnedReferralPaise = 0;
-    for (const w of wallets || []) {
+    for (const w of (wallets || []) as Array<{ balance_paise?: number }>) {
       totalWalletBalancePaise += w.balance_paise || 0;
-      totalEarnedReferralPaise += w.total_earned_paise || 0;
+    }
+
+    const { data: referrals } = await db
+      .from("referral_codes")
+      .select("total_earned_paise");
+    let totalEarnedReferralPaise = 0;
+    for (const r of (referrals || []) as Array<{ total_earned_paise?: number }>) {
+      totalEarnedReferralPaise += r.total_earned_paise || 0;
     }
 
     // 3. Fetch Inquiries count

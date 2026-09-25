@@ -244,6 +244,7 @@ footer{background:var(--deep-green-dark)}
 .site-header.nav-on-light .brand img{filter:none}
 .whatsapp-contact{position:fixed;z-index:15;right:20px;bottom:80px;display:flex;align-items:center;gap:.6rem;padding:12px 17px;border-radius:40px;background:#17683c;color:white;font-size:.8rem;box-shadow:0 4px 18px #0003}
 body:has(.pdp-page) .whatsapp-contact{bottom:118px}
+body:has([data-admin-page]) .whatsapp-contact,body:has([data-admin-page]) .priority-popup,body:has([data-admin-page]) .back-to-top{display:none!important;visibility:hidden!important;pointer-events:none!important}
 @media(max-width:640px){.site-header .brand{width:82px}.site-header .brand img{width:82px;height:82px}.whatsapp-contact{right:14px;bottom:16px;padding:13px}.whatsapp-contact span{display:none}}
 html{scroll-padding-top:120px}
 @media(max-width:640px){html{scroll-padding-top:90px}}

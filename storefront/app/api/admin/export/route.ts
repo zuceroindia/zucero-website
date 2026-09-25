@@ -138,12 +138,12 @@ export async function GET(request: Request) {
 
     if (type === "customers") {
       const { data: orders } = await db.from("orders").select("customer_email, customer_phone, total_paise, status, payment_status, created_at, shipping_address");
-      const { data: wallets } = await db.from("wallets").select("customer_email, balance_paise, total_earned_paise");
+      const { data: wallets } = await db.from("wallets").select("email, balance_paise");
       const { data: referrals } = await db.from("referral_codes").select("code, owner_email");
 
       const walletsMap = new Map<string, number>();
-      for (const w of wallets || []) {
-        if (w.customer_email) walletsMap.set(w.customer_email.toLowerCase(), w.balance_paise || 0);
+      for (const w of (wallets || []) as Array<{ email?: string; balance_paise?: number }>) {
+        if (w.email) walletsMap.set(w.email.toLowerCase(), w.balance_paise || 0);
       }
 
       const refsMap = new Map<string, string>();

@@ -30,7 +30,7 @@ export default async function AdminPage() {
   }
 
   return (
-    <main className="store-page">
+    <main className="store-page" data-admin-page="true">
       <StoreHeader />
       <AdminDashboard />
       <SiteFooter />
