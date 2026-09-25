@@ -18,7 +18,8 @@ import {
 import { StoreHeader } from "@/components/store-header";
 import { SiteFooter } from "@/components/site-footer";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase-browser";
-import { formatPrice, products } from "@/lib/catalog";
+import { formatPrice } from "@/lib/catalog";
+import { useCMS } from "@/components/cms-provider";
 import { INDIAN_STATES } from "@/lib/india";
 import styles from "./account.module.css";
 
@@ -148,6 +149,7 @@ function orderProgress(status: string) {
 
 export default function OrdersPage() {
   const router = useRouter();
+  const { config: cmsConfig } = useCMS();
   const client = useMemo(() => (isSupabaseConfigured() ? createSupabaseBrowserClient() : null), []);
   const [section, setSection] = useState<Section>("overview");
   const [orders, setOrders] = useState<Order[]>([]);
@@ -527,14 +529,14 @@ export default function OrdersPage() {
 
   // Flat product variant list for subscription selector
   const catalogVariants = useMemo(() => {
-    return products.flatMap((p) =>
+    return cmsConfig.products.flatMap((p) =>
       p.variants.map((v) => ({
         variantId: v.id,
         label: `${p.name} - ${v.label} (${formatPrice(v.pricePaise ?? 0)})`,
         pricePaise: v.pricePaise ?? 0,
       }))
     );
-  }, []);
+  }, [cmsConfig.products]);
 
   if (loading) {
     return (
