@@ -26,6 +26,7 @@ import {
   Upload,
   User,
 } from "lucide-react";
+import { AdminCouponManager } from "@/components/admin-coupon-manager";
 import type {
   CMSCommit,
   CMSConfig,
@@ -217,8 +218,9 @@ export function AdminCMSEditor() {
         body: formData,
       });
       const data = await res.json();
-      if (res.ok && data.success && data.publicUrl) {
-        onUploaded(data.publicUrl);
+      const uploadedUrl = data.publicUrl || data.url;
+      if (res.ok && (data.success || data.ok) && uploadedUrl) {
+        onUploaded(uploadedUrl);
         showToast("success", "Image uploaded to CDN successfully!");
       } else {
         showToast("error", data.error || "Failed to upload image.");
@@ -734,7 +736,7 @@ export function AdminCMSEditor() {
                         gap: "0.3rem",
                       }}
                     >
-                      <Upload size={14} /> Upload
+                      <Upload size={14} /> Replace Image
                       <input
                         type="file"
                         accept="image/*"
@@ -918,7 +920,7 @@ export function AdminCMSEditor() {
                         gap: "0.3rem",
                       }}
                     >
-                      <Upload size={14} /> Upload
+                      <Upload size={14} /> Replace Image
                       <input
                         type="file"
                         accept="image/*"
@@ -1006,7 +1008,7 @@ export function AdminCMSEditor() {
                         gap: "0.3rem",
                       }}
                     >
-                      <Upload size={14} /> Upload
+                      <Upload size={14} /> Replace Image
                       <input
                         type="file"
                         accept="image/*"
@@ -1135,7 +1137,7 @@ export function AdminCMSEditor() {
                         gap: "0.3rem",
                       }}
                     >
-                      <Upload size={14} /> Upload
+                      <Upload size={14} /> Replace Image
                       <input
                         type="file"
                         accept="image/*"
@@ -1334,7 +1336,7 @@ export function AdminCMSEditor() {
                       gap: "0.3rem",
                     }}
                   >
-                    <Upload size={14} /> Upload
+                    <Upload size={14} /> Replace Image
                     <input
                       type="file"
                       accept="image/*"
@@ -1539,7 +1541,28 @@ export function AdminCMSEditor() {
                       }}
                     />
                   </div>
-                  <div style={{ display: "flex", gap: "0.3rem" }}>
+                  <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
+                    <label
+                      style={{ padding: "0.4rem 0.55rem", borderRadius: "4px", border: "1px solid #d8b456", background: "#fffdf7", color: "#8a6616", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.25rem", fontSize: "0.72rem", fontWeight: 700 }}
+                      title="Replace this image"
+                    >
+                      <Upload size={13} /> Replace
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          handleImageUpload(file, (url) => {
+                            const photos = [...(currentVariant.galleryPhotos || [])];
+                            photos[pIdx] = { ...photos[pIdx], src: url };
+                            updateVariantField(selectedVariantIdx, { galleryPhotos: photos });
+                          });
+                          e.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
                     <button
                       type="button"
                       disabled={pIdx === 0}
@@ -2179,7 +2202,8 @@ export function AdminCMSEditor() {
           <h3 style={{ margin: "0 0 1rem", fontSize: "1.05rem", color: "#102218" }}>
             Promotions &amp; Offer Badges
           </h3>
-          <div style={{ display: "grid", gap: "1rem" }}>
+          <AdminCouponManager />
+          <div style={{ display: "grid", gap: "1rem", marginTop: "1.25rem" }}>
             <div>
               <label style={labelStyle}>Introductory Price Notice (Shown Next to Prices)</label>
               <input
