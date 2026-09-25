@@ -9,7 +9,7 @@ export function DynamicOurStory() {
   const story = config.ourStory;
 
   return (
-    <ContentPage eyebrow={story.eyebrow} title={story.title} intro={story.intro}>
+    <ContentPage eyebrow={story.eyebrow} title={story.title} intro={story.intro} layout={config.sectionLayouts?.["ourStory.page"]}>
       {story.storyParagraphs?.map((paragraph, idx) => (
         <p key={idx}>{paragraph}</p>
       ))}
