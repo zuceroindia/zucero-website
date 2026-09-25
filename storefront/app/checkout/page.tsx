@@ -696,12 +696,18 @@ export default function CheckoutPage() {
       </div>
       {lines.map((line) => (
         <div className="checkout-line" key={line.variantId}>
-          <span>{line.productName} · {line.variantLabel} × {line.quantity}</span>
+          <div>
+            <span>{line.productName} · {line.variantLabel} × {line.quantity}</span>
+            <div style={{ fontSize: "0.7rem", color: "#8a6616" }}>Introductory price</div>
+          </div>
           <strong>{formatPrice(line.pricePaise * line.quantity)}</strong>
         </div>
       ))}
       <div className="checkout-line">
-        <span>Product subtotal</span>
+        <div>
+          <span>Product subtotal</span>
+          <div style={{ fontSize: "0.72rem", color: "#8a6616", fontWeight: 600 }}>Introductory price for first 100 orders only</div>
+        </div>
         <strong>{formatPrice(subtotalPaise)}</strong>
       </div>
       {discountPaise > 0 && (

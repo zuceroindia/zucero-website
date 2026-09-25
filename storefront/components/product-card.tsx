@@ -21,7 +21,13 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="variant-row" aria-label="Choose size">
           {product.variants.map((item) => <button key={item.id} onClick={() => setVariantId(item.id)} className={variantId === item.id ? "active" : ""}>{item.label}</button>)}
         </div>
-        <div className="product-buy"><strong>{formatPrice(variant.pricePaise)}</strong><Link className="button button-dark" href={`/products/${product.slug}`}>View product</Link></div>
+        <div className="product-buy">
+          <div>
+            <strong>{formatPrice(variant.pricePaise)}</strong>
+            <small style={{ display: "block", fontSize: "0.68rem", color: "#8a6616", fontWeight: 600 }}>Introductory price for first 100 orders only</small>
+          </div>
+          <Link className="button button-dark" href={`/products/${product.slug}`}>View product</Link>
+        </div>
       </div>
     </article>
   );

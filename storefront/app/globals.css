@@ -200,6 +200,7 @@ footer{background:var(--deep-green-dark)}
 .collection-intro p{font:300 clamp(1.7rem,3vw,2.8rem)/1.3 var(--serif);margin:auto}
 .heritage-collection{background:var(--deep-green);color:var(--paper);padding-top:5rem!important}
 .heritage-collection .heritage-sizes{color:var(--gold)}
+.heritage-intro-price{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:-.25rem 0 .75rem;font-weight:600}
 .craft-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:2rem;padding:0 8vw 5rem}
 .craft-steps h3{font-size:2rem!important}
 .why-zucero{text-align:center;background:var(--cream)}

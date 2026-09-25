@@ -29,6 +29,7 @@ export function ProductDetailView({
               <div>
                 <h3>{relatedProduct.name}</h3>
                 <p>From {formatPrice(relatedProduct.variants[0].pricePaise)}</p>
+                <small style={{ display: "block", fontSize: "0.7rem", color: "#8a6616", fontWeight: 600, marginBottom: "0.25rem" }}>Introductory price for first 100 orders only</small>
                 <span>View product <span aria-hidden="true">→</span></span>
               </div>
             </Link>
