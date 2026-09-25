@@ -53,8 +53,35 @@ export function CMSProvider({
     [config.products]
   );
 
+  const typographyCss = React.useMemo(() => {
+    const t = config.typography ?? DEFAULT_CMS_CONFIG.typography;
+    const fontFaces = (t.uploadedFonts || []).map((font) => {
+      const safeName = font.name.replace(/["\\]/g, "");
+      const safeUrl = font.url.replace(/["\\]/g, "");
+      const cssFormat = font.format === "ttf" ? "truetype" : font.format === "otf" ? "opentype" : font.format;
+      return `@font-face{font-family:"${safeName}";src:url("${safeUrl}") format("${cssFormat}");font-style:normal;font-weight:100 900;font-display:swap;}`;
+    }).join("\n");
+
+    const rules = [
+      `:root{--sans:"${String(t.bodyFont || "Manrope").replace(/["\\]/g, "")}",Arial,sans-serif;--serif:"${String(t.headingFont || "Cormorant Garamond").replace(/["\\]/g, "")}",Georgia,serif;--cms-accent-font:"${String(t.accentFont || t.bodyFont || "Manrope").replace(/["\\]/g, "")}",Arial,sans-serif;}`,
+      `body{font-family:var(--sans);font-weight:${Number(t.bodyWeight) || 400};}`,
+      `h1,h2,h3,h4,h5,h6,.product-info h3,.purchase-panel h1,.page-title h1,.checkout-heading h1,.account-story h1,.orders-shell h1{font-family:var(--serif);font-weight:${Number(t.headingWeight) || 400};}`,
+      `.eyebrow,.button,.nav,.text-link,.text-button{font-family:var(--cms-accent-font);}`,
+      t.bodySizePx > 0 ? `body{font-size:${t.bodySizePx}px!important;}` : "",
+      t.h1SizePx > 0 ? `h1,.hero h1,.purchase-panel h1,.page-title h1,.checkout-heading h1,.account-story h1,.orders-shell h1{font-size:${t.h1SizePx}px!important;}` : "",
+      t.h2SizePx > 0 ? `h2,.section-copy h2,.section-heading h2,.nature-copy h2,.proof-section h2,.faq-section h2,.contact-section h2{font-size:${t.h2SizePx}px!important;}` : "",
+      t.h3SizePx > 0 ? `h3,.product-info h3,.process-grid h3,.proof-grid h3{font-size:${t.h3SizePx}px!important;}` : "",
+      t.navSizePx > 0 ? `.nav,.nav a{font-size:${t.navSizePx}px!important;}` : "",
+      t.buttonSizePx > 0 ? `.button,.text-link,.text-button{font-size:${t.buttonSizePx}px!important;}` : "",
+      t.advancedCss || "",
+    ].filter(Boolean).join("\n");
+
+    return `${fontFaces}\n${rules}`;
+  }, [config.typography]);
+
   return (
     <CMSContext.Provider value={{ config, getProduct, refresh }}>
+      <style data-zucero-cms-typography>{typographyCss}</style>
       {children}
     </CMSContext.Provider>
   );

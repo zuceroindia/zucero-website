@@ -174,7 +174,7 @@ export function findCatalogProductAndVariant(variantId: string, customProducts?:
   const list = customProducts && customProducts.length > 0 ? customProducts : products;
   for (const product of list) {
     const variant = product.variants.find((item) => item.id === resolvedId);
-    if (variant && variant.pricePaise !== null) {
+    if (variant && (variant.pricePaise ?? 0) > 0) {
       return { product, variant };
     }
   }

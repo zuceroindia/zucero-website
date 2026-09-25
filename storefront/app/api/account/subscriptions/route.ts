@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { findCatalogProductAndVariant } from "@/lib/catalog";
+import { getLiveCMSConfig } from "@/lib/cms";
 
 const schema = z.object({
   productVariantId: z.string().min(2),
@@ -72,8 +73,9 @@ export async function POST(request: Request) {
   try {
     const body = schema.parse(await request.json());
 
-    // Validate catalog item
-    const match = findCatalogProductAndVariant(body.productVariantId);
+    // Validate live catalog item
+    const cms = await getLiveCMSConfig();
+    const match = findCatalogProductAndVariant(body.productVariantId, cms.products);
     if (!match) {
       return NextResponse.json({ error: "Selected product is not available." }, { status: 400 });
     }

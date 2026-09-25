@@ -23,6 +23,41 @@ export type CMSHighlight = {
   description: string;
 };
 
+export type CMSCustomHomepageSection = {
+  id: string;
+  enabled: boolean;
+  eyebrow: string;
+  title: string;
+  body: string;
+  image: string;
+  imageAlt: string;
+  imagePosition: "left" | "right" | "none";
+  theme: "light" | "dark" | "green";
+};
+
+export type CMSUploadedFont = {
+  id: string;
+  name: string;
+  url: string;
+  format: "woff2" | "woff" | "ttf" | "otf";
+};
+
+export type CMSTypography = {
+  bodyFont: string;
+  headingFont: string;
+  accentFont: string;
+  bodyWeight: number;
+  headingWeight: number;
+  bodySizePx: number;
+  h1SizePx: number;
+  h2SizePx: number;
+  h3SizePx: number;
+  navSizePx: number;
+  buttonSizePx: number;
+  uploadedFonts: CMSUploadedFont[];
+  advancedCss: string;
+};
+
 export type CMSPromotions = {
   introductoryPriceText: string;
   referralOfferText: string;
@@ -75,6 +110,7 @@ export type CMSHomepage = {
   launchListEyebrow: string;
   launchListHeading: string;
   launchListSubtitle: string;
+  customSections: CMSCustomHomepageSection[];
 };
 
 export type CMSContact = {
@@ -158,6 +194,7 @@ export type CMSConfig = {
   footer: CMSFooter;
   policies: CMSPolicies;
   guides: CMSGuides;
+  typography: CMSTypography;
   customPages?: Record<string, { title: string; contentHtml: string }>;
   updatedAt: string;
 };
@@ -250,6 +287,7 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
     launchListEyebrow: "11 · The Launch List",
     launchListHeading: "Be first to taste the good sugar.",
     launchListSubtitle: "Get launch availability, founder notes, and early product access. No noisy inbox.",
+    customSections: [],
   },
   products: JSON.parse(JSON.stringify(defaultProducts)),
   promotions: {
@@ -261,6 +299,21 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
     popupDescription: "Share the goodness of Zucero with friends and family.",
     collectionBannerEyebrow: "Experience the goodness of the first batch",
     collectionBannerSubtitle: "Introductory price for first 100 orders only · Deliveries begin",
+  },
+  typography: {
+    bodyFont: "Outfit",
+    headingFont: "Cormorant Garamond",
+    accentFont: "Outfit",
+    bodyWeight: 400,
+    headingWeight: 400,
+    bodySizePx: 0,
+    h1SizePx: 0,
+    h2SizePx: 0,
+    h3SizePx: 0,
+    navSizePx: 0,
+    buttonSizePx: 0,
+    uploadedFonts: [],
+    advancedCss: "",
   },
   ourStory: {
     eyebrow: "Tamanna Sharma · The founder’s story",
@@ -514,6 +567,9 @@ export function mergeWithDefaultCMS(partial?: Partial<CMSConfig> | null): CMSCon
       whyZuceroParagraphs: Array.isArray(partial.homepage?.whyZuceroParagraphs) && partial.homepage.whyZuceroParagraphs.length > 0
         ? partial.homepage.whyZuceroParagraphs
         : DEFAULT_CMS_CONFIG.homepage.whyZuceroParagraphs,
+      customSections: Array.isArray(partial.homepage?.customSections)
+        ? partial.homepage.customSections
+        : DEFAULT_CMS_CONFIG.homepage.customSections,
     },
     products:
       Array.isArray(partial.products) && partial.products.length > 0
@@ -601,6 +657,13 @@ export function mergeWithDefaultCMS(partial?: Partial<CMSConfig> | null): CMSCon
           ? partial.policies.terms.sections
           : DEFAULT_CMS_CONFIG.policies.terms.sections,
       },
+    },
+    typography: {
+      ...DEFAULT_CMS_CONFIG.typography,
+      ...(partial.typography ?? {}),
+      uploadedFonts: Array.isArray(partial.typography?.uploadedFonts)
+        ? partial.typography.uploadedFonts
+        : DEFAULT_CMS_CONFIG.typography.uploadedFonts,
     },
     guides: {
       desiKhand: {

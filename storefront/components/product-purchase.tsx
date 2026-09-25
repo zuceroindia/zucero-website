@@ -33,9 +33,9 @@ export function ProductPurchase({
   const [shippingMessage, setShippingMessage] = useState("");
   const [checking, setChecking] = useState(false);
   const variant = product.variants.find((item: ProductVariant) => item.id === variantId) ?? product.variants[0];
-  const readyForSale = variant.pricePaise !== null;
+  const readyForSale = (variant.pricePaise ?? 0) > 0;
   const isKhand = product.slug === "desi-khand";
-  const offerPrice = variant.pricePaise === null ? "Price to be confirmed" : formatPrice(variant.pricePaise);
+  const offerPrice = (variant.pricePaise ?? 0) <= 0 ? "Price to be confirmed" : formatPrice(variant.pricePaise);
   const introPriceText = cmsConfig.promotions.introductoryPriceText;
   const referralOfferText = cmsConfig.promotions.referralOfferText;
   const benefits = isKhand

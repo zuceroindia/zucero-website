@@ -191,3 +191,74 @@ export function DynamicLaunchListSection() {
     </section>
   );
 }
+
+
+export function DynamicCustomSections() {
+  const { config } = useCMS();
+  const sections = config.homepage.customSections || [];
+
+  if (!sections.some((section) => section.enabled)) return null;
+
+  return (
+    <>
+      {sections.filter((section) => section.enabled).map((section) => {
+        const hasImage = Boolean(section.image) && section.imagePosition !== "none";
+        const dark = section.theme === "dark" || section.theme === "green";
+        const background = section.theme === "dark"
+          ? "#11130f"
+          : section.theme === "green"
+            ? "#102218"
+            : "var(--paper)";
+        const color = dark ? "#f4efe4" : "var(--ink)";
+        const muted = dark ? "rgba(244,239,228,.72)" : "var(--muted)";
+        const imageFirst = section.imagePosition === "left";
+
+        const copy = (
+          <div style={{ padding: "clamp(3.5rem,7vw,7rem)", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            {section.eyebrow && (
+              <p className="eyebrow" style={{ color: dark ? "#d8b456" : undefined }}>
+                {section.eyebrow}
+              </p>
+            )}
+            <h2 style={{ fontFamily: "var(--serif)", fontWeight: 400, fontSize: "clamp(2.6rem,4.8vw,5.2rem)", lineHeight: 1.05, margin: "0 0 1.1rem" }}>
+              {section.title}
+            </h2>
+            <div style={{ color: muted, whiteSpace: "pre-line", fontSize: "1.03rem", lineHeight: 1.7 }}>
+              {section.body}
+            </div>
+          </div>
+        );
+
+        const image = hasImage ? (
+          <div style={{ position: "relative", minHeight: "clamp(360px,52vw,680px)" }}>
+            <Image
+              src={section.image}
+              alt={section.imageAlt || section.title || "Zucero editorial section"}
+              fill
+              sizes="(max-width: 900px) 100vw, 50vw"
+              style={{ objectFit: "cover" }}
+            />
+          </div>
+        ) : null;
+
+        return (
+          <section
+            key={section.id}
+            id={section.id}
+            style={{
+              background,
+              color,
+              display: hasImage ? "grid" : "block",
+              gridTemplateColumns: hasImage ? "repeat(2,minmax(0,1fr))" : undefined,
+            }}
+            className="cms-custom-section"
+          >
+            {hasImage ? (
+              imageFirst ? <>{image}{copy}</> : <>{copy}{image}</>
+            ) : copy}
+          </section>
+        );
+      })}
+    </>
+  );
+}
