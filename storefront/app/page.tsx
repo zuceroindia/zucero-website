@@ -9,7 +9,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { StoryCarousel } from "@/components/story-carousel";
 import { SectionDivider } from "@/components/section-divider";
 import { LaunchListForm } from "@/components/launch-list-form";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, DEFAULT_OG_IMAGE } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Desi Khand & Traditional Sugar Alternatives",
@@ -21,13 +21,13 @@ export const metadata: Metadata = {
     url: absoluteUrl("/"),
     title: "Desi Khand & Traditional Sugar Alternatives | Zucero",
     description: "Traditional Indian sugarcane sweetness, thoughtfully made and explained honestly. Explore Desi Khand and Khand Mishri by Zucero.",
-    images: [{ url: "/images/hero-cinematic-poster.png", alt: "Zucero Desi Khand among sugarcane" }],
+    images: [{ url: DEFAULT_OG_IMAGE, alt: "Zucero — The Good Sugar" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Desi Khand & Traditional Sugar Alternatives | Zucero",
     description: "Explore Zucero Desi Khand and traditional Indian sugar alternatives made from sugarcane.",
-    images: ["/images/hero-cinematic-poster.png"],
+    images: [DEFAULT_OG_IMAGE],
   },
 };
 

@@ -47,6 +47,7 @@ type MainTab =
   | "policies"
   | "guides"
   | "headerFooter"
+  | "branding"
   | "promotions"
   | "typography"
   | "rawJson"
@@ -298,6 +299,7 @@ export function AdminCMSEditor() {
         : "https://www.thegoodsugar.in/guides/sugar-alternatives";
     }
     if (activeTab === "promotions") return "https://www.thegoodsugar.in/products";
+    if (activeTab === "branding") return "https://www.thegoodsugar.in";
     return "https://www.thegoodsugar.in";
   };
 
@@ -500,6 +502,88 @@ export function AdminCMSEditor() {
       )}
     </div>
   );
+
+  const renderBrandAssetEditor = (
+    field: keyof CMSConfig["branding"],
+    label: string,
+    note: string,
+    previewAlt: string
+  ) => {
+    const value = config.branding?.[field] || "";
+    return (
+      <div style={{ padding: "1rem", borderRadius: "8px", border: "1px solid #e6decb", background: "#fbf9f4" }}>
+        <label style={labelStyle}>{label}</label>
+        <p style={{ margin: "0 0 0.6rem", fontSize: "0.78rem", color: "#665e52" }}>{note}</p>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          <input
+            style={{ ...inputStyle, flex: "1 1 420px" }}
+            value={value}
+            onChange={(e) =>
+              setConfig({
+                ...config,
+                branding: { ...config.branding, [field]: e.target.value },
+              })
+            }
+          />
+          <label
+            style={{
+              padding: "0.5rem 0.85rem",
+              background: "#f4ede0",
+              borderRadius: "6px",
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.3rem",
+            }}
+          >
+            <Upload size={14} /> Upload / Replace
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                handleImageUpload(file, (url) =>
+                  setConfig({
+                    ...config,
+                    branding: { ...config.branding, [field]: url },
+                  })
+                );
+                e.currentTarget.value = "";
+              }}
+            />
+          </label>
+          {value && (
+            <button
+              type="button"
+              onClick={() =>
+                setConfig({
+                  ...config,
+                  branding: {
+                    ...config.branding,
+                    [field]:
+                      field === "faviconImage"
+                        ? "/images/zucero-favicon.webp"
+                        : field === "fssaiLogo"
+                          ? "/images/fssai-logo.png"
+                          : "/images/zucero-highres-logo.png",
+                  },
+                })
+              }
+              style={{ padding: "0.5rem 0.75rem", borderRadius: "6px", border: "1px solid #dcd4c4", background: "#fff", fontSize: "0.75rem", cursor: "pointer" }}
+            >
+              Reset Default
+            </button>
+          )}
+        </div>
+        {renderImagePreview(value, previewAlt)}
+      </div>
+    );
+  };
 
   const removeProductAtIndex = (productIdx: number) => {
     if (config.products.length <= 1) {
@@ -710,6 +794,7 @@ export function AdminCMSEditor() {
           { id: "policies", label: "⚖️ Legal & Policies", icon: Shield },
           { id: "guides", label: "📚 Guides & Educational", icon: Layers },
           { id: "headerFooter", label: "📢 Header & Footer", icon: Sparkles },
+          { id: "branding", label: "🎨 Brand, Logo & Elements", icon: ImageIcon },
           { id: "promotions", label: "🏷️ Promotions", icon: Sparkles },
           { id: "typography", label: "🔤 Fonts & Typography", icon: Sparkles },
           { id: "rawJson", label: "💻 Raw JSON Editor", icon: Code },
@@ -2239,6 +2324,62 @@ export function AdminCMSEditor() {
             </div>
           </div>
 
+          {/* Product Recommendation ("You may also like") */}
+          <div style={cardStyle}>
+            <h3 style={{ margin: "0 0 0.35rem", fontSize: "1.05rem", color: "#102218" }}>
+              Product Recommendation Section — “You may also like”
+            </h3>
+            <p style={{ margin: "0 0 1rem", fontSize: "0.82rem", color: "#665e52" }}>
+              Controls the recommendation block shown below the product gallery. The recommended product name, image and price come from the product you edit above.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.55rem", fontSize: "0.86rem", fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={config.productDetail?.recommendationEnabled !== false}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    productDetail: { ...config.productDetail, recommendationEnabled: e.target.checked },
+                  })}
+                />
+                Show recommendation section
+              </label>
+              <div>
+                <label style={labelStyle}>Section Heading</label>
+                <input
+                  style={inputStyle}
+                  value={config.productDetail?.recommendationHeading || "You may also like"}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    productDetail: { ...config.productDetail, recommendationHeading: e.target.value },
+                  })}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Price Prefix</label>
+                <input
+                  style={inputStyle}
+                  value={config.productDetail?.recommendationPricePrefix || "From"}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    productDetail: { ...config.productDetail, recommendationPricePrefix: e.target.value },
+                  })}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>CTA Text</label>
+                <input
+                  style={inputStyle}
+                  value={config.productDetail?.recommendationCtaText || "View product"}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    productDetail: { ...config.productDetail, recommendationCtaText: e.target.value },
+                  })}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Product Gallery Manager */}
           <div style={cardStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
@@ -2977,6 +3118,62 @@ export function AdminCMSEditor() {
                 />
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* BRAND, LOGO & WEBSITE ELEMENTS TAB                                        */}
+      {/* ========================================================================= */}
+      {activeTab === "branding" && (
+        <div style={{ display: "grid", gap: "1.25rem" }}>
+          <div style={cardStyle}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.4rem" }}>
+              <ImageIcon size={19} color="#8a6616" />
+              <h3 style={{ margin: 0, fontSize: "1.08rem", color: "#102218" }}>Brand, Logo &amp; Website Elements</h3>
+            </div>
+            <p style={{ margin: "0 0 1rem", fontSize: "0.82rem", color: "#665e52", lineHeight: 1.55 }}>
+              Update the main website logos and visual brand elements without changing code. Uploading an image saves it to the CMS CDN; click Save &amp; Commit to publish.
+            </p>
+            <div style={{ display: "grid", gap: "1rem" }}>
+              {renderBrandAssetEditor(
+                "headerLogo",
+                "Main Website / Header Logo",
+                "Used in the main site header and as the structured-data organisation logo.",
+                "Current Zucero header logo"
+              )}
+              {renderBrandAssetEditor(
+                "footerLogo",
+                "Footer Logo",
+                "Used in the main website footer. Keep this the same as the header logo unless a footer-specific version is required.",
+                "Current Zucero footer logo"
+              )}
+              {renderBrandAssetEditor(
+                "faviconImage",
+                "Browser Tab / Element Logo (Favicon)",
+                "Small brand element shown in browser tabs, bookmarks and supported device surfaces.",
+                "Current Zucero favicon / element logo"
+              )}
+              {renderBrandAssetEditor(
+                "socialShareImage",
+                "Social Media Link Preview Image",
+                "This is the image Facebook, WhatsApp, LinkedIn, X and other platforms are instructed to show when a Zucero link is shared. The current default is the Zucero logo, replacing the old hero image.",
+                "Current social share preview"
+              )}
+              {renderBrandAssetEditor(
+                "fssaiLogo",
+                "FSSAI Logo Element",
+                "Compliance logo displayed in the footer next to the FSSAI licence number.",
+                "Current FSSAI logo"
+              )}
+            </div>
+          </div>
+
+          <div style={{ ...cardStyle, background: "#fffaf0", borderColor: "#ead7a0" }}>
+            <strong style={{ color: "#8a6616" }}>Social preview note</strong>
+            <p style={{ margin: "0.4rem 0 0", fontSize: "0.82rem", color: "#665e52", lineHeight: 1.55 }}>
+              Social networks cache link previews. After changing the preview image, new shares will use the live preview endpoint, but an already-cached post may take time to refresh on that platform.
+            </p>
           </div>
         </div>
       )}

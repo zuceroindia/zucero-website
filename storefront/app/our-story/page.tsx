@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ContentPage } from "@/components/content-page";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, DEFAULT_OG_IMAGE } from "@/lib/seo";
 
 const title = "Our Story | Why Zucero Chose Traditional Indian Sweetness";
 const description = "Discover why Zucero was created to bring greater transparency, provenance and traditional craft to Desi Khand, Mishri and everyday sugar choices.";
@@ -16,13 +16,13 @@ export const metadata: Metadata = {
     url: absoluteUrl("/our-story"),
     title: `${title} | Zucero`,
     description,
-    images: [{ url: "/images/foundertamanna.webp", alt: "Zucero founder story" }],
+    images: [{ url: DEFAULT_OG_IMAGE, alt: "Zucero — The Good Sugar" }],
   },
   twitter: {
     card: "summary_large_image",
     title: `${title} | Zucero`,
     description,
-    images: ["/images/foundertamanna.webp"],
+    images: [DEFAULT_OG_IMAGE],
   },
 };
 

@@ -16,7 +16,7 @@ export function SiteFooter() {
 
   return <footer>
     <div className="footer-brand">
-      <Image className="footer-logo" src="/images/zucero-highres-logo.png" alt="Zucero — The Good Sugar" width={180} height={120} />
+      <Image className="footer-logo" src={config.branding?.footerLogo || config.branding?.headerLogo || "/images/zucero-highres-logo.png"} alt="Zucero — The Good Sugar" width={180} height={120} />
       <p>{footer.tagline || "Thoughtfully made Indian sweetness, explained honestly."}</p>
     </div>
     <div>
@@ -71,7 +71,7 @@ export function SiteFooter() {
     </div>
     <div className="footer-compliance" role="group" aria-label="Business registration details">
       <div className="footer-fssai">
-        <Image src="/images/fssai-logo.png" alt="FSSAI" width={86} height={86} />
+        <Image src={config.branding?.fssaiLogo || "/images/fssai-logo.png"} alt="FSSAI" width={86} height={86} />
         <p><span>FSSAI Licence</span><strong>{footer.fssaiNumber || "20826018000800"}</strong></p>
       </div>
       <p><span>CIN</span><strong>{footer.cinNumber || "U56290HR2026PTC145994"}</strong></p>

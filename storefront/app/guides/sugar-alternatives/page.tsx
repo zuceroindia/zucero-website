@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ContentPage } from "@/components/content-page";
-import { absoluteUrl, safeJsonLd } from "@/lib/seo";
+import { absoluteUrl, DEFAULT_OG_IMAGE, safeJsonLd } from "@/lib/seo";
 
 const title = "Sugar Alternatives: Desi Khand, Mishri, Health & Diabetes Questions";
 const description = "A practical guide to sugar alternatives, Desi Khand and Mishri, including health and wellness considerations, diabetes questions and how to compare labels responsibly.";
@@ -17,13 +17,13 @@ export const metadata: Metadata = {
     url,
     title: `${title} | Zucero`,
     description,
-    images: [{ url: "/images/carousel-khand-matka-v2.png", alt: "Traditional Indian sugar alternatives including Desi Khand" }],
+    images: [{ url: DEFAULT_OG_IMAGE, alt: "Zucero — The Good Sugar" }],
   },
   twitter: {
     card: "summary_large_image",
     title: `${title} | Zucero`,
     description,
-    images: ["/images/carousel-khand-matka-v2.png"],
+    images: [DEFAULT_OG_IMAGE],
   },
 };
 
