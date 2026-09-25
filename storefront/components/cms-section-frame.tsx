@@ -41,7 +41,13 @@ export function CMSSectionFrame({
   }
 
   const media = (
-    <div className="cms-section-layout-image" style={layout?.imageHeightPx ? { minHeight: `${layout.imageHeightPx}px`, height: `${layout.imageHeightPx}px` } : undefined}>
+    <div
+      className="cms-section-layout-image"
+      style={{
+        ...(layout?.imageHeightPx ? { minHeight: `${layout.imageHeightPx}px`, height: `${layout.imageHeightPx}px` } : {}),
+        ...(layout?.imageWidthPx ? { width: `${layout.imageWidthPx}px`, maxWidth: "100%", justifySelf: "center" } : {}),
+      }}
+    >
       <Image
         src={image}
         alt={layout?.imageAlt || "Section image"}
