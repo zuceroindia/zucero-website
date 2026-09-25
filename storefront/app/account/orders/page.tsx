@@ -530,11 +530,13 @@ export default function OrdersPage() {
   // Flat product variant list for subscription selector
   const catalogVariants = useMemo(() => {
     return cmsConfig.products.flatMap((p) =>
-      p.variants.map((v) => ({
-        variantId: v.id,
-        label: `${p.name} - ${v.label} (${formatPrice(v.pricePaise ?? 0)})`,
-        pricePaise: v.pricePaise ?? 0,
-      }))
+      p.variants
+        .filter((v) => (v.pricePaise ?? 0) > 0)
+        .map((v) => ({
+          variantId: v.id,
+          label: `${p.name} - ${v.label} (${formatPrice(v.pricePaise)})`,
+          pricePaise: v.pricePaise ?? 0,
+        }))
     );
   }, [cmsConfig.products]);
 
