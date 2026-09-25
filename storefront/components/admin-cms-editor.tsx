@@ -76,6 +76,67 @@ type HomeSubTab =
 type PolicySubTab = "shipping" | "returns" | "refunds" | "privacy" | "terms";
 type GuideSubTab = "desiKhand" | "sugarAlternatives";
 
+function ImageSizePreview({
+  src,
+  alt,
+  label,
+}: {
+  src?: string | null;
+  alt: string;
+  label: string;
+}) {
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    setDimensions(null);
+  }, [src]);
+
+  return (
+    <div style={{
+      border: "1px solid #e6decb",
+      borderRadius: "8px",
+      background: "#faf8f2",
+      padding: "0.6rem",
+      minWidth: 0,
+    }}>
+      <span style={{ display: "block", marginBottom: "0.45rem", fontSize: "0.66rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "#6b786f", fontWeight: 700 }}>
+        {label}
+      </span>
+      {src ? (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0 }}>
+          <img
+            src={src}
+            alt={alt}
+            onLoad={(e) => {
+              const image = e.currentTarget;
+              setDimensions({ width: image.naturalWidth, height: image.naturalHeight });
+            }}
+            style={{
+              width: "120px",
+              height: "82px",
+              objectFit: "cover",
+              borderRadius: "6px",
+              border: "1px solid #ddd4c3",
+              background: "#fff",
+              flex: "0 0 auto",
+            }}
+          />
+          <div style={{ minWidth: 0 }}>
+            <strong style={{ display: "block", color: "#234235", fontSize: "0.8rem" }}>
+              {dimensions ? `${dimensions.width} × ${dimensions.height}px` : "Reading image size…"}
+            </strong>
+            <span style={{ display: "block", marginTop: "0.25rem", fontSize: "0.7rem", color: "#776e61", wordBreak: "break-all" }}>
+              {src}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <span style={{ fontSize: "0.78rem", color: "#8a8174" }}>No image selected</span>
+      )}
+    </div>
+  );
+}
+
 export function AdminCMSEditor() {
   const [config, setConfig] = useState<CMSConfig | null>(null);
   const [originalConfig, setOriginalConfig] = useState<CMSConfig | null>(null);
@@ -473,39 +534,22 @@ export function AdminCMSEditor() {
     letterSpacing: "0.04em",
   };
 
-  const renderImagePreview = (src: string | undefined | null, alt = "Current image") => (
+  const renderImagePreview = (
+    src: string | undefined | null,
+    alt = "Current image",
+    currentLiveSrc?: string | undefined | null
+  ) => (
     <div style={{
       marginTop: "0.65rem",
-      border: "1px solid #e6decb",
-      borderRadius: "8px",
-      background: "#faf8f2",
-      padding: "0.6rem",
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "0.75rem",
+      display: "grid",
+      gridTemplateColumns: currentLiveSrc !== undefined ? "repeat(auto-fit,minmax(260px,1fr))" : "minmax(0,1fr)",
+      gap: "0.65rem",
       maxWidth: "100%",
     }}>
-      {src ? (
-        <>
-          <img
-            src={src}
-            alt={alt}
-            style={{
-              width: "120px",
-              height: "82px",
-              objectFit: "cover",
-              borderRadius: "6px",
-              border: "1px solid #ddd4c3",
-              background: "#fff",
-            }}
-          />
-          <span style={{ fontSize: "0.75rem", color: "#665e52", wordBreak: "break-all", maxWidth: "520px" }}>
-            Current image
-          </span>
-        </>
-      ) : (
-        <span style={{ fontSize: "0.78rem", color: "#8a8174" }}>No image selected</span>
+      {currentLiveSrc !== undefined && (
+        <ImageSizePreview src={currentLiveSrc} alt={alt} label="Current Live Image & Size" />
       )}
+      <ImageSizePreview src={src} alt={alt} label={currentLiveSrc !== undefined ? "After Update Image & Size" : "Image Preview & Size"} />
     </div>
   );
 
@@ -3504,6 +3548,7 @@ export function AdminCMSEditor() {
         <div style={cardStyle}>
           <AdminLayoutSizingManager
             value={config.layoutSizing}
+            currentValue={originalConfig?.layoutSizing || config.layoutSizing}
             onChange={(layoutSizing) => setConfig({ ...config, layoutSizing })}
           />
         </div>
