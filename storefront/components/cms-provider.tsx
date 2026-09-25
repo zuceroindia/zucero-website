@@ -77,6 +77,9 @@ export function CMSProvider({
       l.cardMinWidthPx > 0
         ? `.heritage-product-grid,.heritage-ritual-grid,.heritage-journal-grid,.proof-grid,.process-grid,.pdp-difference-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,${l.cardMinWidthPx}px),1fr))!important;}`
         : "",
+      l.cardMinHeightPx > 0
+        ? `.heritage-product,.heritage-ritual-grid article,.heritage-journal-grid>a,.proof-grid article,.process-grid article,.pdp-difference article,.pdp-recommendation-card,.account-card,.order-card{min-height:${l.cardMinHeightPx}px!important;}`
+        : "",
       l.cardImageHeightPx > 0
         ? `.heritage-picture,.prelaunch-card img,.pdp-difference article img{height:${l.cardImageHeightPx}px!important;min-height:${l.cardImageHeightPx}px!important;aspect-ratio:auto!important;}`
         : "",
