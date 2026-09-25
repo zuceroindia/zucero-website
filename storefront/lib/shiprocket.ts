@@ -20,7 +20,8 @@ function credentials() {
   return { email, password };
 }
 
-async function token() {
+async function token(forceRefresh = false) {
+  if (forceRefresh) cachedToken = null;
   if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.value;
   const response = await fetch(`${API_BASE}/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(credentials()), cache: "no-store" });
   if (!response.ok) throw new Error(`Shiprocket authentication failed (${response.status})`);
@@ -30,8 +31,9 @@ async function token() {
 }
 
 async function shiprocketFetch(path: string, init?: RequestInit) {
-  const authToken = await token();
-  const response = await fetch(`${API_BASE}${path}`, { ...init, headers: { authorization: `Bearer ${authToken}`, "content-type": "application/json", ...(init?.headers ?? {}) }, cache: "no-store" });
+  const request = async (authToken: string) => fetch(`${API_BASE}${path}`, { ...init, headers: { authorization: `Bearer ${authToken}`, "content-type": "application/json", ...(init?.headers ?? {}) }, cache: "no-store" });
+  let response = await request(await token());
+  if (response.status === 401) response = await request(await token(true));
   if (!response.ok) throw new Error(`Shiprocket request failed (${response.status})`);
   return response.json();
 }
@@ -72,17 +74,12 @@ export function formatAccurateEdd(rawDate: unknown): string | null {
     return str;
   }
 
-  const parsed = new Date(str.replace(/-/g, "/"));
-  if (!isNaN(parsed.getTime())) {
-    return `Expected by ${parsed.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}`;
-  }
-
-  const fallback = new Date(str);
-  if (!isNaN(fallback.getTime())) {
-    return `Expected by ${fallback.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}`;
-  }
-
-  return `Expected by ${str}`;
+  const sqlDate = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T].*)?$/);
+  const parsed = sqlDate
+    ? new Date(Number(sqlDate[1]), Number(sqlDate[2]) - 1, Number(sqlDate[3]))
+    : new Date(str);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return `Expected by ${parsed.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}`;
 }
 
 export function getFallbackDeliveryEstimate(_destinationState?: string, _baseDate = new Date()): { minDays: number; maxDays: number; windowText: string } {
@@ -183,6 +180,11 @@ export async function getPrepaidShippingQuote(input: { pickupPostcode: string; d
 
 export async function createShiprocketOrder(payload: Record<string, unknown>) {
   return shiprocketFetch("/orders/create/adhoc", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function getShiprocketOrder(orderId: string) {
+  if (!/^\d+$/.test(orderId)) throw new Error("Invalid Shiprocket order ID");
+  return shiprocketFetch(`/orders/show/${orderId}`);
 }
 
 export async function trackAwb(awb: string) {

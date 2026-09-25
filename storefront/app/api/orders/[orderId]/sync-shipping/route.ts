@@ -2,28 +2,10 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { notifyShipmentStatus } from "@/lib/notifications";
 import { isAuthorizedAdminOrInternal } from "@/lib/api-auth";
-import { formatAccurateEdd } from "@/lib/shiprocket";
+import { formatAccurateEdd, getShiprocketOrder } from "@/lib/shiprocket";
 
-const SHIPROCKET_API_BASE = "https://apiv2.shiprocket.in/v1/external";
-let cachedToken: { value: string; expiresAt: number } | null = null;
-
-async function getShiprocketToken() {
-  if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.value;
-  const email = process.env.SHIPROCKET_EMAIL;
-  const password = process.env.SHIPROCKET_PASSWORD;
-  if (!email || !password) throw new Error("Shiprocket API credentials are not configured");
-
-  const response = await fetch(`${SHIPROCKET_API_BASE}/auth/login`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email, password }),
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error(`Shiprocket auth failed (${response.status})`);
-  const data = await response.json();
-  cachedToken = { value: data.token, expiresAt: Date.now() + 9 * 24 * 60 * 60 * 1000 };
-  return data.token;
-}
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ORDER_NUMBER_PATTERN = /^ZUC-[A-Z0-9-]{6,40}$/;
 
 export async function POST(
   request: Request,
@@ -36,13 +18,17 @@ export async function POST(
     }
 
     const { orderId } = await params;
+    if (!UUID_PATTERN.test(orderId) && !ORDER_NUMBER_PATTERN.test(orderId)) {
+      return NextResponse.json({ error: "Invalid order identifier" }, { status: 400 });
+    }
     const db = supabaseAdmin();
 
-    const { data: order, error: orderError } = await db
+    const orderQuery = db
       .from("orders")
-      .select("*")
-      .or(`id.eq.${orderId},order_number.eq.${orderId}`)
-      .single();
+      .select("*");
+    const { data: order, error: orderError } = UUID_PATTERN.test(orderId)
+      ? await orderQuery.eq("id", orderId).maybeSingle()
+      : await orderQuery.eq("order_number", orderId).maybeSingle();
 
     if (orderError || !order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
@@ -52,21 +38,21 @@ export async function POST(
       return NextResponse.json({ error: "Order does not have a linked Shiprocket Order ID" }, { status: 400 });
     }
 
-    const authToken = await getShiprocketToken();
-    const srResponse = await fetch(`${SHIPROCKET_API_BASE}/orders/show/${order.shiprocket_order_id}`, {
-      headers: { authorization: `Bearer ${authToken}` },
-      cache: "no-store",
-    });
-
-    if (!srResponse.ok) {
-      const errText = await srResponse.text().catch(() => "");
-      return NextResponse.json({ error: `Shiprocket API error (${srResponse.status}): ${errText}` }, { status: 502 });
+    let srData: Record<string, unknown>;
+    try {
+      srData = await getShiprocketOrder(String(order.shiprocket_order_id)) as Record<string, unknown>;
+    } catch (error) {
+      console.error("Shiprocket order sync failed:", error);
+      return NextResponse.json({ error: "Shiprocket is temporarily unavailable. Please retry shortly." }, { status: 502 });
     }
-
-    const srData = await srResponse.json();
-    const orderData = srData.data ?? srData;
+    const nestedData = srData.data;
+    const orderData = nestedData && typeof nestedData === "object"
+      ? nestedData as Record<string, unknown>
+      : srData;
     const shipments = Array.isArray(orderData.shipments) ? orderData.shipments : [orderData.shipment ?? {}];
-    const latestShipment = shipments[0] || {};
+    const latestShipment = shipments[0] && typeof shipments[0] === "object"
+      ? shipments[0] as Record<string, unknown>
+      : {};
 
     const awb = latestShipment.awb ?? latestShipment.awb_code ?? orderData.awb_code ?? order.tracking_awb;
     const courier = latestShipment.courier ?? latestShipment.courier_name ?? orderData.courier_name ?? order.courier_name;

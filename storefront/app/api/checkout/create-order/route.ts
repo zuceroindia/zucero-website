@@ -7,7 +7,7 @@ import { createRazorpayOrder, razorpayPublicKeyId } from "@/lib/razorpay";
 import { getPrepaidShippingQuote } from "@/lib/shiprocket";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { calculateCheckoutTotal } from "@/lib/tax";
-import { validateReferralCode, getOrCreateWallet, debitWallet } from "@/lib/referral";
+import { creditReferralReward, debitWallet, getOrCreateWallet, refundWalletCredits, validateReferralCode } from "@/lib/referral";
 import { fulfilPaidOrder } from "@/lib/order-fulfilment";
 import { notifyPaidOrder } from "@/lib/notifications";
 import { authenticatedEmail } from "@/lib/server-auth";
@@ -170,16 +170,26 @@ export async function POST(request: Request) {
       });
 
       // Mark order as paid
-      await db.from("orders").update({
+      const { error: paidUpdateError } = await db.from("orders").update({
         status: "paid",
         payment_status: "captured",
         updated_at: new Date().toISOString(),
       }).eq("id", localOrderId);
+      if (paidUpdateError) {
+        await refundWalletCredits({
+          email: input.customer.email,
+          orderId: localOrderId,
+          orderNumber: number,
+          refundPaise: walletSpentPaise,
+        });
+        throw new Error("Could not finalize wallet payment. Your wallet credits were restored.");
+      }
 
       // Trigger fulfilment + notifications in background
       await Promise.allSettled([
         fulfilPaidOrder(localOrderId).catch((err) => console.error("Fulfilment error (wallet-only):", err)),
         notifyPaidOrder(localOrderId).catch((err) => console.error("Notification error (wallet-only):", err)),
+        creditReferralReward(localOrderId).catch((err) => console.error("Referral credit error (wallet-only):", err)),
       ]);
 
       return NextResponse.json({

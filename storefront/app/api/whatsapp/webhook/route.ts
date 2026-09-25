@@ -1,5 +1,17 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+
+function hasValidMetaSignature(rawBody: string, suppliedSignature: string | null) {
+  const appSecret = process.env.WHATSAPP_APP_SECRET?.trim();
+  if (!appSecret) return true;
+  if (!suppliedSignature?.startsWith("sha256=")) return false;
+
+  const expected = `sha256=${createHmac("sha256", appSecret).update(rawBody).digest("hex")}`;
+  const expectedBuffer = Buffer.from(expected);
+  const suppliedBuffer = Buffer.from(suppliedSignature);
+  return expectedBuffer.length === suppliedBuffer.length && timingSafeEqual(expectedBuffer, suppliedBuffer);
+}
 
 /**
  * Meta WhatsApp Cloud API Webhook Verification (GET)
@@ -29,14 +41,24 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const payload = await request.json().catch(() => ({}));
+    const rawBody = await request.text();
+    if (!hasValidMetaSignature(rawBody, request.headers.get("x-hub-signature-256"))) {
+      return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
+    }
+
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(rawBody) as Record<string, unknown>;
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
 
     // Log receipt to payment_events for tracking and auditing
-    if (payload?.entry) {
+    if (payload.entry) {
       const db = supabaseAdmin();
       await db.from("payment_events").insert({
         provider: "whatsapp",
-        provider_event_id: `wa:webhook:${Date.now()}`,
+        provider_event_id: `wa:webhook:${createHash("sha256").update(rawBody).digest("hex")}`,
         event_type: "whatsapp.webhook_event",
         payload,
         processed_at: new Date().toISOString(),

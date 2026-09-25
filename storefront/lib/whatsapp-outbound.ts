@@ -23,6 +23,9 @@ export function normalizeWhatsAppRecipient(phone: string): string {
   if (digits.length === 12 && digits.startsWith("91")) {
     return digits;
   }
+  if (digits.length === 13 && digits.startsWith("910")) {
+    return `91${digits.slice(3)}`;
+  }
   if (digits.length === 11 && digits.startsWith("0")) {
     return `91${digits.slice(1)}`;
   }
@@ -65,8 +68,12 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
   }
 
   const recipient = normalizeWhatsAppRecipient(rawPhone);
+  if (!/^91[6-9]\d{9}$/.test(recipient)) {
+    console.warn(`[WhatsApp Outbound] Invalid Indian mobile number for order ${order.order_number}`);
+    return { success: false, reason: "invalid_phone" };
+  }
   const deliveryWindow = order.estimated_delivery_window || address.estimated_delivery_window || "5–7 days";
-  const customerName = address.fullName || "Customer";
+  const customerName = address.fullName?.trim() || "Valued Customer";
   const totalRupeesFormatted = (order.total_rupees !== null && order.total_rupees !== undefined)
     ? Number(order.total_rupees).toFixed(2)
     : (order.total_paise / 100).toFixed(2);
