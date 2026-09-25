@@ -405,17 +405,7 @@ export function AdminCMSEditor() {
     showToast("success", "New collection product added. Complete its collection copy and image here, then set sizes, price and SKU in Products & Prices before publishing.");
   };
 
-  const removeCurrentProduct = () => {
-    if (config.products.length <= 1) {
-      showToast("error", "At least one product must remain in the collection.");
-      return;
-    }
-    if (!confirm(`Remove ${currentProduct.name} from the live collection?`)) return;
-    const products = config.products.filter((_, idx) => idx !== selectedProductIdx);
-    setConfig({ ...config, products });
-    setSelectedProductIdx(Math.max(0, selectedProductIdx - 1));
-    setSelectedVariantIdx(0);
-  };
+  const removeCurrentProduct = () => removeProductAtIndex(selectedProductIdx);
 
   const addVariant = () => {
     const suffix = Date.now().toString(36);
@@ -473,6 +463,67 @@ export function AdminCMSEditor() {
     marginBottom: "0.3rem",
     textTransform: "uppercase" as const,
     letterSpacing: "0.04em",
+  };
+
+  const renderImagePreview = (src: string | undefined | null, alt = "Current image") => (
+    <div style={{
+      marginTop: "0.65rem",
+      border: "1px solid #e6decb",
+      borderRadius: "8px",
+      background: "#faf8f2",
+      padding: "0.6rem",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "0.75rem",
+      maxWidth: "100%",
+    }}>
+      {src ? (
+        <>
+          <img
+            src={src}
+            alt={alt}
+            style={{
+              width: "120px",
+              height: "82px",
+              objectFit: "cover",
+              borderRadius: "6px",
+              border: "1px solid #ddd4c3",
+              background: "#fff",
+            }}
+          />
+          <span style={{ fontSize: "0.75rem", color: "#665e52", wordBreak: "break-all", maxWidth: "520px" }}>
+            Current image
+          </span>
+        </>
+      ) : (
+        <span style={{ fontSize: "0.78rem", color: "#8a8174" }}>No image selected</span>
+      )}
+    </div>
+  );
+
+  const removeProductAtIndex = (productIdx: number) => {
+    if (config.products.length <= 1) {
+      showToast("error", "At least one product must remain in the collection.");
+      return;
+    }
+    const product = config.products[productIdx];
+    if (!product || !confirm(`Delete ${product.name} from the Collection and storefront?`)) return;
+
+    const products = config.products.filter((_, idx) => idx !== productIdx);
+    const nextStories = { ...(config.homepage.collectionProductStories || {}) };
+    delete nextStories[product.slug];
+
+    setConfig({
+      ...config,
+      products,
+      homepage: {
+        ...config.homepage,
+        collectionProductStories: nextStories,
+      },
+    });
+    setSelectedProductIdx((current) => Math.min(current, products.length - 1));
+    setSelectedVariantIdx(0);
+    showToast("success", `${product.name} removed. Save & Commit to publish the deletion.`);
   };
 
   const cardStyle = {
@@ -945,7 +996,8 @@ export function AdminCMSEditor() {
                         }}
                         style={{ padding: "0.38rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "5px", cursor: "pointer" }}
                         title="Delete slide"
-                      ><Trash2 size={14} /></button>
+                        style={{ padding: "0.38rem 0.55rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "5px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", fontWeight: 700 }}
+                      ><Trash2 size={14} /> Delete Slide</button>
                     </div>
                   </div>
 
@@ -1043,6 +1095,7 @@ export function AdminCMSEditor() {
                           />
                         </label>
                       </div>
+                      {renderImagePreview(story.image, story.alt || story.title || "Story carousel image")}
                     </div>
                   </div>
                 </div>
@@ -1157,9 +1210,18 @@ export function AdminCMSEditor() {
 
               {config.products.map((product, pIdx) => (
                 <div key={product.slug} style={cardStyle}>
-                  <h3 style={{ margin: "0 0 0.3rem", fontSize: "1.05rem", color: "#102218" }}>
-                    Collection Product Card {pIdx + 1} — {product.name}
-                  </h3>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "center", flexWrap: "wrap", marginBottom: "0.3rem" }}>
+                    <h3 style={{ margin: 0, fontSize: "1.05rem", color: "#102218" }}>
+                      Collection Product Card {pIdx + 1} — {product.name}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => removeProductAtIndex(pIdx)}
+                      style={{ padding: "0.42rem 0.65rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+                    >
+                      <Trash2 size={14} /> Delete Collection Card
+                    </button>
+                  </div>
                   <p style={{ margin: "0 0 1rem", fontSize: "0.78rem", color: "#665e52" }}>
                     Edit how this product appears inside The Collection. Pricing/sizes remain managed in Products &amp; Prices.
                   </p>
@@ -1227,6 +1289,7 @@ export function AdminCMSEditor() {
                           }} />
                         </label>
                       </div>
+                      {renderImagePreview(product.image, product.name)}
                     </div>
                   </div>
                 </div>
