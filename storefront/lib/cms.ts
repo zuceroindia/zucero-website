@@ -67,6 +67,7 @@ export type CMSLayoutSizing = {
   cardRadiusPx: number;
   cardGapPx: number;
   cardMinWidthPx: number;
+  cardMinHeightPx: number;
   cardImageHeightPx: number;
   carouselCardWidthPx: number;
   carouselCardHeightPx: number;
@@ -471,6 +472,7 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
     cardRadiusPx: 0,
     cardGapPx: 0,
     cardMinWidthPx: 0,
+    cardMinHeightPx: 0,
     cardImageHeightPx: 0,
     carouselCardWidthPx: 0,
     carouselCardHeightPx: 0,
