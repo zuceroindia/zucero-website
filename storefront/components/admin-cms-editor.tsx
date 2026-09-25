@@ -54,6 +54,8 @@ type MainTab =
 
 type HomeSubTab =
   | "hero"
+  | "storyCarousel"
+  | "collection"
   | "highlights"
   | "problem"
   | "nature"
@@ -715,6 +717,8 @@ export function AdminCMSEditor() {
           <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
             {[
               { id: "hero", label: "Hero Banner" },
+              { id: "storyCarousel", label: "Story Carousel" },
+              { id: "collection", label: "04 · Collection Page" },
               { id: "highlights", label: "Highlights Marquee" },
               { id: "problem", label: "01 · Sugar Problem" },
               { id: "nature", label: "02 · Nature's Solution" },
@@ -855,6 +859,333 @@ export function AdminCMSEditor() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Sub-section: Story Carousel */}
+          {homeSubTab === "storyCarousel" && (
+            <div style={{ display: "grid", gap: "1rem" }}>
+              <div style={{ ...cardStyle, display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", color: "#102218" }}>
+                    Homepage “GOOD IS…” Story Carousel
+                  </h3>
+                  <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: "#665e52" }}>
+                    Edit the exact horizontal image strip shown below the hero: image, headline, caption, destination link, order and slide count.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = [
+                      ...(config.homepage.storyCarousel || []),
+                      {
+                        id: `story_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                        image: "/images/zucero-highres-logo.png",
+                        title: "Good is...",
+                        copy: "Add your story caption.",
+                        href: "/",
+                        alt: "Zucero story image",
+                      },
+                    ];
+                    setConfig({ ...config, homepage: { ...config.homepage, storyCarousel: next } });
+                  }}
+                  style={{ padding: "0.55rem 0.9rem", border: 0, borderRadius: "6px", background: "#102218", color: "#fff", fontWeight: 700, cursor: "pointer" }}
+                >
+                  + Add Carousel Slide
+                </button>
+              </div>
+
+              {(config.homepage.storyCarousel || []).map((story, idx) => (
+                <div key={story.id} style={cardStyle}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap" }}>
+                    <strong style={{ color: "#102218" }}>Slide {idx + 1}: {story.title || "Untitled"}</strong>
+                    <div style={{ display: "flex", gap: "0.35rem" }}>
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => {
+                          const next = [...config.homepage.storyCarousel];
+                          [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                          setConfig({ ...config, homepage: { ...config.homepage, storyCarousel: next } });
+                        }}
+                        style={{ padding: "0.38rem", border: "1px solid #dcd4c4", background: "#fff", borderRadius: "5px", cursor: "pointer" }}
+                        title="Move slide left"
+                      ><ArrowUp size={14} /></button>
+                      <button
+                        type="button"
+                        disabled={idx === config.homepage.storyCarousel.length - 1}
+                        onClick={() => {
+                          const next = [...config.homepage.storyCarousel];
+                          [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+                          setConfig({ ...config, homepage: { ...config.homepage, storyCarousel: next } });
+                        }}
+                        style={{ padding: "0.38rem", border: "1px solid #dcd4c4", background: "#fff", borderRadius: "5px", cursor: "pointer" }}
+                        title="Move slide right"
+                      ><ArrowDown size={14} /></button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (config.homepage.storyCarousel.length <= 1) {
+                            showToast("error", "Keep at least one story slide.");
+                            return;
+                          }
+                          const next = config.homepage.storyCarousel.filter((_, i) => i !== idx);
+                          setConfig({ ...config, homepage: { ...config.homepage, storyCarousel: next } });
+                        }}
+                        style={{ padding: "0.38rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "5px", cursor: "pointer" }}
+                        title="Delete slide"
+                      ><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: "0.8rem" }}>
+                    <div>
+                      <label style={labelStyle}>Headline</label>
+                      <input
+                        style={inputStyle}
+                        value={story.title}
+                        onChange={(e) => {
+                          const next = [...config.homepage.storyCarousel];
+                          next[idx] = { ...story, title: e.target.value };
+                          setConfig({ ...config, homepage: { ...config.homepage, storyCarousel: next } });
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Caption / Subtext</label>
+                      <input
+                        style={inputStyle}
+                        value={story.copy}
+                        onChange={(e) => {
+                          const next = [...config.homepage.storyCarousel];
+                          next[idx] = { ...story, copy: e.target.value };
+                          setConfig({ ...config, homepage: { ...config.homepage, storyCarousel: next } });
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Click Destination</label>
+                      <input
+                        style={inputStyle}
+                        value={story.href}
+                        placeholder="/products or /#process"
+                        onChange={(e) => {
+                          const next = [...config.homepage.storyCarousel];
+                          next[idx] = { ...story, href: e.target.value };
+                          setConfig({ ...config, homepage: { ...config.homepage, storyCarousel: next } });
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Image Alt Text</label>
+                      <input
+                        style={inputStyle}
+                        value={story.alt}
+                        onChange={(e) => {
+                          const next = [...config.homepage.storyCarousel];
+                          next[idx] = { ...story, alt: e.target.value };
+                          setConfig({ ...config, homepage: { ...config.homepage, storyCarousel: next } });
+                        }}
+                      />
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={labelStyle}>Carousel Image</label>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <input
+                          style={inputStyle}
+                          value={story.image}
+                          onChange={(e) => {
+                            const next = [...config.homepage.storyCarousel];
+                            next[idx] = { ...story, image: e.target.value };
+                            setConfig({ ...config, homepage: { ...config.homepage, storyCarousel: next } });
+                          }}
+                        />
+                        <label
+                          style={{
+                            padding: "0.5rem 0.8rem",
+                            background: "#f4ede0",
+                            borderRadius: "6px",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.3rem",
+                          }}
+                        >
+                          <Upload size={14} /> Replace Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: "none" }}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              handleImageUpload(file, (url) => {
+                                const next = [...config.homepage.storyCarousel];
+                                next[idx] = { ...story, image: url };
+                                setConfig({ ...config, homepage: { ...config.homepage, storyCarousel: next } });
+                              });
+                              e.currentTarget.value = "";
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Sub-section: Collection Page */}
+          {homeSubTab === "collection" && (
+            <div style={{ display: "grid", gap: "1rem" }}>
+              <div style={cardStyle}>
+                <h3 style={{ margin: "0 0 0.3rem", fontSize: "1.05rem", color: "#102218" }}>
+                  Collection Page — Intro &amp; Section Copy
+                </h3>
+                <p style={{ margin: "0 0 1rem", fontSize: "0.82rem", color: "#665e52" }}>
+                  These settings update the Collection block on the homepage and the /products Collection page.
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: "0.8rem" }}>
+                  <div>
+                    <label style={labelStyle}>Intro Line 1</label>
+                    <input style={inputStyle} value={config.homepage.collectionIntroLine1} onChange={(e) =>
+                      setConfig({ ...config, homepage: { ...config.homepage, collectionIntroLine1: e.target.value } })
+                    } />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Intro Line 2</label>
+                    <input style={inputStyle} value={config.homepage.collectionIntroLine2} onChange={(e) =>
+                      setConfig({ ...config, homepage: { ...config.homepage, collectionIntroLine2: e.target.value } })
+                    } />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Section Number</label>
+                    <input style={inputStyle} value={config.homepage.collectionSectionNumber} onChange={(e) =>
+                      setConfig({ ...config, homepage: { ...config.homepage, collectionSectionNumber: e.target.value } })
+                    } />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Section Title</label>
+                    <input style={inputStyle} value={config.homepage.collectionSectionTitle} onChange={(e) =>
+                      setConfig({ ...config, homepage: { ...config.homepage, collectionSectionTitle: e.target.value } })
+                    } />
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={labelStyle}>Collection Subtitle</label>
+                    <textarea style={textareaStyle} value={config.homepage.collectionSubtitle} onChange={(e) =>
+                      setConfig({ ...config, homepage: { ...config.homepage, collectionSubtitle: e.target.value } })
+                    } />
+                  </div>
+                </div>
+              </div>
+
+              <div style={cardStyle}>
+                <h3 style={{ margin: "0 0 1rem", fontSize: "1.05rem", color: "#102218" }}>
+                  Collection Offer / Launch Callout
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: "0.8rem" }}>
+                  <div>
+                    <label style={labelStyle}>Callout Eyebrow</label>
+                    <input style={inputStyle} value={config.promotions.collectionBannerEyebrow} onChange={(e) =>
+                      setConfig({ ...config, promotions: { ...config.promotions, collectionBannerEyebrow: e.target.value } })
+                    } />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Callout Subtitle</label>
+                    <input style={inputStyle} value={config.promotions.collectionBannerSubtitle} onChange={(e) =>
+                      setConfig({ ...config, promotions: { ...config.promotions, collectionBannerSubtitle: e.target.value } })
+                    } />
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={labelStyle}>Referral / Offer Line</label>
+                    <input style={inputStyle} value={config.promotions.referralOfferText} onChange={(e) =>
+                      setConfig({ ...config, promotions: { ...config.promotions, referralOfferText: e.target.value } })
+                    } />
+                  </div>
+                </div>
+              </div>
+
+              {config.products.map((product, pIdx) => (
+                <div key={product.slug} style={cardStyle}>
+                  <h3 style={{ margin: "0 0 0.3rem", fontSize: "1.05rem", color: "#102218" }}>
+                    Collection Product Card {pIdx + 1} — {product.name}
+                  </h3>
+                  <p style={{ margin: "0 0 1rem", fontSize: "0.78rem", color: "#665e52" }}>
+                    Edit how this product appears inside The Collection. Pricing/sizes remain managed in Products &amp; Prices.
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: "0.8rem" }}>
+                    <div>
+                      <label style={labelStyle}>Product Display Name</label>
+                      <input style={inputStyle} value={product.name} onChange={(e) => {
+                        const products = [...config.products];
+                        products[pIdx] = { ...product, name: e.target.value };
+                        setConfig({ ...config, products });
+                      }} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Eyebrow</label>
+                      <input style={inputStyle} value={product.eyebrow} onChange={(e) => {
+                        const products = [...config.products];
+                        products[pIdx] = { ...product, eyebrow: e.target.value };
+                        setConfig({ ...config, products });
+                      }} />
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={labelStyle}>Collection Story Line</label>
+                      <textarea
+                        style={textareaStyle}
+                        value={config.homepage.collectionProductStories?.[product.slug] || ""}
+                        onChange={(e) => setConfig({
+                          ...config,
+                          homepage: {
+                            ...config.homepage,
+                            collectionProductStories: {
+                              ...(config.homepage.collectionProductStories || {}),
+                              [product.slug]: e.target.value,
+                            },
+                          },
+                        })}
+                      />
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={labelStyle}>Product Description</label>
+                      <textarea style={textareaStyle} value={product.description} onChange={(e) => {
+                        const products = [...config.products];
+                        products[pIdx] = { ...product, description: e.target.value };
+                        setConfig({ ...config, products });
+                      }} />
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={labelStyle}>Collection Product Image</label>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <input style={inputStyle} value={product.image} onChange={(e) => {
+                          const products = [...config.products];
+                          products[pIdx] = { ...product, image: e.target.value };
+                          setConfig({ ...config, products });
+                        }} />
+                        <label style={{ padding: "0.5rem 0.8rem", background: "#f4ede0", borderRadius: "6px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+                          <Upload size={14} /> Replace Image
+                          <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            handleImageUpload(file, (url) => {
+                              const products = [...config.products];
+                              products[pIdx] = { ...product, image: url };
+                              setConfig({ ...config, products });
+                            });
+                            e.currentTarget.value = "";
+                          }} />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
