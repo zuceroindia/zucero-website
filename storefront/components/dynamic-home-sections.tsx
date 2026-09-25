@@ -7,7 +7,7 @@ import { useCMS } from "@/components/cms-provider";
 import { Header } from "@/components/header";
 import { SectionDivider } from "@/components/section-divider";
 import { LaunchListForm } from "@/components/launch-list-form";
-import { CMSSectionFrame, cmsTextAlign } from "@/components/cms-section-frame";
+import { CMSSectionFrame, cmsSectionStyle, cmsTextAlign } from "@/components/cms-section-frame";
 
 const highlightIcons = [Leaf, FlaskConical, Sparkles, PackageCheck];
 
@@ -37,7 +37,7 @@ export function DynamicHeroSection() {
       ];
 
   return (
-    <section className="hero">
+    <section className="hero" style={cmsSectionStyle(layout)}>
       <Image
         className="hero-image"
         src={hp.heroPosterImage || "/images/hero-cinematic-poster.png"}
@@ -137,8 +137,14 @@ export function DynamicNatureSection() {
   const layout = config.sectionLayouts?.["homepage.nature"];
 
   return (
-    <section id="nature" className="nature-section">
-      <div className="nature-art">
+    <section id="nature" className="nature-section" style={cmsSectionStyle(layout)}>
+      <div
+        className="nature-art"
+        style={{
+          ...(layout?.imageHeightPx ? { minHeight: `${layout.imageHeightPx}px`, height: `${layout.imageHeightPx}px` } : {}),
+          ...(layout?.imageWidthPx ? { width: `${layout.imageWidthPx}px`, maxWidth: "100%", justifySelf: "center" } : {}),
+        }}
+      >
         <Image
           src={hp.natureSolutionImage || "/images/nature-solution-field-v3.png"}
           alt="An Indian woman standing in a sugarcane field at sunrise"
@@ -216,6 +222,7 @@ export function DynamicCustomSections() {
   return (
     <>
       {sections.filter((section) => section.enabled).map((section) => {
+        const sectionLayout = config.sectionLayouts?.[`homepage.custom.${section.id}`];
         const hasImage = Boolean(section.image) && section.imagePosition !== "none";
         const dark = section.theme === "dark" || section.theme === "green";
         const background = section.theme === "dark"
@@ -245,7 +252,16 @@ export function DynamicCustomSections() {
         );
 
         const image = hasImage ? (
-          <div style={{ position: "relative", minHeight: "clamp(360px,52vw,680px)" }}>
+          <div
+            style={{
+              position: "relative",
+              minHeight: sectionLayout?.imageHeightPx ? `${sectionLayout.imageHeightPx}px` : "clamp(360px,52vw,680px)",
+              height: sectionLayout?.imageHeightPx ? `${sectionLayout.imageHeightPx}px` : undefined,
+              width: sectionLayout?.imageWidthPx ? `${sectionLayout.imageWidthPx}px` : "100%",
+              maxWidth: "100%",
+              justifySelf: "center",
+            }}
+          >
             <Image
               src={section.image}
               alt={section.imageAlt || section.title || "Zucero editorial section"}
@@ -261,6 +277,7 @@ export function DynamicCustomSections() {
             key={section.id}
             id={section.id}
             style={{
+              ...cmsSectionStyle(sectionLayout),
               background,
               color,
               display: hasImage ? "grid" : "block",
