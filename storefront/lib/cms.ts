@@ -55,6 +55,7 @@ export type CMSSectionLayout = {
   paddingTopPx?: number;
   paddingBottomPx?: number;
   paddingInlinePx?: number;
+  imageWidthPx?: number;
   imageHeightPx?: number;
 };
 
