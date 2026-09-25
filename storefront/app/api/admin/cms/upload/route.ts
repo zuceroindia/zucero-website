@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { isAuthorizedAdminOrInternal } from "@/lib/api-auth";
+import { isAuthorizedCmsRequest } from "@/lib/squargraph-control-cms-auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  if (!(await isAuthorizedAdminOrInternal(request))) {
+  if (!(await isAuthorizedCmsRequest(request, "media"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
