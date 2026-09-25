@@ -630,7 +630,7 @@ export function AdminCMSEditor() {
             </button>
           )}
         </div>
-        {renderImagePreview(value, previewAlt)}
+        {renderImagePreview(value, previewAlt, originalConfig?.branding?.[field])}
       </div>
     );
   };
@@ -1268,7 +1268,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
-                  {renderImagePreview(config.homepage.heroPosterImage, "Homepage hero poster")}
+                  {renderImagePreview(config.homepage.heroPosterImage, "Homepage hero poster", originalConfig?.homepage?.heroPosterImage)}
                 </div>
               </div>
             </div>
@@ -1446,7 +1446,11 @@ export function AdminCMSEditor() {
                           />
                         </label>
                       </div>
-                      {renderImagePreview(story.image, story.alt || story.title || "Story carousel image")}
+                      {renderImagePreview(
+                        story.image,
+                        story.alt || story.title || "Story carousel image",
+                        originalConfig?.homepage?.storyCarousel?.find((item) => item.id === story.id)?.image
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1640,7 +1644,11 @@ export function AdminCMSEditor() {
                           }} />
                         </label>
                       </div>
-                      {renderImagePreview(product.image, product.name)}
+                      {renderImagePreview(
+                        product.image,
+                        product.name,
+                        originalConfig?.products?.find((item) => item.slug === product.slug)?.image
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1840,7 +1848,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
-                  {renderImagePreview(config.homepage.natureSolutionImage, "Nature solution image")}
+                  {renderImagePreview(config.homepage.natureSolutionImage, "Nature solution image", originalConfig?.homepage?.natureSolutionImage)}
                 </div>
                 <div>
                   <label style={labelStyle}>Paragraphs</label>
@@ -1929,7 +1937,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
-                  {renderImagePreview(config.homepage.craftImage, "Artisan craft image")}
+                  {renderImagePreview(config.homepage.craftImage, "Artisan craft image", originalConfig?.homepage?.craftImage)}
                 </div>
               </div>
             </div>
@@ -2059,7 +2067,11 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
-                  {renderImagePreview(config.homepage.founderImage, config.homepage.founderName || "Founder portrait")}
+                  {renderImagePreview(
+                    config.homepage.founderImage,
+                    config.homepage.founderName || "Founder portrait",
+                    originalConfig?.homepage?.founderImage
+                  )}
                 </div>
                 <div style={{ gridColumn: "1 / -1" }}>
                   <label style={labelStyle}>Founder Story Lead</label>
@@ -2334,7 +2346,11 @@ export function AdminCMSEditor() {
                           </button>
                         )}
                       </div>
-                  {renderImagePreview(section.image, section.imageAlt || section.title || "Custom section image")}
+                  {renderImagePreview(
+                    section.image,
+                    section.imageAlt || section.title || "Custom section image",
+                    originalConfig?.homepage?.customSections?.find((item) => item.id === section.id)?.image
+                  )}
                     </div>
                     <div style={{ gridColumn: "1 / -1" }}>
                       <label style={labelStyle}>Image alt text</label>
@@ -2477,7 +2493,11 @@ export function AdminCMSEditor() {
                     />
                   </label>
                 </div>
-                  {renderImagePreview(currentProduct.image, currentProduct.name)}
+                  {renderImagePreview(
+                    currentProduct.image,
+                    currentProduct.name,
+                    originalConfig?.products?.find((item) => item.slug === currentProduct.slug)?.image
+                  )}
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={labelStyle}>Short Description</label>
