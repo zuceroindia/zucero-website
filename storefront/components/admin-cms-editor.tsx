@@ -2360,6 +2360,14 @@ export function AdminCMSEditor() {
                       }} />
                     </div>
                   </div>
+                  {renderSectionLayoutControls(
+                    `homepage.custom.${section.id}`,
+                    `Custom Section ${idx + 1}`,
+                    {
+                      imageEnabled: false,
+                      imageNote: "Use the Custom Section image controls above. The size controls below still let you set this section’s width, height, spacing and image dimensions.",
+                    }
+                  )}
                 </div>
               ))}
 
