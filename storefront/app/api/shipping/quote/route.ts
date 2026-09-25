@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { findCatalogProductAndVariant } from "@/lib/catalog";
+import { getLiveCMSConfig } from "@/lib/cms";
 import { getPrepaidShippingQuote } from "@/lib/shiprocket";
 
 const lineSchema = z.object({
@@ -15,19 +16,15 @@ const inputSchema = z.object({
   lines: z.array(lineSchema).min(1).max(20).optional(),
 }).refine((value) => value.weightGrams || value.lines?.length, { message: "Shipping weight is required" });
 
-function catalogVariant(variantId: string) {
-  const match = findCatalogProductAndVariant(variantId);
-  return match?.variant ?? null;
-}
-
 export async function POST(request: Request) {
   try {
     const input = inputSchema.parse(await request.json());
     const pickupPostcode = process.env.SHIPROCKET_PICKUP_POSTCODE || "122003";
+    const cms = await getLiveCMSConfig();
 
     const totalWeightGrams = input.lines
       ? input.lines.reduce((sum, line) => {
-          const variant = catalogVariant(line.variantId);
+          const variant = findCatalogProductAndVariant(line.variantId, cms.products)?.variant ?? null;
           if (!variant) throw new Error("A product in your bag is no longer available");
           return sum + variant.packedWeightGrams * line.quantity;
         }, 0)
