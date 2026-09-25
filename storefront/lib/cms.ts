@@ -23,6 +23,15 @@ export type CMSHighlight = {
   description: string;
 };
 
+export type CMSStoryCarouselItem = {
+  id: string;
+  image: string;
+  title: string;
+  copy: string;
+  href: string;
+  alt: string;
+};
+
 export type CMSCustomHomepageSection = {
   id: string;
   enabled: boolean;
@@ -80,6 +89,7 @@ export type CMSHomepage = {
   heroPosterImage: string;
   heroVideoUrl: string;
   heroQuickLinks: { label: string; href: string }[];
+  storyCarousel: CMSStoryCarouselItem[];
   highlights: CMSHighlight[];
   sugarProblemEyebrow: string;
   sugarProblemHeading: string;
@@ -90,7 +100,10 @@ export type CMSHomepage = {
   natureSolutionImage: string;
   collectionIntroLine1: string;
   collectionIntroLine2: string;
+  collectionSectionNumber: string;
+  collectionSectionTitle: string;
   collectionSubtitle: string;
+  collectionProductStories: Record<string, string>;
   craftTitle: string;
   craftLead: string;
   craftImage: string;
@@ -224,6 +237,14 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
       { label: "Mindful sweetness", href: "#problem" },
       { label: "Delicate sweetness", href: "/products/dhage-wali-mishri" },
     ],
+    storyCarousel: [
+      { id: "traditional", image: "/images/artisan_hands.webp", title: "Good is traditional.", copy: "Made with respect for craft.", href: "/#process", alt: "Traditional sugar-making by hand" },
+      { id: "pure", image: "/images/carousel-khand-matka-v2.png", title: "Good is pure.", copy: "Khand, closer to its source.", href: "/products/desi-khand", alt: "Fine brown Desi Khand spilling from a black clay pot" },
+      { id: "nature", image: "/images/carousel-dew-leaf-v2.png", title: "Good begins in nature.", copy: "Begin with sugarcane.", href: "/#nature", alt: "A dew drop resting on a green sugarcane leaf at sunrise" },
+      { id: "transparent", image: "/images/carousel-mishri-v2.png", title: "Good is transparent.", copy: "Crystal by crystal.", href: "/products/dhage-wali-mishri", alt: "Natural amber-brown Mishri crystals in warm sunlight" },
+      { id: "choice", image: "/images/tea_ritual.webp", title: "Good is a choice.", copy: "Choose better. Choose Zucero.", href: "/products", alt: "An everyday tea ritual with natural sweetness" },
+      { id: "tradition-gud", image: "/images/carousel-gud-tradition.png", title: "Gud is tradition.", copy: "Sweetness rooted in Indian homes.", href: "/#process", alt: "Traditional Gud pieces arranged on a brass plate" },
+    ],
     highlights: [
       { title: "PURE BY NATURE", description: "Nothing Artificial" },
       { title: "NATURAL GOODNESS", description: "Retains the goodness of its natural source" },
@@ -251,7 +272,13 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
     natureSolutionImage: "/images/nature-solution-field-v3.png",
     collectionIntroLine1: "Luxury is not about adding more.",
     collectionIntroLine2: "It’s about preserving what truly matters.",
+    collectionSectionNumber: "04",
+    collectionSectionTitle: "The Collection",
     collectionSubtitle: "Each one distinct. Each one with a story older than the brand.",
+    collectionProductStories: {
+      "desi-khand": "Before refined sugar, there was Khand — a centuries-old Indian tradition of sweetness.",
+      "dhage-wali-mishri": "A centuries-old tradition of crystallised sweetness.",
+    },
     craftTitle: "The Craft",
     craftLead: "At Zucero, we honour the wisdom of how sweetness was made before shortcuts became the norm.",
     craftImage: "/images/khand-craft-artisan-v2.png",
@@ -549,6 +576,9 @@ export function mergeWithDefaultCMS(partial?: Partial<CMSConfig> | null): CMSCon
     homepage: {
       ...DEFAULT_CMS_CONFIG.homepage,
       ...(partial.homepage ?? {}),
+      storyCarousel: Array.isArray(partial.homepage?.storyCarousel) && partial.homepage.storyCarousel.length > 0
+        ? partial.homepage.storyCarousel
+        : DEFAULT_CMS_CONFIG.homepage.storyCarousel,
       highlights: Array.isArray(partial.homepage?.highlights) && partial.homepage.highlights.length > 0
         ? partial.homepage.highlights
         : DEFAULT_CMS_CONFIG.homepage.highlights,
@@ -567,6 +597,10 @@ export function mergeWithDefaultCMS(partial?: Partial<CMSConfig> | null): CMSCon
       whyZuceroParagraphs: Array.isArray(partial.homepage?.whyZuceroParagraphs) && partial.homepage.whyZuceroParagraphs.length > 0
         ? partial.homepage.whyZuceroParagraphs
         : DEFAULT_CMS_CONFIG.homepage.whyZuceroParagraphs,
+      collectionProductStories: {
+        ...DEFAULT_CMS_CONFIG.homepage.collectionProductStories,
+        ...(partial.homepage?.collectionProductStories ?? {}),
+      },
       customSections: Array.isArray(partial.homepage?.customSections)
         ? partial.homepage.customSections
         : DEFAULT_CMS_CONFIG.homepage.customSections,
