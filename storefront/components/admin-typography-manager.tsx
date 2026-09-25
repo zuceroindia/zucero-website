@@ -15,7 +15,7 @@ export function AdminTypographyManager({
   const [message, setMessage] = useState("");
 
   const fontOptions = useMemo(() => {
-    const builtIns = ["Manrope", "Cormorant Garamond", "Melodrama", "Georgia", "Arial", "Helvetica Neue"];
+    const builtIns = ["Outfit", "Cormorant Garamond", "Manrope", "Melodrama", "DM Sans", "Italiana", "Georgia", "Arial", "Helvetica Neue"];
     return Array.from(new Set([...builtIns, ...(typography.uploadedFonts || []).map((font) => font.name)]));
   }, [typography.uploadedFonts]);
 
