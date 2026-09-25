@@ -23,6 +23,18 @@ export type CMSHighlight = {
   description: string;
 };
 
+export type CMSCustomHomepageSection = {
+  id: string;
+  enabled: boolean;
+  eyebrow: string;
+  title: string;
+  body: string;
+  image: string;
+  imageAlt: string;
+  imagePosition: "left" | "right" | "none";
+  theme: "light" | "dark" | "green";
+};
+
 export type CMSPromotions = {
   introductoryPriceText: string;
   referralOfferText: string;
@@ -75,6 +87,7 @@ export type CMSHomepage = {
   launchListEyebrow: string;
   launchListHeading: string;
   launchListSubtitle: string;
+  customSections: CMSCustomHomepageSection[];
 };
 
 export type CMSContact = {
@@ -250,6 +263,7 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
     launchListEyebrow: "11 · The Launch List",
     launchListHeading: "Be first to taste the good sugar.",
     launchListSubtitle: "Get launch availability, founder notes, and early product access. No noisy inbox.",
+    customSections: [],
   },
   products: JSON.parse(JSON.stringify(defaultProducts)),
   promotions: {
@@ -514,6 +528,9 @@ export function mergeWithDefaultCMS(partial?: Partial<CMSConfig> | null): CMSCon
       whyZuceroParagraphs: Array.isArray(partial.homepage?.whyZuceroParagraphs) && partial.homepage.whyZuceroParagraphs.length > 0
         ? partial.homepage.whyZuceroParagraphs
         : DEFAULT_CMS_CONFIG.homepage.whyZuceroParagraphs,
+      customSections: Array.isArray(partial.homepage?.customSections)
+        ? partial.homepage.customSections
+        : DEFAULT_CMS_CONFIG.homepage.customSections,
     },
     products:
       Array.isArray(partial.products) && partial.products.length > 0
