@@ -35,6 +35,7 @@ import type {
   CMSHighlight,
   CMSNavLink,
   CMSSectionBlock,
+  CMSSectionLayout,
   Product,
   ProductVariant,
 } from "@/lib/cms";
@@ -62,7 +63,10 @@ type HomeSubTab =
   | "nature"
   | "craft"
   | "philosophy"
+  | "slowSweetness"
   | "founder"
+  | "rituals"
+  | "journal"
   | "whyZucero"
   | "launchList"
   | "customSections";
@@ -585,6 +589,158 @@ export function AdminCMSEditor() {
     );
   };
 
+  const renderSectionLayoutControls = (
+    sectionKey: string,
+    sectionLabel: string,
+    options: { imageEnabled?: boolean; imageNote?: string } = {}
+  ) => {
+    const current: CMSSectionLayout = config.sectionLayouts?.[sectionKey] || {
+      textAlign: "left",
+      image: "",
+      imageAlt: "",
+      imagePosition: "none",
+    };
+    const imageEnabled = options.imageEnabled !== false;
+
+    const updateLayout = (patch: Partial<CMSSectionLayout>) => {
+      setConfig({
+        ...config,
+        sectionLayouts: {
+          ...(config.sectionLayouts || {}),
+          [sectionKey]: { ...current, ...patch },
+        },
+      });
+    };
+
+    return (
+      <div style={{ ...cardStyle, borderColor: "#d8b456", background: "#fffdf7" }}>
+        <h3 style={{ margin: "0 0 0.25rem", fontSize: "1.02rem", color: "#102218" }}>
+          Section Image &amp; Text Alignment — {sectionLabel}
+        </h3>
+        <p style={{ margin: "0 0 1rem", fontSize: "0.8rem", color: "#665e52" }}>
+          Choose how text is aligned in this section. {imageEnabled
+            ? "You can also add an optional section image and choose where it appears."
+            : (options.imageNote || "This section already has its own image controls above; alignment applies to the section text.")}
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "0.9rem" }}>
+          <div>
+            <label style={labelStyle}>Text Alignment</label>
+            <select
+              style={inputStyle}
+              value={current.textAlign || "left"}
+              onChange={(e) => updateLayout({ textAlign: e.target.value as CMSSectionLayout["textAlign"] })}
+            >
+              <option value="left">Left Align</option>
+              <option value="center">Center Align</option>
+              <option value="right">Right Align</option>
+            </select>
+          </div>
+
+          {imageEnabled && (
+            <div>
+              <label style={labelStyle}>Image Position</label>
+              <select
+                style={inputStyle}
+                value={current.imagePosition || "none"}
+                onChange={(e) => updateLayout({ imagePosition: e.target.value as CMSSectionLayout["imagePosition"] })}
+              >
+                <option value="none">No Section Image</option>
+                <option value="top">Above Text</option>
+                <option value="bottom">Below Text</option>
+                <option value="left">Left of Text</option>
+                <option value="right">Right of Text</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        {imageEnabled && (
+          <div style={{ marginTop: "1rem" }}>
+            <label style={labelStyle}>Optional Section Image</label>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+              <input
+                style={{ ...inputStyle, flex: "1 1 420px" }}
+                value={current.image || ""}
+                placeholder="Upload an image or paste image URL"
+                onChange={(e) => updateLayout({
+                  image: e.target.value,
+                  imagePosition: e.target.value && current.imagePosition === "none" ? "top" : current.imagePosition,
+                })}
+              />
+              <label
+                style={{
+                  padding: "0.5rem 0.85rem",
+                  background: "#f4ede0",
+                  borderRadius: "6px",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                }}
+              >
+                <Upload size={14} /> Upload / Replace Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    handleImageUpload(file, (url) => updateLayout({
+                      image: url,
+                      imagePosition: current.imagePosition === "none" ? "top" : current.imagePosition,
+                    }));
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </label>
+              {current.image && (
+                <button
+                  type="button"
+                  onClick={() => updateLayout({ image: "", imageAlt: "", imagePosition: "none" })}
+                  style={{ padding: "0.5rem 0.7rem", borderRadius: "6px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+                >
+                  <Trash2 size={13} /> Remove Image
+                </button>
+              )}
+            </div>
+            <div style={{ marginTop: "0.75rem" }}>
+              <label style={labelStyle}>Image Alt Text</label>
+              <input
+                style={inputStyle}
+                value={current.imageAlt || ""}
+                placeholder="Describe the image for accessibility"
+                onChange={(e) => updateLayout({ imageAlt: e.target.value })}
+              />
+            </div>
+            {renderImagePreview(current.image, current.imageAlt || `${sectionLabel} section image`)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const homeLayoutMeta: Record<Exclude<HomeSubTab, "customSections">, { key: string; label: string; imageEnabled: boolean; imageNote?: string }> = {
+    hero: { key: "homepage.hero", label: "Hero Banner", imageEnabled: false, imageNote: "Use the Hero Poster Image control above. Alignment changes the hero copy." },
+    storyCarousel: { key: "homepage.storyCarousel", label: "Story Carousel", imageEnabled: false, imageNote: "Each story slide already has its own image. Alignment changes all carousel card captions." },
+    collection: { key: "homepage.collection", label: "The Collection", imageEnabled: true },
+    highlights: { key: "homepage.highlights", label: "Highlights Marquee", imageEnabled: false, imageNote: "Highlights are compact badges; alignment changes their text." },
+    problem: { key: "homepage.problem", label: "The Sugar Problem", imageEnabled: true },
+    nature: { key: "homepage.nature", label: "Nature’s Solution", imageEnabled: false, imageNote: "Use the Art Image control above. Alignment changes the section copy." },
+    craft: { key: "homepage.craft", label: "The Craft", imageEnabled: false, imageNote: "Use the Artisan Craft Image control above. Alignment changes the section copy." },
+    philosophy: { key: "homepage.philosophy", label: "Our Philosophy", imageEnabled: true },
+    slowSweetness: { key: "homepage.slowSweetness", label: "Slow Sweetness", imageEnabled: true },
+    founder: { key: "homepage.founder", label: "Founder Story", imageEnabled: false, imageNote: "Use the Founder Portrait Image control above. Alignment changes the section copy." },
+    rituals: { key: "homepage.rituals", label: "Everyday Rituals", imageEnabled: true },
+    journal: { key: "homepage.journal", label: "From the Journal", imageEnabled: true },
+    whyZucero: { key: "homepage.whyZucero", label: "Why Zucero Exists", imageEnabled: true },
+    launchList: { key: "homepage.launchList", label: "Launch List", imageEnabled: true },
+  };
+
   const removeProductAtIndex = (productIdx: number) => {
     if (config.products.length <= 1) {
       showToast("error", "At least one product must remain in the collection.");
@@ -870,7 +1026,10 @@ export function AdminCMSEditor() {
               { id: "nature", label: "02 · Nature's Solution" },
               { id: "craft", label: "03 · The Craft" },
               { id: "philosophy", label: "05 · Philosophy" },
-              { id: "founder", label: "06 · Founder Story" },
+              { id: "slowSweetness", label: "06 · Slow Sweetness" },
+              { id: "founder", label: "07 · Founder Story" },
+              { id: "rituals", label: "08 · Everyday Rituals" },
+              { id: "journal", label: "09 · Journal" },
               { id: "whyZucero", label: "10 · Why Zucero" },
               { id: "launchList", label: "11 · Launch List" },
               { id: "customSections", label: "➕ Custom Sections" },
