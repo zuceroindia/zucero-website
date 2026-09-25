@@ -31,3 +31,11 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: TypeScript check
         run: pnpm exec tsc --noEmit
+      - name: Production build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://www.thegoodsugar.in
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: test-publishable-key
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          ORDER_NOTIFICATION_EMAIL: zucero.thegoodsugar@gmail.com
