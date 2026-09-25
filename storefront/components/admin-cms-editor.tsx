@@ -2850,6 +2850,12 @@ export function AdminCMSEditor() {
         </div>
       )}
 
+      {activeTab === "products" && renderSectionLayoutControls(
+        "product.recommendation",
+        "Product Recommendation / You may also like",
+        { imageEnabled: true }
+      )}
+
       {/* ========================================================================= */}
       {/* 3. OUR STORY TAB                                                          */}
       {/* ========================================================================= */}
@@ -2939,6 +2945,12 @@ export function AdminCMSEditor() {
         </div>
       )}
 
+      {activeTab === "ourStory" && renderSectionLayoutControls(
+        "ourStory.page",
+        "Our Story Page",
+        { imageEnabled: true }
+      )}
+
       {/* ========================================================================= */}
       {/* 4. CONTACT TAB                                                            */}
       {/* ========================================================================= */}
@@ -3000,6 +3012,12 @@ export function AdminCMSEditor() {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === "contact" && renderSectionLayoutControls(
+        "contact.page",
+        "Contact Page",
+        { imageEnabled: true }
       )}
 
       {/* ========================================================================= */}
@@ -3133,6 +3151,12 @@ export function AdminCMSEditor() {
         </div>
       )}
 
+      {activeTab === "policies" && renderSectionLayoutControls(
+        `policy.${policySubTab}`,
+        `${policySubTab.charAt(0).toUpperCase() + policySubTab.slice(1)} Policy Page`,
+        { imageEnabled: true }
+      )}
+
       {/* ========================================================================= */}
       {/* 6. GUIDES TAB                                                             */}
       {/* ========================================================================= */}
@@ -3260,6 +3284,12 @@ export function AdminCMSEditor() {
             );
           })()}
         </div>
+      )}
+
+      {activeTab === "guides" && renderSectionLayoutControls(
+        guideSubTab === "desiKhand" ? "guide.desiKhand" : "guide.sugarAlternatives",
+        guideSubTab === "desiKhand" ? "Desi Khand Guide" : "Sugar Alternatives Guide",
+        { imageEnabled: true }
       )}
 
       {/* ========================================================================= */}
