@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import type { ProductVariant } from "@/lib/catalog";
 import { useCMS } from "@/components/cms-provider";
 import { SectionDivider } from "@/components/section-divider";
-import { CMSSectionFrame, cmsTextAlign } from "@/components/cms-section-frame";
+import { CMSSectionFrame, cmsSectionStyle, cmsTextAlign } from "@/components/cms-section-frame";
 
 export function PhilosophySection() {
   const { config } = useCMS();
@@ -40,7 +40,7 @@ export function CollectionSection() {
         {config.homepage.collectionIntroLine2 || "It’s about preserving what truly matters."}
       </p>
     </div>
-    <section id="products" className="heritage-collection" style={{ textAlign }}>
+    <section id="products" className="heritage-collection" style={{ ...cmsSectionStyle(layout), textAlign }}>
       <div id="collection-title" className="collection-anchor"><SectionDivider number={config.homepage.collectionSectionNumber || "04"} title={config.homepage.collectionSectionTitle || "The Collection"} light /></div>
       <h2 className="sr-only">Explore Our Collection</h2>
       <CMSSectionFrame layout={layout}>
@@ -87,15 +87,23 @@ export function CollectionSection() {
 
 export function HeritageSections({ philosophy }: { philosophy: ReactNode }) {
   const { config } = useCMS();
-  const craftAlign = cmsTextAlign(config.sectionLayouts?.["homepage.craft"]);
+  const craftLayout = config.sectionLayouts?.["homepage.craft"];
+  const craftAlign = cmsTextAlign(craftLayout);
   const slowLayout = config.sectionLayouts?.["homepage.slowSweetness"];
-  const founderAlign = cmsTextAlign(config.sectionLayouts?.["homepage.founder"]);
+  const founderLayout = config.sectionLayouts?.["homepage.founder"];
+  const founderAlign = cmsTextAlign(founderLayout);
   const ritualsLayout = config.sectionLayouts?.["homepage.rituals"];
   const journalLayout = config.sectionLayouts?.["homepage.journal"];
 
   return <div className="heritage">
-    <section id="process" className="heritage-dark heritage-craft">
-      <div className="heritage-panorama">
+    <section id="process" className="heritage-dark heritage-craft" style={cmsSectionStyle(craftLayout)}>
+      <div
+        className="heritage-panorama"
+        style={{
+          ...(craftLayout?.imageHeightPx ? { minHeight: `${craftLayout.imageHeightPx}px`, height: `${craftLayout.imageHeightPx}px` } : {}),
+          ...(craftLayout?.imageWidthPx ? { width: `${craftLayout.imageWidthPx}px`, maxWidth: "100%", marginLeft: "auto", marginRight: "auto" } : {}),
+        }}
+      >
         <Image
           src={config.homepage.craftImage || "/images/khand-craft-artisan-v2.png"}
           alt="An artisan preparing fine Desi Khand in a traditional iron kadai"
@@ -125,14 +133,14 @@ export function HeritageSections({ philosophy }: { philosophy: ReactNode }) {
     </section>
     <CollectionSection />
     {philosophy}
-    <section className="heritage-dark heritage-slow" style={{ textAlign: cmsTextAlign(slowLayout) }}><SectionDivider number="06" title="Slow Sweetness" light /><div><span className="heritage-rule" /><p>There is something that happens when Mishri dissolves slowly in hot water. You wait for it. That waiting is the ritual. Not the sugar itself, but what it asks of you.</p></div><div className="heritage-panorama"><Image src={slowLayout?.image || "/images/slow-sweetness-ritual-v3.png"} alt={slowLayout?.imageAlt || "Brown Mishri beside a brass cup of morning chai"} fill sizes="100vw" /><div className="section-image-caption"><span>Everyday ritual</span><strong>Let sweetness<br />unfold slowly.</strong></div></div></section>
-    <section className="heritage-founder" style={{ textAlign: founderAlign }}>
+    <section className="heritage-dark heritage-slow" style={{ ...cmsSectionStyle(slowLayout), textAlign: cmsTextAlign(slowLayout) }}><SectionDivider number="06" title="Slow Sweetness" light /><div><span className="heritage-rule" /><p>There is something that happens when Mishri dissolves slowly in hot water. You wait for it. That waiting is the ritual. Not the sugar itself, but what it asks of you.</p></div><div className="heritage-panorama" style={{ ...(slowLayout?.imageHeightPx ? { minHeight: `${slowLayout.imageHeightPx}px`, height: `${slowLayout.imageHeightPx}px` } : {}), ...(slowLayout?.imageWidthPx ? { width: `${slowLayout.imageWidthPx}px`, maxWidth: "100%", marginLeft: "auto", marginRight: "auto" } : {}) }}><Image src={slowLayout?.image || "/images/slow-sweetness-ritual-v3.png"} alt={slowLayout?.imageAlt || "Brown Mishri beside a brass cup of morning chai"} fill sizes="100vw" /><div className="section-image-caption"><span>Everyday ritual</span><strong>Let sweetness<br />unfold slowly.</strong></div></div></section>
+    <section className="heritage-founder" style={{ ...cmsSectionStyle(founderLayout), textAlign: founderAlign }}>
       <SectionDivider number="07" title="The Founder’s Point of View" />
       <Image
         src={config.homepage.founderImage || "/images/foundertamanna.webp"}
         alt={`${config.homepage.founderName || "Tamanna Sharma"}, founder of Zucero`}
-        width={380}
-        height={480}
+        width={founderLayout?.imageWidthPx || 380}
+        height={founderLayout?.imageHeightPx || 480}
         sizes="(max-width: 640px) 70vw, 300px"
       />
       <blockquote>{config.homepage.founderQuote || "If marketing can create trust,\nit should also earn it."}</blockquote>
