@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feat/cms-section-images-alignment
+  pull_request:
+    branches:
+      - main
 
 jobs:
   typecheck:
