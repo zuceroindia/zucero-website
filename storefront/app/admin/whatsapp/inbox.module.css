@@ -294,71 +294,216 @@
   cursor: pointer;
 }
 
-/* --- Customer Orders Strip --- */
-.ordersStrip {
+/* --- Customer Orders Intelligence Panel --- */
+.orderIntelBox {
   background: #fdfaf3;
-  border-bottom: 1px solid rgba(16, 34, 24, 0.1);
-  padding: 0.55rem 1.25rem;
+  border-bottom: 1px solid rgba(16, 34, 24, 0.12);
+  padding: 0.75rem 1.25rem;
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  overflow-x: auto;
-  font-size: 0.78rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.02);
 }
 
-.ordersStripLabel {
+.orderIntelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.orderIntelHeading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #102218;
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.orderTabs {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  color: #8a6b2f;
-  font-weight: 700;
+  overflow-x: auto;
+}
+
+.orderTabBtn {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(16, 34, 24, 0.16);
+  padding: 0.2rem 0.55rem;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #4a453e;
+  cursor: pointer;
   white-space: nowrap;
+  transition: all 0.12s ease;
+}
+
+.orderTabBtn:hover {
+  background: #fff;
+  border-color: #102218;
+}
+
+.orderTabBtnActive {
+  background: #143727 !important;
+  color: #d8b456 !important;
+  border-color: #143727 !important;
+}
+
+.orderIntelDetails {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.5rem 1rem;
+  background: #fff;
+  border: 1px solid rgba(16, 34, 24, 0.1);
+  border-radius: 6px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.orderIntelCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.orderIntelCol span {
+  color: #6d675e;
   font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
+  font-weight: 700;
 }
 
-.orderPill {
-  display: inline-flex;
+.orderIntelCol strong {
+  color: #102218;
+  font-size: 0.8rem;
+}
+
+.orderActionRow {
+  display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: #fff;
-  border: 1px solid rgba(16, 34, 24, 0.14);
-  padding: 0.3rem 0.65rem;
-  border-radius: 99px;
-  white-space: nowrap;
-  font-size: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 0.25rem;
 }
 
-.orderPill strong {
+.orderActionLabel {
+  font-size: 0.7rem;
+  color: #8a6b2f;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.orderActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #fff;
+  border: 1px solid rgba(16, 34, 24, 0.2);
   color: #102218;
+  padding: 0.3rem 0.65rem;
+  border-radius: 5px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.orderActionBtn:hover {
+  background: #143727;
+  color: #fff;
+  border-color: #143727;
+}
+
+.orderActionBtnPrimary {
+  background: #143727;
+  color: #d8b456;
+  border-color: #143727;
+}
+
+.orderActionBtnPrimary:hover {
+  background: #1c4b35;
+  color: #fff;
 }
 
 .orderStatusBadge {
   background: #e6f4ea;
   color: #137333;
-  padding: 0.1rem 0.4rem;
+  padding: 0.12rem 0.45rem;
   border-radius: 4px;
   font-size: 0.68rem;
-  font-weight: 600;
-  text-transform: capitalize;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.resendBtn {
-  background: transparent;
-  border: 1px solid rgba(138, 107, 47, 0.4);
-  color: #8a6b2f;
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 0.15rem 0.5rem;
+.orderStatusBadgeShipped {
+  background: #e8f0fe;
+  color: #1a73e8;
+}
+
+.orderStatusBadgePending {
+  background: #fef7e0;
+  color: #b06000;
+}
+
+/* Modal Lookup Box */
+.modalLookupCard {
+  background: #fdfaf3;
+  border: 1px solid rgba(138, 107, 47, 0.3);
+  border-radius: 6px;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.modalLookupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  color: #102218;
+}
+
+.modalLookupChips {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.modalLookupChip {
+  background: #fff;
+  border: 1px solid rgba(16, 34, 24, 0.2);
+  color: #102218;
+  padding: 0.25rem 0.55rem;
   border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.12s ease;
 }
 
-.resendBtn:hover {
-  background: #8a6b2f;
-  color: white;
+.modalLookupChip:hover {
+  background: #143727;
+  color: #d8b456;
+  border-color: #143727;
 }
 
 /* --- Messages List --- */

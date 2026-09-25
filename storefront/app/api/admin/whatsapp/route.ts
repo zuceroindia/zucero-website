@@ -27,6 +27,14 @@ export async function GET(request: Request) {
   try {
     const db = supabaseAdmin();
     const url = new URL(request.url);
+    const lookupPhone = url.searchParams.get("lookupPhone");
+    if (lookupPhone) {
+      const customerOrders = await fetchCustomerOrdersForWaId(lookupPhone);
+      return NextResponse.json({ customerOrders }, {
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
+
     const selected = url.searchParams.get("conversationId");
     if (selected && !idSchema.safeParse(selected).success) {
       return NextResponse.json({ error: "Invalid conversation ID" }, { status: 400 });

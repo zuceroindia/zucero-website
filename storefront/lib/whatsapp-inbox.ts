@@ -302,6 +302,12 @@ export async function startWhatsAppConversation(input: {
   return { conversation, message: saved };
 }
 
+export type CustomerOrderItem = {
+  name: string;
+  variant: string;
+  quantity: number;
+};
+
 export type CustomerOrderBrief = {
   id: string;
   orderNumber: string;
@@ -309,11 +315,26 @@ export type CustomerOrderBrief = {
   status: string;
   paymentStatus: string;
   totalPaise: number;
+  totalRupees: string;
+  subtotalRupees?: string;
+  taxRupees?: string;
+  shippingRupees?: string;
+  discountRupees?: string;
+  walletSpentRupees?: string;
   trackingAwb?: string | null;
   courierName?: string | null;
   trackingUrl?: string | null;
   estimatedDeliveryWindow?: string | null;
-  itemsSummary?: string;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  deliveryAddress?: string | null;
+  deliveryCity?: string | null;
+  deliveryState?: string | null;
+  deliveryPincode?: string | null;
+  invoiceUrl?: string | null;
+  itemsSummary: string;
+  itemsList: CustomerOrderItem[];
 };
 
 export async function fetchCustomerOrdersForWaId(waId: string): Promise<CustomerOrderBrief[]> {
@@ -324,10 +345,10 @@ export async function fetchCustomerOrdersForWaId(waId: string): Promise<Customer
 
   const { data: orders } = await db
     .from("orders")
-    .select("id, order_number, created_at, status, payment_status, total_paise, tracking_awb, courier_name, tracking_url, estimated_delivery_window, customer_phone")
+    .select("id, order_number, created_at, status, payment_status, total_paise, subtotal_paise, tax_paise, shipping_paise, discount_paise, wallet_spent_paise, tracking_awb, courier_name, tracking_url, estimated_delivery_window, customer_phone, customer_email, shipping_address")
     .or(`customer_phone.ilike.%${last10}%,shipping_address->>phone.ilike.%${last10}%`)
     .order("created_at", { ascending: false })
-    .limit(5);
+    .limit(10);
 
   type RawOrderRow = {
     id: string;
@@ -336,11 +357,26 @@ export async function fetchCustomerOrdersForWaId(waId: string): Promise<Customer
     status: string;
     payment_status: string;
     total_paise: number;
+    subtotal_paise?: number;
+    tax_paise?: number;
+    shipping_paise?: number;
+    discount_paise?: number;
+    wallet_spent_paise?: number;
     tracking_awb?: string | null;
     courier_name?: string | null;
     tracking_url?: string | null;
     estimated_delivery_window?: string | null;
     customer_phone?: string | null;
+    customer_email?: string | null;
+    shipping_address?: {
+      fullName?: string;
+      phone?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      city?: string;
+      state?: string;
+      postalCode?: string;
+    } | null;
   };
 
   const rows = (orders || []) as RawOrderRow[];
@@ -352,23 +388,57 @@ export async function fetchCustomerOrdersForWaId(waId: string): Promise<Customer
     .select("order_id, product_name, variant_label, quantity")
     .in("order_id", orderIds);
 
-  const itemsByOrder = new Map<string, string>();
+  const itemsMap = new Map<string, CustomerOrderItem[]>();
   for (const it of (items || []) as Array<{ order_id: string; product_name: string; variant_label: string; quantity: number }>) {
-    const prev = itemsByOrder.get(it.order_id);
-    itemsByOrder.set(it.order_id, prev ? `${prev}, ${it.product_name} (${it.variant_label}) × ${it.quantity}` : `${it.product_name} (${it.variant_label}) × ${it.quantity}`);
+    const list = itemsMap.get(it.order_id) || [];
+    list.push({
+      name: it.product_name,
+      variant: it.variant_label,
+      quantity: it.quantity,
+    });
+    itemsMap.set(it.order_id, list);
   }
 
-  return rows.map((o) => ({
-    id: o.id,
-    orderNumber: o.order_number,
-    createdAt: o.created_at,
-    status: o.status,
-    paymentStatus: o.payment_status,
-    totalPaise: o.total_paise,
-    trackingAwb: o.tracking_awb,
-    courierName: o.courier_name,
-    trackingUrl: o.tracking_url,
-    estimatedDeliveryWindow: o.estimated_delivery_window,
-    itemsSummary: itemsByOrder.get(o.id) || "Zucero Pure Sugar Products",
-  }));
+  return rows.map((o) => {
+    const addr = o.shipping_address || {};
+    const itemsList = itemsMap.get(o.id) || [];
+    const itemsSummary = itemsList.length > 0
+      ? itemsList.map((i) => `${i.name} (${i.variant}) × ${i.quantity}`).join(", ")
+      : "Zucero Pure Sugar Products";
+
+    const fullAddr = [addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.postalCode]
+      .filter(Boolean)
+      .join(", ");
+
+    const trackingUrl = o.tracking_url || (o.tracking_awb ? `https://shiprocket.co/tracking/${o.tracking_awb}` : null);
+
+    return {
+      id: o.id,
+      orderNumber: o.order_number,
+      createdAt: o.created_at,
+      status: o.status,
+      paymentStatus: o.payment_status,
+      totalPaise: o.total_paise,
+      totalRupees: (o.total_paise / 100).toFixed(2),
+      subtotalRupees: ((o.subtotal_paise || 0) / 100).toFixed(2),
+      taxRupees: ((o.tax_paise || 0) / 100).toFixed(2),
+      shippingRupees: ((o.shipping_paise || 0) / 100).toFixed(2),
+      discountRupees: ((o.discount_paise || 0) / 100).toFixed(2),
+      walletSpentRupees: ((o.wallet_spent_paise || 0) / 100).toFixed(2),
+      trackingAwb: o.tracking_awb,
+      courierName: o.courier_name,
+      trackingUrl,
+      estimatedDeliveryWindow: o.estimated_delivery_window || "3-5 Business Days",
+      customerName: addr.fullName || null,
+      customerEmail: o.customer_email || null,
+      customerPhone: o.customer_phone || addr.phone || null,
+      deliveryAddress: fullAddr || null,
+      deliveryCity: addr.city || null,
+      deliveryState: addr.state || null,
+      deliveryPincode: addr.postalCode || null,
+      invoiceUrl: `https://www.thegoodsugar.in/api/orders/${o.id}/invoice`,
+      itemsSummary,
+      itemsList,
+    };
+  });
 }

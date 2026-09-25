@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Check,
   CheckCheck,
+  FileText,
   MessageCircle,
   Package,
   Plus,
@@ -12,6 +13,7 @@ import {
   Search,
   Send,
   Sparkles,
+  Truck,
   X,
 } from "lucide-react";
 import styles from "@/app/admin/whatsapp/inbox.module.css";
@@ -35,6 +37,12 @@ type Message = {
   sent_at: string;
 };
 
+type CustomerOrderItem = {
+  name: string;
+  variant: string;
+  quantity: number;
+};
+
 type CustomerOrder = {
   id: string;
   orderNumber: string;
@@ -42,11 +50,26 @@ type CustomerOrder = {
   status: string;
   paymentStatus: string;
   totalPaise: number;
+  totalRupees: string;
+  subtotalRupees?: string;
+  taxRupees?: string;
+  shippingRupees?: string;
+  discountRupees?: string;
+  walletSpentRupees?: string;
   trackingAwb?: string | null;
   courierName?: string | null;
   trackingUrl?: string | null;
   estimatedDeliveryWindow?: string | null;
-  itemsSummary?: string;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  deliveryAddress?: string | null;
+  deliveryCity?: string | null;
+  deliveryState?: string | null;
+  deliveryPincode?: string | null;
+  invoiceUrl?: string | null;
+  itemsSummary: string;
+  itemsList: CustomerOrderItem[];
 };
 
 const QUICK_REPLIES = [
@@ -68,6 +91,64 @@ const QUICK_REPLIES = [
   },
 ];
 
+function buildOrderSummaryMessage(ord: CustomerOrder, name?: string) {
+  const greeting = name ? `Hello ${name}` : "Hello";
+  const statusLabel = ord.paymentStatus === "captured" || ord.status === "paid" ? "Paid" : (ord.status || "Confirmed");
+  return `${greeting}, thank you for ordering with Zucero! 🍃
+
+📦 Order Details: #${ord.orderNumber}
+• ${ord.itemsSummary || "Zucero Pure Sugars"}
+
+Total Amount: ₹${ord.totalRupees || (ord.totalPaise / 100).toFixed(0)} (${statusLabel})
+Delivery Address: ${ord.deliveryAddress || "Your saved address"}
+Expected Delivery: ${ord.estimatedDeliveryWindow || "3-5 Business Days"}
+
+Please reply here if you have any questions or delivery instructions!`;
+}
+
+function buildTrackingMessage(ord: CustomerOrder, name?: string) {
+  const greeting = name ? `Hello ${name}` : "Hello";
+  if (ord.trackingAwb) {
+    const courier = ord.courierName || "Shiprocket Express";
+    const trackingLink = ord.trackingUrl || `https://shiprocket.co/tracking/${ord.trackingAwb}`;
+    return `${greeting}, great news! Your Zucero order #${ord.orderNumber} has been dispatched! 🚚
+
+Courier Partner: ${courier}
+Tracking AWB: ${ord.trackingAwb}
+Live Tracking Link: ${trackingLink}
+Expected Delivery: ${ord.estimatedDeliveryWindow || "3-5 Business Days"}
+
+Your parcel of unrefined sweetness is on its way! 🍃`;
+  }
+
+  return `${greeting}, your Zucero order #${ord.orderNumber} is freshly packed and scheduled for courier pickup today. We will share your live tracking link as soon as the courier scans your package! 🍃`;
+}
+
+function buildConfirmationMessage(ord: CustomerOrder, name?: string) {
+  const greeting = name ? `Hello ${name}` : "Hello";
+  const itemsText = ord.itemsSummary || "Zucero Pure Sugar Products";
+  const total = ord.totalRupees || (ord.totalPaise / 100).toFixed(0);
+  const delivery = ord.estimatedDeliveryWindow || "3-5 Business Days";
+  return `${greeting}, thank you for ordering with Zucero! 🍃
+
+Your order #${ord.orderNumber} for ${itemsText} is confirmed.
+Total Paid: ₹${total}
+Estimated Delivery: ${delivery}
+
+We will share your live tracking link as soon as your parcel is dispatched!`;
+}
+
+function buildInvoiceMessage(ord: CustomerOrder, name?: string) {
+  const greeting = name ? `Hello ${name}` : "Hello";
+  const link = ord.invoiceUrl || `https://www.thegoodsugar.in/api/orders/${ord.id}/invoice`;
+  return `${greeting}, here is your official GST Tax Invoice for Zucero order #${ord.orderNumber}:
+
+📄 Download Tax Invoice:
+${link}
+
+Thank you for choosing mindful sweetness! 🍃`;
+}
+
 function time(value: string | null) {
   if (!value) return "";
   return new Intl.DateTimeFormat("en-IN", {
@@ -88,6 +169,7 @@ export function AdminWhatsAppInbox() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
+  const [selectedOrderIndex, setSelectedOrderIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [draft, setDraft] = useState("");
@@ -96,15 +178,17 @@ export function AdminWhatsAppInbox() {
   const [error, setError] = useState("");
   const [successNote, setSuccessNote] = useState("");
 
-  // New Chat Modal state
+  // New Chat Modal state & Phone Lookup
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newPhone, setNewPhone] = useState("");
   const [newName, setNewName] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [newChatSubmitting, setNewChatSubmitting] = useState(false);
   const [newChatError, setNewChatError] = useState("");
+  const [modalLookupOrders, setModalLookupOrders] = useState<CustomerOrder[]>([]);
 
   const bottomRef = useRef<HTMLDivElement>(null);
+  const composerInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -116,6 +200,7 @@ export function AdminWhatsAppInbox() {
       setConversations(data.conversations || []);
       setMessages(data.messages || []);
       setCustomerOrders(data.customerOrders || []);
+      setSelectedOrderIndex(0);
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load inbox");
@@ -146,6 +231,54 @@ export function AdminWhatsAppInbox() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Deep-link query param listener: /admin/whatsapp?phone=...
+  useEffect(() => {
+    if (typeof window === "undefined" || conversations.length === 0) return;
+    const p = new URLSearchParams(window.location.search).get("phone");
+    if (!p) return;
+
+    const clean = p.replace(/\D/g, "");
+    if (clean.length < 10) return;
+
+    const last10 = clean.slice(-10);
+    const found = conversations.find((c) => c.wa_id.includes(last10));
+    if (found) {
+      const timer = window.setTimeout(() => setSelectedId(found.id), 0);
+      return () => window.clearTimeout(timer);
+    } else {
+      const timer = window.setTimeout(() => {
+        setNewPhone(p);
+        setShowNewChatModal(true);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [conversations]);
+
+  // Real-time phone lookup in + New Chat modal
+  useEffect(() => {
+    const digits = newPhone.replace(/\D/g, "");
+    if (digits.length < 10) {
+      const timer = window.setTimeout(() => setModalLookupOrders([]), 0);
+      return () => window.clearTimeout(timer);
+    }
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/admin/whatsapp?lookupPhone=${encodeURIComponent(digits.slice(-10))}`);
+        if (res.ok) {
+          const data = await res.json();
+          const ords = (data.customerOrders || []) as CustomerOrder[];
+          setModalLookupOrders(ords);
+          if (ords.length > 0 && !newName.trim() && ords[0].customerName) {
+            setNewName(ords[0].customerName);
+          }
+        }
+      } catch {}
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [newPhone, newName]);
+
   async function send(event: FormEvent) {
     event.preventDefault();
     const body = draft.trim();
@@ -166,6 +299,16 @@ export function AdminWhatsAppInbox() {
     } finally {
       setSending(false);
     }
+  }
+
+  function insertIntoDraft(body: string) {
+    setDraft(body);
+    setSuccessNote("✨ Option loaded into composer below. Review or edit, then click Send!");
+    setTimeout(() => {
+      composerInputRef.current?.focus();
+      composerInputRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+    setTimeout(() => setSuccessNote(""), 6000);
   }
 
   async function handleStartNewChat(event: FormEvent) {
@@ -190,6 +333,7 @@ export function AdminWhatsAppInbox() {
       setNewPhone("");
       setNewName("");
       setNewMessage("");
+      setModalLookupOrders([]);
       setSuccessNote("Message sent and conversation started!");
       await load(true);
       if (data.conversation?.id) {
@@ -212,7 +356,7 @@ export function AdminWhatsAppInbox() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not resend order confirmation");
-      setSuccessNote("Order confirmation template sent successfully!");
+      setSuccessNote("Official Order Confirmation template sent via Meta WhatsApp Cloud API!");
       await load(true);
       setTimeout(() => setSuccessNote(""), 5000);
     } catch (err) {
@@ -232,6 +376,7 @@ export function AdminWhatsAppInbox() {
   }, [conversations, searchQuery]);
 
   const selected = conversations.find((item) => item.id === selectedId);
+  const activeOrder = customerOrders[selectedOrderIndex] || customerOrders[0];
 
   function renderStatus(message: Message) {
     if (message.direction !== "outbound") return null;
@@ -272,6 +417,7 @@ export function AdminWhatsAppInbox() {
             className={styles.primaryBtn}
             onClick={() => {
               setNewChatError("");
+              setModalLookupOrders([]);
               setShowNewChatModal(true);
             }}
           >
@@ -301,36 +447,45 @@ export function AdminWhatsAppInbox() {
       )}
 
       <div className={styles.inbox}>
-        {/* Conversations Column */}
+        {/* Left Sidebar: Conversations List */}
         <aside
           className={`${styles.conversations} ${selectedId ? styles.mobileHidden : ""}`}
-          aria-label="WhatsApp conversations"
+          aria-label="Conversations"
         >
-          <div className={styles.searchBox}>
-            <Search size={15} color="#8a6b2f" />
+          <div className={styles.searchBar}>
+            <Search size={15} color="#797368" />
             <input
-              type="search"
-              placeholder="Search by name or number…"
+              type="text"
+              placeholder="Search chat or phone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={styles.searchInput}
+              aria-label="Search conversations"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                className={styles.clearSearchBtn}
+                onClick={() => setSearchQuery("")}
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
-          <div className={styles.conversationsList}>
+          <div className={styles.conversationList}>
             {loading && conversations.length === 0 && (
-              <p className={styles.empty}>Loading conversations…</p>
+              <div className={styles.empty}>
+                <RefreshCw size={24} className="spin" />
+                <span>Loading conversations…</span>
+              </div>
             )}
 
             {!loading && filteredConversations.length === 0 && (
               <div className={styles.empty}>
-                <MessageCircle size={32} />
-                <strong>{searchQuery ? "No matches found" : "No messages yet"}</strong>
-                <span>
-                  {searchQuery
-                    ? "Try a different name or phone number."
-                    : "Customer messages and automated order confirmations will appear here."}
-                </span>
+                <MessageCircle size={28} />
+                <strong>No conversations yet</strong>
+                <span>Click &quot;+ New Chat&quot; above to message any customer number.</span>
               </div>
             )}
 
@@ -338,13 +493,11 @@ export function AdminWhatsAppInbox() {
               <button
                 key={item.id}
                 type="button"
-                className={`${styles.conversationItem} ${
-                  item.id === selectedId ? styles.activeConversation : ""
-                }`}
+                className={`${styles.conversationItem} ${item.id === selectedId ? styles.activeConversation : ""}`}
                 onClick={() => setSelectedId(item.id)}
               >
                 <span className={styles.avatar}>
-                  {(item.profile_name || item.wa_id).charAt(0).toUpperCase()}
+                  {(item.profile_name || item.wa_id).slice(0, 1).toUpperCase()}
                 </span>
                 <span className={styles.conversationCopy}>
                   <strong>{item.profile_name || phone(item.wa_id)}</strong>
@@ -397,29 +550,148 @@ export function AdminWhatsAppInbox() {
                 </div>
               </header>
 
-              {/* Linked Customer Orders Strip */}
-              {customerOrders.length > 0 && (
-                <div className={styles.ordersStrip}>
-                  <span className={styles.ordersStripLabel}>
-                    <Package size={14} /> Linked Orders ({customerOrders.length}):
-                  </span>
-                  {customerOrders.map((ord) => (
-                    <div key={ord.id} className={styles.orderPill}>
-                      <strong>#{ord.orderNumber}</strong>
-                      <span>₹{(ord.totalPaise / 100).toFixed(0)}</span>
-                      <span className={styles.orderStatusBadge}>
-                        {ord.status === "paid" ? "Paid" : ord.status}
-                      </span>
-                      <button
-                        type="button"
-                        className={styles.resendBtn}
-                        onClick={() => resendOrderTemplate(ord.id)}
-                        title="Resend official WhatsApp order confirmation template"
-                      >
-                        Resend Confirmation
-                      </button>
+              {/* Linked Customer Orders Intelligence Panel */}
+              {customerOrders.length > 0 && activeOrder && (
+                <div className={styles.orderIntelBox}>
+                  <div className={styles.orderIntelHeader}>
+                    <div className={styles.orderIntelHeading}>
+                      <Package size={15} color="#8a6b2f" />
+                      <span>Customer Orders ({customerOrders.length})</span>
+                      {customerOrders.length > 1 && (
+                        <div className={styles.orderTabs}>
+                          {customerOrders.map((ord, idx) => (
+                            <button
+                              key={ord.id}
+                              type="button"
+                              className={`${styles.orderTabBtn} ${selectedOrderIndex === idx ? styles.orderTabBtnActive : ""}`}
+                              onClick={() => setSelectedOrderIndex(idx)}
+                            >
+                              #{ord.orderNumber}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    <div>
+                      <span
+                        className={
+                          activeOrder.status === "shipped" || activeOrder.status === "in_transit"
+                            ? styles.orderStatusBadgeShipped
+                            : styles.orderStatusBadge
+                        }
+                      >
+                        {activeOrder.status || "Placed"}
+                      </span>
+                      <strong style={{ marginLeft: "0.5rem", color: "#102218" }}>
+                        ₹{activeOrder.totalRupees || (activeOrder.totalPaise / 100).toFixed(0)}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className={styles.orderIntelDetails}>
+                    <div className={styles.orderIntelCol}>
+                      <span>Products Ordered</span>
+                      <strong>{activeOrder.itemsSummary}</strong>
+                    </div>
+                    <div className={styles.orderIntelCol}>
+                      <span>Courier &amp; Tracking</span>
+                      {activeOrder.trackingAwb ? (
+                        <a
+                          href={
+                            activeOrder.trackingUrl ||
+                            `https://shiprocket.co/tracking/${activeOrder.trackingAwb}`
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: "#1a73e8", fontWeight: 600, textDecoration: "underline" }}
+                        >
+                          {activeOrder.courierName ? `${activeOrder.courierName}: ` : ""}
+                          {activeOrder.trackingAwb}
+                        </a>
+                      ) : (
+                        <span style={{ color: "#8a6b2f", fontWeight: 600 }}>AWB Pending Dispatch</span>
+                      )}
+                    </div>
+                    <div className={styles.orderIntelCol}>
+                      <span>Delivery Location</span>
+                      <strong>{activeOrder.deliveryAddress || "Address in database"}</strong>
+                    </div>
+                  </div>
+
+                  {/* Send Options Toolbar */}
+                  <div className={styles.orderActionRow}>
+                    <span className={styles.orderActionLabel}>
+                      <Sparkles size={12} /> Send Options:
+                    </span>
+                    <button
+                      type="button"
+                      className={styles.orderActionBtn}
+                      onClick={() =>
+                        insertIntoDraft(
+                          buildOrderSummaryMessage(
+                            activeOrder,
+                            selected.profile_name || activeOrder.customerName || undefined
+                          )
+                        )
+                      }
+                      title="Load formatted order summary into chat composer"
+                    >
+                      <Package size={13} /> Order Details
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.orderActionBtn}
+                      onClick={() =>
+                        insertIntoDraft(
+                          buildTrackingMessage(
+                            activeOrder,
+                            selected.profile_name || activeOrder.customerName || undefined
+                          )
+                        )
+                      }
+                      title="Load live tracking and AWB into chat composer"
+                    >
+                      <Truck size={13} /> Live Tracking
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.orderActionBtn}
+                      onClick={() =>
+                        insertIntoDraft(
+                          buildConfirmationMessage(
+                            activeOrder,
+                            selected.profile_name || activeOrder.customerName || undefined
+                          )
+                        )
+                      }
+                      title="Load order confirmation text into chat composer"
+                    >
+                      <CheckCheck size={13} /> Confirmation Text
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.orderActionBtn}
+                      onClick={() =>
+                        insertIntoDraft(
+                          buildInvoiceMessage(
+                            activeOrder,
+                            selected.profile_name || activeOrder.customerName || undefined
+                          )
+                        )
+                      }
+                      title="Load tax invoice download link into chat composer"
+                    >
+                      <FileText size={13} /> Tax Invoice
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.orderActionBtn} ${styles.orderActionBtnPrimary}`}
+                      onClick={() => resendOrderTemplate(activeOrder.id)}
+                      title="Send official Meta WhatsApp Order Confirmation template"
+                    >
+                      <Send size={13} /> Meta Template
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -432,9 +704,6 @@ export function AdminWhatsAppInbox() {
                       message.direction === "outbound" ? styles.outbound : styles.inbound
                     }`}
                   >
-                    {message.message_type === "template" && (
-                      <span className={styles.templateTag}>Official Template</span>
-                    )}
                     <p>{message.body}</p>
                     <footer className={styles.messageFooter}>
                       <time>{time(message.sent_at)}</time>
@@ -445,55 +714,52 @@ export function AdminWhatsAppInbox() {
                 <div ref={bottomRef} />
               </div>
 
-              {/* Quick Canned Replies Bar */}
+              {/* Quick Canned Replies */}
               <div className={styles.quickReplies} aria-label="Quick reply options">
-                <Sparkles size={13} color="#8a6b2f" />
-                {QUICK_REPLIES.map((qr) => (
+                <span className={styles.quickRepliesLabel}>
+                  <Sparkles size={13} /> Quick reply:
+                </span>
+                {QUICK_REPLIES.map((item) => (
                   <button
-                    key={qr.label}
+                    key={item.label}
                     type="button"
                     className={styles.quickReplyChip}
-                    onClick={() => setDraft(qr.text)}
+                    onClick={() => setDraft(item.text)}
                   >
-                    {qr.label}
+                    {item.label}
                   </button>
                 ))}
               </div>
 
-              {/* Message Composer */}
+              {/* Chat Composer */}
               <form className={styles.composer} onSubmit={send}>
-                <textarea
+                <input
+                  ref={composerInputRef}
+                  type="text"
+                  placeholder="Type a message or select an order action above…"
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value.slice(0, 4096))}
-                  placeholder="Type a WhatsApp reply…"
+                  onChange={(e) => setDraft(e.target.value)}
                   aria-label="Message"
-                  rows={2}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      void send(e);
-                    }
-                  }}
+                  disabled={sending}
                 />
-                <button type="submit" disabled={sending || !draft.trim()}>
+                <button
+                  type="submit"
+                  disabled={sending || !draft.trim()}
+                  className={styles.sendBtn}
+                  aria-label="Send message"
+                >
                   <Send size={16} />
-                  {sending ? "Sending…" : "Send"}
                 </button>
               </form>
-
-              <p className={styles.windowNote}>
-                Free-form replies are accepted by Meta within the active customer care window. Order
-                confirmations and utility templates can be sent anytime 24/7.
-              </p>
             </>
           )}
         </section>
       </div>
 
-      {/* --- New Chat Modal --- */}
+      {/* Modal: Start New Chat with any Phone Number */}
       {showNewChatModal && (
         <div
-          className={styles.modalOverlay}
+          className={styles.modalBackdrop}
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowNewChatModal(false);
           }}
@@ -527,8 +793,79 @@ export function AdminWhatsAppInbox() {
                   required
                   value={newPhone}
                   onChange={(e) => setNewPhone(e.target.value)}
+                  autoFocus
                 />
               </div>
+
+              {/* Live Order Auto-Fetch Preview inside Modal */}
+              {modalLookupOrders.length > 0 && (
+                <div className={styles.modalLookupCard}>
+                  <div className={styles.modalLookupHeader}>
+                    <span>
+                      <strong>📦 Linked Order:</strong> #{modalLookupOrders[0].orderNumber} (₹
+                      {modalLookupOrders[0].totalRupees} · {modalLookupOrders[0].status})
+                    </span>
+                  </div>
+                  <div className={styles.modalLookupChips}>
+                    <button
+                      type="button"
+                      className={styles.modalLookupChip}
+                      onClick={() =>
+                        setNewMessage(
+                          buildOrderSummaryMessage(
+                            modalLookupOrders[0],
+                            newName || modalLookupOrders[0].customerName || undefined
+                          )
+                        )
+                      }
+                    >
+                      <Package size={12} /> + Order Details
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.modalLookupChip}
+                      onClick={() =>
+                        setNewMessage(
+                          buildTrackingMessage(
+                            modalLookupOrders[0],
+                            newName || modalLookupOrders[0].customerName || undefined
+                          )
+                        )
+                      }
+                    >
+                      <Truck size={12} /> + Tracking
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.modalLookupChip}
+                      onClick={() =>
+                        setNewMessage(
+                          buildConfirmationMessage(
+                            modalLookupOrders[0],
+                            newName || modalLookupOrders[0].customerName || undefined
+                          )
+                        )
+                      }
+                    >
+                      <CheckCheck size={12} /> + Confirmation
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.modalLookupChip}
+                      onClick={() =>
+                        setNewMessage(
+                          buildInvoiceMessage(
+                            modalLookupOrders[0],
+                            newName || modalLookupOrders[0].customerName || undefined
+                          )
+                        )
+                      }
+                    >
+                      <FileText size={12} /> + Tax Invoice
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className={styles.field}>
                 <label htmlFor="newName">Customer Name (Optional)</label>
@@ -545,8 +882,8 @@ export function AdminWhatsAppInbox() {
                 <label htmlFor="newMessage">Message *</label>
                 <textarea
                   id="newMessage"
-                  rows={3}
-                  placeholder="Write your message to the customer…"
+                  rows={4}
+                  placeholder="Write your message or select an order action above…"
                   required
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
@@ -555,8 +892,8 @@ export function AdminWhatsAppInbox() {
 
               <p className={styles.modalHint}>
                 💡 <strong>Note on Meta Policy</strong>: Free-form text messages are accepted if the
-                customer has contacted you within 24 hours. For automated order updates, official
-                templates are dispatched automatically upon purchase.
+                customer has contacted you within 24 hours. For cold outreach on new orders, the
+                official confirmation template is registered with Meta.
               </p>
 
               <div className={styles.modalActions}>
