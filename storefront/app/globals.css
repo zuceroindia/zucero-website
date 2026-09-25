@@ -843,3 +843,15 @@ main section[id]{scroll-margin-top:calc(var(--nav-height) + 18px)}
 @media(max-width:900px){
   .cms-custom-section{grid-template-columns:1fr!important}
 }
+
+
+/* CMS universal section image + text alignment */
+.cms-section-layout{display:grid;gap:clamp(1.5rem,3vw,3.5rem);align-items:center;width:100%}
+.cms-section-layout.cms-image-left,.cms-section-layout.cms-image-right{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.cms-section-layout.cms-image-top,.cms-section-layout.cms-image-bottom,.cms-section-layout.cms-image-none{grid-template-columns:1fr}
+.cms-section-layout-image{position:relative;min-height:clamp(280px,38vw,520px);overflow:hidden;border-radius:2px}
+.cms-section-layout-copy{text-align:inherit;min-width:0}
+.cms-section-layout-copy .button-row{justify-content:inherit}
+@media(max-width:900px){
+  .cms-section-layout.cms-image-left,.cms-section-layout.cms-image-right{grid-template-columns:1fr}
+}

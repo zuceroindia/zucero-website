@@ -7,12 +7,17 @@ import { useCMS } from "@/components/cms-provider";
 import { Header } from "@/components/header";
 import { SectionDivider } from "@/components/section-divider";
 import { LaunchListForm } from "@/components/launch-list-form";
+import { CMSSectionFrame, cmsSectionStyle, cmsTextAlign } from "@/components/cms-section-frame";
 
 const highlightIcons = [Leaf, FlaskConical, Sparkles, PackageCheck];
 
 export function DynamicHeroSection() {
   const { config } = useCMS();
   const hp = config.homepage;
+  const layout = config.sectionLayouts?.["homepage.hero"];
+  const highlightsLayout = config.sectionLayouts?.["homepage.highlights"];
+  const textAlign = cmsTextAlign(layout);
+  const contentJustify = textAlign === "center" ? "center" : textAlign === "right" ? "flex-end" : "flex-start";
 
   const highlights = hp.highlights && hp.highlights.length > 0
     ? hp.highlights
@@ -33,7 +38,7 @@ export function DynamicHeroSection() {
       ];
 
   return (
-    <section className="hero">
+    <section className="hero" style={cmsSectionStyle(layout)}>
       <Image
         className="hero-image"
         src={hp.heroPosterImage || "/images/hero-cinematic-poster.png"}
@@ -55,7 +60,7 @@ export function DynamicHeroSection() {
       )}
       <div className="hero-shade" />
       <Header />
-      <div className="hero-copy">
+      <div className="hero-copy" style={{ textAlign }}>
         <p className="eyebrow gold">{hp.heroEyebrow || "Rooted in Indian sugar-making"}</p>
         <h1>
           {hp.heroTitleLine1 || "Sweetness"}
@@ -67,12 +72,12 @@ export function DynamicHeroSection() {
           <br />
           {hp.heroSubtitleLine2 || "We simply preserved it."}
         </p>
-        <div className="button-row">
+        <div className="button-row" style={{ justifyContent: contentJustify }}>
           <Link className="button button-gold" href={hp.heroButtonLink || "#collection-title"}>
             {hp.heroButtonText || "Explore our collection"} <ArrowRight size={16} />
           </Link>
         </div>
-        <div className="hero-labels">
+        <div className="hero-labels" style={{ justifyContent: contentJustify }}>
           {quickLinks.map((ql, idx) => (
             <Link key={`${ql.href}-${idx}`} href={ql.href}>
               {ql.label}
@@ -80,7 +85,7 @@ export function DynamicHeroSection() {
           ))}
         </div>
       </div>
-      <div className="hero-proofs" aria-label="Product highlights">
+      <div className="hero-proofs" style={{ ...cmsSectionStyle(highlightsLayout), textAlign: cmsTextAlign(highlightsLayout) }} aria-label="Product highlights">
         <div className="hero-proofs-track">
           {[...highlights, ...highlights].map((item, index) => {
             const Icon = highlightIcons[index % highlightIcons.length] || Leaf;
@@ -106,20 +111,23 @@ export function DynamicHeroSection() {
 export function DynamicProblemSection() {
   const { config } = useCMS();
   const hp = config.homepage;
+  const layout = config.sectionLayouts?.["homepage.problem"];
 
   return (
     <section id="problem" className="problem">
       <SectionDivider number="01" title={hp.sugarProblemEyebrow || "The Sugar Problem"} />
-      <div className="section-copy">
-        <header className="problem-heading">
-          <h2>{hp.sugarProblemHeading || "Sweetness lost its story."}</h2>
-        </header>
-        {hp.sugarProblemParagraphs?.map((paragraph, idx) => (
-          <p key={idx} style={{ whiteSpace: "pre-line" }}>
-            {paragraph}
-          </p>
-        ))}
-      </div>
+      <CMSSectionFrame layout={layout}>
+        <div className="section-copy">
+          <header className="problem-heading">
+            <h2>{hp.sugarProblemHeading || "Sweetness lost its story."}</h2>
+          </header>
+          {hp.sugarProblemParagraphs?.map((paragraph, idx) => (
+            <p key={idx} style={{ whiteSpace: "pre-line" }}>
+              {paragraph}
+            </p>
+          ))}
+        </div>
+      </CMSSectionFrame>
     </section>
   );
 }
@@ -127,10 +135,17 @@ export function DynamicProblemSection() {
 export function DynamicNatureSection() {
   const { config } = useCMS();
   const hp = config.homepage;
+  const layout = config.sectionLayouts?.["homepage.nature"];
 
   return (
-    <section id="nature" className="nature-section">
-      <div className="nature-art">
+    <section id="nature" className="nature-section" style={cmsSectionStyle(layout)}>
+      <div
+        className="nature-art"
+        style={{
+          ...(layout?.imageHeightPx ? { minHeight: `${layout.imageHeightPx}px`, height: `${layout.imageHeightPx}px` } : {}),
+          ...(layout?.imageWidthPx ? { width: `${layout.imageWidthPx}px`, maxWidth: "100%", justifySelf: "center" } : {}),
+        }}
+      >
         <Image
           src={hp.natureSolutionImage || "/images/nature-solution-field-v3.png"}
           alt="An Indian woman standing in a sugarcane field at sunrise"
@@ -138,7 +153,7 @@ export function DynamicNatureSection() {
           sizes="100vw"
         />
       </div>
-      <div className="nature-copy">
+      <div className="nature-copy" style={{ textAlign: cmsTextAlign(layout) }}>
         <p className="overlay-section-title">{hp.natureSolutionOverlayTitle || "Nature’s Solution"}</p>
         <Sun />
         <h2>{hp.natureSolutionHeading || "Begin with sugarcane. Interfere less."}</h2>
@@ -155,23 +170,26 @@ export function DynamicNatureSection() {
 export function DynamicWhyZuceroSection() {
   const { config } = useCMS();
   const hp = config.homepage;
+  const layout = config.sectionLayouts?.["homepage.whyZucero"];
 
   return (
     <section className="why-zucero section-shell">
       <SectionDivider number="10" title={hp.whyZuceroEyebrow || "Why Zucero Exists"} />
-      <h2>{hp.whyZuceroHeading || "We question what goes into everything else. Why not sugar?"}</h2>
-      {hp.whyZuceroParagraphs?.map((paragraph, idx) => (
-        <p key={idx} style={{ whiteSpace: "pre-line" }}>
-          {paragraph}
-        </p>
-      ))}
-      <div className="why-highlight">
-        <strong>{hp.whyZuceroBannerTitle || "Experience the goodness of the first batch"}</strong>
-        <span>{hp.whyZuceroBannerSubtitle || "Exclusive referral access · Deliveries begin"}</span>
-        <Link className="button button-gold" href={hp.heroButtonLink || "#collection-title"}>
-          {hp.whyZuceroButtonText || "Explore the collection"} <ArrowRight size={16} />
-        </Link>
-      </div>
+      <CMSSectionFrame layout={layout}>
+        <h2>{hp.whyZuceroHeading || "We question what goes into everything else. Why not sugar?"}</h2>
+        {hp.whyZuceroParagraphs?.map((paragraph, idx) => (
+          <p key={idx} style={{ whiteSpace: "pre-line" }}>
+            {paragraph}
+          </p>
+        ))}
+        <div className="why-highlight">
+          <strong>{hp.whyZuceroBannerTitle || "Experience the goodness of the first batch"}</strong>
+          <span>{hp.whyZuceroBannerSubtitle || "Exclusive referral access · Deliveries begin"}</span>
+          <Link className="button button-gold" href={hp.heroButtonLink || "#collection-title"}>
+            {hp.whyZuceroButtonText || "Explore the collection"} <ArrowRight size={16} />
+          </Link>
+        </div>
+      </CMSSectionFrame>
     </section>
   );
 }
@@ -179,15 +197,18 @@ export function DynamicWhyZuceroSection() {
 export function DynamicLaunchListSection() {
   const { config } = useCMS();
   const hp = config.homepage;
+  const layout = config.sectionLayouts?.["homepage.launchList"];
 
   return (
     <section id="contact" className="contact-section">
       <SectionDivider number="11" title={hp.launchListEyebrow || "The Launch List"} light />
-      <div>
-        <h2>{hp.launchListHeading || "Be first to taste the good sugar."}</h2>
-        <p>{hp.launchListSubtitle || "Get launch availability, founder notes, and early product access. No noisy inbox."}</p>
-      </div>
-      <LaunchListForm />
+      <CMSSectionFrame layout={layout}>
+        <div>
+          <h2>{hp.launchListHeading || "Be first to taste the good sugar."}</h2>
+          <p>{hp.launchListSubtitle || "Get launch availability, founder notes, and early product access. No noisy inbox."}</p>
+        </div>
+        <LaunchListForm />
+      </CMSSectionFrame>
     </section>
   );
 }
@@ -202,6 +223,7 @@ export function DynamicCustomSections() {
   return (
     <>
       {sections.filter((section) => section.enabled).map((section) => {
+        const sectionLayout = config.sectionLayouts?.[`homepage.custom.${section.id}`];
         const hasImage = Boolean(section.image) && section.imagePosition !== "none";
         const dark = section.theme === "dark" || section.theme === "green";
         const background = section.theme === "dark"
@@ -211,10 +233,11 @@ export function DynamicCustomSections() {
             : "var(--paper)";
         const color = dark ? "#f4efe4" : "var(--ink)";
         const muted = dark ? "rgba(244,239,228,.72)" : "var(--muted)";
-        const imageFirst = section.imagePosition === "left";
+        const imageFirst = section.imagePosition === "left" || section.imagePosition === "top";
+        const splitImage = section.imagePosition === "left" || section.imagePosition === "right";
 
         const copy = (
-          <div style={{ padding: "clamp(3.5rem,7vw,7rem)", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <div style={{ padding: "clamp(3.5rem,7vw,7rem)", display: "flex", flexDirection: "column", justifyContent: "center", textAlign: section.textAlign || "left" }}>
             {section.eyebrow && (
               <p className="eyebrow" style={{ color: dark ? "#d8b456" : undefined }}>
                 {section.eyebrow}
@@ -230,7 +253,16 @@ export function DynamicCustomSections() {
         );
 
         const image = hasImage ? (
-          <div style={{ position: "relative", minHeight: "clamp(360px,52vw,680px)" }}>
+          <div
+            style={{
+              position: "relative",
+              minHeight: sectionLayout?.imageHeightPx ? `${sectionLayout.imageHeightPx}px` : "clamp(360px,52vw,680px)",
+              height: sectionLayout?.imageHeightPx ? `${sectionLayout.imageHeightPx}px` : undefined,
+              width: sectionLayout?.imageWidthPx ? `${sectionLayout.imageWidthPx}px` : "100%",
+              maxWidth: "100%",
+              justifySelf: "center",
+            }}
+          >
             <Image
               src={section.image}
               alt={section.imageAlt || section.title || "Zucero editorial section"}
@@ -246,10 +278,11 @@ export function DynamicCustomSections() {
             key={section.id}
             id={section.id}
             style={{
+              ...cmsSectionStyle(sectionLayout),
               background,
               color,
               display: hasImage ? "grid" : "block",
-              gridTemplateColumns: hasImage ? "repeat(2,minmax(0,1fr))" : undefined,
+              gridTemplateColumns: hasImage && splitImage ? "repeat(2,minmax(0,1fr))" : "1fr",
             }}
             className="cms-custom-section"
           >

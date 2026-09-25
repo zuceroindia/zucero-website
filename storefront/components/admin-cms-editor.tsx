@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { AdminCouponManager } from "@/components/admin-coupon-manager";
 import { AdminTypographyManager } from "@/components/admin-typography-manager";
+import { AdminLayoutSizingManager } from "@/components/admin-layout-sizing-manager";
 import type {
   CMSCommit,
   CMSConfig,
@@ -35,6 +36,7 @@ import type {
   CMSHighlight,
   CMSNavLink,
   CMSSectionBlock,
+  CMSSectionLayout,
   Product,
   ProductVariant,
 } from "@/lib/cms";
@@ -50,6 +52,7 @@ type MainTab =
   | "branding"
   | "promotions"
   | "typography"
+  | "layoutSizing"
   | "rawJson"
   | "commits";
 
@@ -62,13 +65,77 @@ type HomeSubTab =
   | "nature"
   | "craft"
   | "philosophy"
+  | "slowSweetness"
   | "founder"
+  | "rituals"
+  | "journal"
   | "whyZucero"
   | "launchList"
   | "customSections";
 
 type PolicySubTab = "shipping" | "returns" | "refunds" | "privacy" | "terms";
 type GuideSubTab = "desiKhand" | "sugarAlternatives";
+
+function ImageSizePreview({
+  src,
+  alt,
+  label,
+}: {
+  src?: string | null;
+  alt: string;
+  label: string;
+}) {
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    setDimensions(null);
+  }, [src]);
+
+  return (
+    <div style={{
+      border: "1px solid #e6decb",
+      borderRadius: "8px",
+      background: "#faf8f2",
+      padding: "0.6rem",
+      minWidth: 0,
+    }}>
+      <span style={{ display: "block", marginBottom: "0.45rem", fontSize: "0.66rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "#6b786f", fontWeight: 700 }}>
+        {label}
+      </span>
+      {src ? (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0 }}>
+          <img
+            src={src}
+            alt={alt}
+            onLoad={(e) => {
+              const image = e.currentTarget;
+              setDimensions({ width: image.naturalWidth, height: image.naturalHeight });
+            }}
+            style={{
+              width: "120px",
+              height: "82px",
+              objectFit: "cover",
+              borderRadius: "6px",
+              border: "1px solid #ddd4c3",
+              background: "#fff",
+              flex: "0 0 auto",
+            }}
+          />
+          <div style={{ minWidth: 0 }}>
+            <strong style={{ display: "block", color: "#234235", fontSize: "0.8rem" }}>
+              {dimensions ? `${dimensions.width} × ${dimensions.height}px` : "Reading image size…"}
+            </strong>
+            <span style={{ display: "block", marginTop: "0.25rem", fontSize: "0.7rem", color: "#776e61", wordBreak: "break-all" }}>
+              {src}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <span style={{ fontSize: "0.78rem", color: "#8a8174" }}>No image selected</span>
+      )}
+    </div>
+  );
+}
 
 export function AdminCMSEditor() {
   const [config, setConfig] = useState<CMSConfig | null>(null);
@@ -467,39 +534,22 @@ export function AdminCMSEditor() {
     letterSpacing: "0.04em",
   };
 
-  const renderImagePreview = (src: string | undefined | null, alt = "Current image") => (
+  const renderImagePreview = (
+    src: string | undefined | null,
+    alt = "Current image",
+    currentLiveSrc?: string | undefined | null
+  ) => (
     <div style={{
       marginTop: "0.65rem",
-      border: "1px solid #e6decb",
-      borderRadius: "8px",
-      background: "#faf8f2",
-      padding: "0.6rem",
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "0.75rem",
+      display: "grid",
+      gridTemplateColumns: currentLiveSrc !== undefined ? "repeat(auto-fit,minmax(260px,1fr))" : "minmax(0,1fr)",
+      gap: "0.65rem",
       maxWidth: "100%",
     }}>
-      {src ? (
-        <>
-          <img
-            src={src}
-            alt={alt}
-            style={{
-              width: "120px",
-              height: "82px",
-              objectFit: "cover",
-              borderRadius: "6px",
-              border: "1px solid #ddd4c3",
-              background: "#fff",
-            }}
-          />
-          <span style={{ fontSize: "0.75rem", color: "#665e52", wordBreak: "break-all", maxWidth: "520px" }}>
-            Current image
-          </span>
-        </>
-      ) : (
-        <span style={{ fontSize: "0.78rem", color: "#8a8174" }}>No image selected</span>
+      {currentLiveSrc !== undefined && (
+        <ImageSizePreview src={currentLiveSrc} alt={alt} label="Current Live Image & Size" />
       )}
+      <ImageSizePreview src={src} alt={alt} label={currentLiveSrc !== undefined ? "After Update Image & Size" : "Image Preview & Size"} />
     </div>
   );
 
@@ -580,9 +630,220 @@ export function AdminCMSEditor() {
             </button>
           )}
         </div>
-        {renderImagePreview(value, previewAlt)}
+        {renderImagePreview(value, previewAlt, originalConfig?.branding?.[field])}
       </div>
     );
+  };
+
+  const renderSectionLayoutControls = (
+    sectionKey: string,
+    sectionLabel: string,
+    options: { imageEnabled?: boolean; imageNote?: string } = {}
+  ) => {
+    const current: CMSSectionLayout = config.sectionLayouts?.[sectionKey] || {
+      textAlign: "left",
+      image: "",
+      imageAlt: "",
+      imagePosition: "none",
+    };
+    const live: CMSSectionLayout = originalConfig?.sectionLayouts?.[sectionKey] || {
+      textAlign: "left",
+      image: "",
+      imageAlt: "",
+      imagePosition: "none",
+    };
+    const imageEnabled = options.imageEnabled !== false;
+    const formatSize = (value: number | undefined) => value && value > 0 ? `${value}px` : "Theme default / responsive";
+
+    const updateLayout = (patch: Partial<CMSSectionLayout>) => {
+      setConfig({
+        ...config,
+        sectionLayouts: {
+          ...(config.sectionLayouts || {}),
+          [sectionKey]: { ...current, ...patch },
+        },
+      });
+    };
+
+    return (
+      <div style={{ ...cardStyle, borderColor: "#d8b456", background: "#fffdf7" }}>
+        <h3 style={{ margin: "0 0 0.25rem", fontSize: "1.02rem", color: "#102218" }}>
+          Section Image &amp; Text Alignment — {sectionLabel}
+        </h3>
+        <p style={{ margin: "0 0 1rem", fontSize: "0.8rem", color: "#665e52" }}>
+          Choose how text is aligned in this section. {imageEnabled
+            ? "You can also add an optional section image and choose where it appears."
+            : (options.imageNote || "This section already has its own image controls above; alignment applies to the section text.")}
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "0.9rem" }}>
+          <div>
+            <label style={labelStyle}>Text Alignment</label>
+            <select
+              style={inputStyle}
+              value={current.textAlign || "left"}
+              onChange={(e) => updateLayout({ textAlign: e.target.value as CMSSectionLayout["textAlign"] })}
+            >
+              <option value="left">Left Align</option>
+              <option value="center">Center Align</option>
+              <option value="right">Right Align</option>
+            </select>
+          </div>
+
+          {imageEnabled && (
+            <div>
+              <label style={labelStyle}>Image Position</label>
+              <select
+                style={inputStyle}
+                value={current.imagePosition || "none"}
+                onChange={(e) => updateLayout({ imagePosition: e.target.value as CMSSectionLayout["imagePosition"] })}
+              >
+                <option value="none">No Section Image</option>
+                <option value="top">Above Text</option>
+                <option value="bottom">Below Text</option>
+                <option value="left">Left of Text</option>
+                <option value="right">Right of Text</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px dashed #d8cba9" }}>
+          <h4 style={{ margin: "0 0 0.7rem", fontSize: "0.86rem", color: "#102218" }}>Section Size Overrides</h4>
+          <p style={{ margin: "0 0 0.8rem", fontSize: "0.75rem", color: "#776e61" }}>
+            Use 0 to keep the current/global responsive size.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: "0.75rem" }}>
+            {[
+              ["contentMaxWidthPx", "Content max width"],
+              ["minHeightPx", "Minimum height"],
+              ["paddingTopPx", "Top padding"],
+              ["paddingBottomPx", "Bottom padding"],
+              ["paddingInlinePx", "Side padding"],
+              ["imageWidthPx", "Section image width"],
+              ["imageHeightPx", "Section image height"],
+            ].map(([key, label]) => {
+              const typedKey = key as keyof CMSSectionLayout;
+              const liveValue = Number(live[typedKey] || 0);
+              const nextValue = Number(current[typedKey] || 0);
+              const changed = liveValue !== nextValue;
+              return (
+                <div key={key} style={{ padding: "0.7rem", border: changed ? "1px solid #d8b456" : "1px solid #e6decb", borderRadius: "7px", background: changed ? "#fffaf0" : "#fff" }}>
+                  <label style={labelStyle}>{label} (px)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={2400}
+                    style={inputStyle}
+                    value={nextValue}
+                    onChange={(e) => updateLayout({
+                      [key]: Math.max(0, Number(e.target.value) || 0),
+                    } as Partial<CMSSectionLayout>)}
+                  />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem", marginTop: "0.55rem" }}>
+                    <div style={{ padding: "0.4rem 0.5rem", borderRadius: "5px", background: "#f4f7f5", border: "1px solid #d8e4dd" }}>
+                      <span style={{ display: "block", fontSize: "0.62rem", textTransform: "uppercase", color: "#6b786f", fontWeight: 700 }}>Current Live</span>
+                      <strong style={{ display: "block", marginTop: "0.15rem", color: "#234235", fontSize: "0.76rem" }}>{formatSize(liveValue)}</strong>
+                    </div>
+                    <div style={{ padding: "0.4rem 0.5rem", borderRadius: "5px", background: changed ? "#fff4cf" : "#f8f8f8", border: changed ? "1px solid #e5c65d" : "1px solid #e6e6e6" }}>
+                      <span style={{ display: "block", fontSize: "0.62rem", textTransform: "uppercase", color: "#6b6659", fontWeight: 700 }}>After Update</span>
+                      <strong style={{ display: "block", marginTop: "0.15rem", color: changed ? "#7b5b00" : "#555", fontSize: "0.76rem" }}>{formatSize(nextValue)}</strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {imageEnabled && (
+          <div style={{ marginTop: "1rem" }}>
+            <label style={labelStyle}>Optional Section Image</label>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+              <input
+                style={{ ...inputStyle, flex: "1 1 420px" }}
+                value={current.image || ""}
+                placeholder="Upload an image or paste image URL"
+                onChange={(e) => updateLayout({
+                  image: e.target.value,
+                  imagePosition: e.target.value && current.imagePosition === "none" ? "top" : current.imagePosition,
+                })}
+              />
+              <label
+                style={{
+                  padding: "0.5rem 0.85rem",
+                  background: "#f4ede0",
+                  borderRadius: "6px",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                }}
+              >
+                <Upload size={14} /> Upload / Replace Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    handleImageUpload(file, (url) => updateLayout({
+                      image: url,
+                      imagePosition: current.imagePosition === "none" ? "top" : current.imagePosition,
+                    }));
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </label>
+              {current.image && (
+                <button
+                  type="button"
+                  onClick={() => updateLayout({ image: "", imageAlt: "", imagePosition: "none" })}
+                  style={{ padding: "0.5rem 0.7rem", borderRadius: "6px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+                >
+                  <Trash2 size={13} /> Remove Image
+                </button>
+              )}
+            </div>
+            <div style={{ marginTop: "0.75rem" }}>
+              <label style={labelStyle}>Image Alt Text</label>
+              <input
+                style={inputStyle}
+                value={current.imageAlt || ""}
+                placeholder="Describe the image for accessibility"
+                onChange={(e) => updateLayout({ imageAlt: e.target.value })}
+              />
+            </div>
+            {renderImagePreview(
+              current.image,
+              current.imageAlt || `${sectionLabel} section image`,
+              live.image
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const homeLayoutMeta: Record<Exclude<HomeSubTab, "customSections">, { key: string; label: string; imageEnabled: boolean; imageNote?: string }> = {
+    hero: { key: "homepage.hero", label: "Hero Banner", imageEnabled: false, imageNote: "Use the Hero Poster Image control above. Alignment changes the hero copy." },
+    storyCarousel: { key: "homepage.storyCarousel", label: "Story Carousel", imageEnabled: false, imageNote: "Each story slide already has its own image. Alignment changes all carousel card captions." },
+    collection: { key: "homepage.collection", label: "The Collection", imageEnabled: true },
+    highlights: { key: "homepage.highlights", label: "Highlights Marquee", imageEnabled: false, imageNote: "Highlights are compact badges; alignment changes their text." },
+    problem: { key: "homepage.problem", label: "The Sugar Problem", imageEnabled: true },
+    nature: { key: "homepage.nature", label: "Nature’s Solution", imageEnabled: false, imageNote: "Use the Art Image control above. Alignment changes the section copy." },
+    craft: { key: "homepage.craft", label: "The Craft", imageEnabled: false, imageNote: "Use the Artisan Craft Image control above. Alignment changes the section copy." },
+    philosophy: { key: "homepage.philosophy", label: "Our Philosophy", imageEnabled: true },
+    slowSweetness: { key: "homepage.slowSweetness", label: "Slow Sweetness", imageEnabled: true },
+    founder: { key: "homepage.founder", label: "Founder Story", imageEnabled: false, imageNote: "Use the Founder Portrait Image control above. Alignment changes the section copy." },
+    rituals: { key: "homepage.rituals", label: "Everyday Rituals", imageEnabled: true },
+    journal: { key: "homepage.journal", label: "From the Journal", imageEnabled: true },
+    whyZucero: { key: "homepage.whyZucero", label: "Why Zucero Exists", imageEnabled: true },
+    launchList: { key: "homepage.launchList", label: "Launch List", imageEnabled: true },
   };
 
   const removeProductAtIndex = (productIdx: number) => {
@@ -797,6 +1058,7 @@ export function AdminCMSEditor() {
           { id: "branding", label: "🎨 Brand, Logo & Elements", icon: ImageIcon },
           { id: "promotions", label: "🏷️ Promotions", icon: Sparkles },
           { id: "typography", label: "🔤 Fonts & Typography", icon: Sparkles },
+          { id: "layoutSizing", label: "📐 Layout & Sizes", icon: Layers },
           { id: "rawJson", label: "💻 Raw JSON Editor", icon: Code },
           { id: "commits", label: "📜 Commit History", icon: History },
         ].map((tab) => {
@@ -870,7 +1132,10 @@ export function AdminCMSEditor() {
               { id: "nature", label: "02 · Nature's Solution" },
               { id: "craft", label: "03 · The Craft" },
               { id: "philosophy", label: "05 · Philosophy" },
-              { id: "founder", label: "06 · Founder Story" },
+              { id: "slowSweetness", label: "06 · Slow Sweetness" },
+              { id: "founder", label: "07 · Founder Story" },
+              { id: "rituals", label: "08 · Everyday Rituals" },
+              { id: "journal", label: "09 · Journal" },
               { id: "whyZucero", label: "10 · Why Zucero" },
               { id: "launchList", label: "11 · Launch List" },
               { id: "customSections", label: "➕ Custom Sections" },
@@ -1003,7 +1268,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
-                  {renderImagePreview(config.homepage.heroPosterImage, "Homepage hero poster")}
+                  {renderImagePreview(config.homepage.heroPosterImage, "Homepage hero poster", originalConfig?.homepage?.heroPosterImage)}
                 </div>
               </div>
             </div>
@@ -1181,7 +1446,11 @@ export function AdminCMSEditor() {
                           />
                         </label>
                       </div>
-                      {renderImagePreview(story.image, story.alt || story.title || "Story carousel image")}
+                      {renderImagePreview(
+                        story.image,
+                        story.alt || story.title || "Story carousel image",
+                        originalConfig?.homepage?.storyCarousel?.find((item) => item.id === story.id)?.image
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1375,7 +1644,11 @@ export function AdminCMSEditor() {
                           }} />
                         </label>
                       </div>
-                      {renderImagePreview(product.image, product.name)}
+                      {renderImagePreview(
+                        product.image,
+                        product.name,
+                        originalConfig?.products?.find((item) => item.slug === product.slug)?.image
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1575,7 +1848,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
-                  {renderImagePreview(config.homepage.natureSolutionImage, "Nature solution image")}
+                  {renderImagePreview(config.homepage.natureSolutionImage, "Nature solution image", originalConfig?.homepage?.natureSolutionImage)}
                 </div>
                 <div>
                   <label style={labelStyle}>Paragraphs</label>
@@ -1664,7 +1937,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
-                  {renderImagePreview(config.homepage.craftImage, "Artisan craft image")}
+                  {renderImagePreview(config.homepage.craftImage, "Artisan craft image", originalConfig?.homepage?.craftImage)}
                 </div>
               </div>
             </div>
@@ -1794,7 +2067,11 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
-                  {renderImagePreview(config.homepage.founderImage, config.homepage.founderName || "Founder portrait")}
+                  {renderImagePreview(
+                    config.homepage.founderImage,
+                    config.homepage.founderName || "Founder portrait",
+                    originalConfig?.homepage?.founderImage
+                  )}
                 </div>
                 <div style={{ gridColumn: "1 / -1" }}>
                   <label style={labelStyle}>Founder Story Lead</label>
@@ -1921,6 +2198,7 @@ export function AdminCMSEditor() {
                       image: "",
                       imageAlt: "",
                       imagePosition: "right" as const,
+                      textAlign: "left" as const,
                       theme: "light" as const,
                     };
                     setConfig({
@@ -2014,12 +2292,25 @@ export function AdminCMSEditor() {
                     <div>
                       <label style={labelStyle}>Image position</label>
                       <select style={inputStyle} value={section.imagePosition} onChange={(e) => {
-                        const next = [...config.homepage.customSections]; next[idx] = { ...section, imagePosition: e.target.value as "left" | "right" | "none" };
+                        const next = [...config.homepage.customSections]; next[idx] = { ...section, imagePosition: e.target.value as "left" | "right" | "top" | "bottom" | "none" };
                         setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
                       }}>
                         <option value="left">Image left</option>
                         <option value="right">Image right</option>
+                        <option value="top">Image above text</option>
+                        <option value="bottom">Image below text</option>
                         <option value="none">No image</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Text alignment</label>
+                      <select style={inputStyle} value={section.textAlign || "left"} onChange={(e) => {
+                        const next = [...config.homepage.customSections]; next[idx] = { ...section, textAlign: e.target.value as "left" | "center" | "right" };
+                        setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                      }}>
+                        <option value="left">Left Align</option>
+                        <option value="center">Center Align</option>
+                        <option value="right">Right Align</option>
                       </select>
                     </div>
                     <div style={{ gridColumn: "1 / -1" }}>
@@ -2037,17 +2328,29 @@ export function AdminCMSEditor() {
                           setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
                         }} />
                         <label style={{ padding: "0.5rem 0.75rem", borderRadius: "6px", background: "#f4ede0", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
-                          <Upload size={14} /> Upload
+                          <Upload size={14} /> Upload / Replace
                           <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) handleImageUpload(file, (url) => {
-                              const next = [...config.homepage.customSections]; next[idx] = { ...section, image: url };
+                              const next = [...config.homepage.customSections]; next[idx] = { ...section, image: url, imagePosition: section.imagePosition === "none" ? "right" : section.imagePosition };
                               setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
                             });
                           }} />
                         </label>
+                        {section.image && (
+                          <button type="button" onClick={() => {
+                            const next = [...config.homepage.customSections]; next[idx] = { ...section, image: "", imageAlt: "", imagePosition: "none" };
+                            setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                          }} style={{ padding: "0.5rem 0.65rem", borderRadius: "6px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>
+                            Remove Image
+                          </button>
+                        )}
                       </div>
-                  {renderImagePreview(section.image, section.imageAlt || section.title || "Custom section image")}
+                  {renderImagePreview(
+                    section.image,
+                    section.imageAlt || section.title || "Custom section image",
+                    originalConfig?.homepage?.customSections?.find((item) => item.id === section.id)?.image
+                  )}
                     </div>
                     <div style={{ gridColumn: "1 / -1" }}>
                       <label style={labelStyle}>Image alt text</label>
@@ -2057,6 +2360,14 @@ export function AdminCMSEditor() {
                       }} />
                     </div>
                   </div>
+                  {renderSectionLayoutControls(
+                    `homepage.custom.${section.id}`,
+                    `Custom Section ${idx + 1}`,
+                    {
+                      imageEnabled: false,
+                      imageNote: "Use the Custom Section image controls above. The size controls below still let you set this section’s width, height, spacing and image dimensions.",
+                    }
+                  )}
                 </div>
               ))}
 
@@ -2065,6 +2376,14 @@ export function AdminCMSEditor() {
               )}
             </div>
           )}
+
+          {homeSubTab !== "customSections" && (() => {
+            const meta = homeLayoutMeta[homeSubTab as Exclude<HomeSubTab, "customSections">];
+            return renderSectionLayoutControls(meta.key, meta.label, {
+              imageEnabled: meta.imageEnabled,
+              imageNote: meta.imageNote,
+            });
+          })()}
         </div>
       )}
 
@@ -2182,7 +2501,11 @@ export function AdminCMSEditor() {
                     />
                   </label>
                 </div>
-                  {renderImagePreview(currentProduct.image, currentProduct.name)}
+                  {renderImagePreview(
+                    currentProduct.image,
+                    currentProduct.name,
+                    originalConfig?.products?.find((item) => item.slug === currentProduct.slug)?.image
+                  )}
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={labelStyle}>Short Description</label>
@@ -2450,11 +2773,16 @@ export function AdminCMSEditor() {
                     border: "1px solid #e6decb",
                   }}
                 >
-                  <img
-                    src={photo.src}
-                    alt={photo.label}
-                    style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "6px" }}
-                  />
+                  <div style={{ flex: "0 1 560px", minWidth: "280px" }}>
+                    {renderImagePreview(
+                      photo.src,
+                      photo.label,
+                      originalConfig?.products
+                        ?.find((item) => item.slug === currentProduct.slug)
+                        ?.variants?.find((variant) => variant.id === currentVariant.id)
+                        ?.galleryPhotos?.[pIdx]?.src
+                    )}
+                  </div>
                   <div style={{ flex: 1 }}>
                     <input
                       style={inputStyle}
@@ -2520,6 +2848,12 @@ export function AdminCMSEditor() {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === "products" && renderSectionLayoutControls(
+        "product.recommendation",
+        "Product Recommendation / You may also like",
+        { imageEnabled: true }
       )}
 
       {/* ========================================================================= */}
@@ -2611,6 +2945,12 @@ export function AdminCMSEditor() {
         </div>
       )}
 
+      {activeTab === "ourStory" && renderSectionLayoutControls(
+        "ourStory.page",
+        "Our Story Page",
+        { imageEnabled: true }
+      )}
+
       {/* ========================================================================= */}
       {/* 4. CONTACT TAB                                                            */}
       {/* ========================================================================= */}
@@ -2672,6 +3012,12 @@ export function AdminCMSEditor() {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === "contact" && renderSectionLayoutControls(
+        "contact.page",
+        "Contact Page",
+        { imageEnabled: true }
       )}
 
       {/* ========================================================================= */}
@@ -2805,6 +3151,12 @@ export function AdminCMSEditor() {
         </div>
       )}
 
+      {activeTab === "policies" && renderSectionLayoutControls(
+        `policy.${policySubTab}`,
+        `${policySubTab.charAt(0).toUpperCase() + policySubTab.slice(1)} Policy Page`,
+        { imageEnabled: true }
+      )}
+
       {/* ========================================================================= */}
       {/* 6. GUIDES TAB                                                             */}
       {/* ========================================================================= */}
@@ -2932,6 +3284,12 @@ export function AdminCMSEditor() {
             );
           })()}
         </div>
+      )}
+
+      {activeTab === "guides" && renderSectionLayoutControls(
+        guideSubTab === "desiKhand" ? "guide.desiKhand" : "guide.sugarAlternatives",
+        guideSubTab === "desiKhand" ? "Desi Khand Guide" : "Sugar Alternatives Guide",
+        { imageEnabled: true }
       )}
 
       {/* ========================================================================= */}
@@ -3269,7 +3627,21 @@ export function AdminCMSEditor() {
         <div style={cardStyle}>
           <AdminTypographyManager
             typography={config.typography}
+            currentTypography={originalConfig?.typography || config.typography}
             onChange={(typography) => setConfig({ ...config, typography })}
+          />
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* GLOBAL LAYOUT & SIZES TAB                                                 */}
+      {/* ========================================================================= */}
+      {activeTab === "layoutSizing" && (
+        <div style={cardStyle}>
+          <AdminLayoutSizingManager
+            value={config.layoutSizing}
+            currentValue={originalConfig?.layoutSizing || config.layoutSizing}
+            onChange={(layoutSizing) => setConfig({ ...config, layoutSizing })}
           />
         </div>
       )}

@@ -6,9 +6,11 @@ import type { CMSTypography, CMSUploadedFont } from "@/lib/cms";
 
 export function AdminTypographyManager({
   typography,
+  currentTypography,
   onChange,
 }: {
   typography: CMSTypography;
+  currentTypography: CMSTypography;
   onChange: (next: CMSTypography) => void;
 }) {
   const [uploading, setUploading] = useState(false);
@@ -171,7 +173,7 @@ export function AdminTypographyManager({
       <div style={{ background: "#fff", border: "1px solid #e6decb", borderRadius: "10px", padding: "1rem" }}>
         <h3 style={{ margin: "0 0 0.35rem", color: "#102218" }}>Font Sizes</h3>
         <p style={{ margin: "0 0 1rem", fontSize: "0.8rem", color: "#665e52" }}>
-          Enter 0 to keep the current responsive theme size. Any positive value applies that size in pixels site-wide.
+          Each size shows <strong>Current Live</strong> and <strong>After Update</strong>. Enter 0 to keep the responsive theme size.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: "0.8rem" }}>
           {[
@@ -181,19 +183,38 @@ export function AdminTypographyManager({
             ["H3 / Card titles", "h3SizePx"],
             ["Navigation", "navSizePx"],
             ["Buttons / links", "buttonSizePx"],
-          ].map(([label, key]) => (
-            <label key={key} style={labelStyle}>
-              {label} (px)
-              <input
-                style={inputStyle}
-                type="number"
-                min={0}
-                max={180}
-                value={typography[key as keyof CMSTypography] as number}
-                onChange={(e) => patch({ [key]: Math.max(0, Number(e.target.value) || 0) } as Partial<CMSTypography>)}
-              />
-            </label>
-          ))}
+          ].map(([label, key]) => {
+            const typedKey = key as keyof CMSTypography;
+            const live = Number(currentTypography?.[typedKey] || 0);
+            const next = Number(typography[typedKey] || 0);
+            const changed = live !== next;
+            const format = (value: number) => value > 0 ? `${value}px` : "Theme default / responsive";
+            return (
+              <div key={key} style={{ padding: "0.75rem", borderRadius: "8px", border: changed ? "1px solid #d8b456" : "1px solid #e6decb", background: changed ? "#fffaf0" : "#fff" }}>
+                <label style={labelStyle}>
+                  {label} (px)
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    min={0}
+                    max={180}
+                    value={next}
+                    onChange={(e) => patch({ [key]: Math.max(0, Number(e.target.value) || 0) } as Partial<CMSTypography>)}
+                  />
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem", marginTop: "0.55rem" }}>
+                  <div style={{ padding: "0.4rem 0.5rem", borderRadius: "5px", background: "#f4f7f5", border: "1px solid #d8e4dd" }}>
+                    <span style={{ display: "block", fontSize: "0.62rem", textTransform: "uppercase", color: "#6b786f", fontWeight: 700 }}>Current Live</span>
+                    <strong style={{ display: "block", marginTop: "0.15rem", color: "#234235", fontSize: "0.76rem" }}>{format(live)}</strong>
+                  </div>
+                  <div style={{ padding: "0.4rem 0.5rem", borderRadius: "5px", background: changed ? "#fff4cf" : "#f8f8f8", border: changed ? "1px solid #e5c65d" : "1px solid #e6e6e6" }}>
+                    <span style={{ display: "block", fontSize: "0.62rem", textTransform: "uppercase", color: "#6b6659", fontWeight: 700 }}>After Update</span>
+                    <strong style={{ display: "block", marginTop: "0.15rem", color: changed ? "#7b5b00" : "#555", fontSize: "0.76rem" }}>{format(next)}</strong>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

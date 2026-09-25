@@ -5,10 +5,13 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCMS } from "@/components/cms-provider";
+import { cmsSectionStyle } from "@/components/cms-section-frame";
 
 export function StoryCarousel() {
   const { config } = useCMS();
   const stories = config.homepage.storyCarousel;
+  const layout = config.sectionLayouts?.["homepage.storyCarousel"];
+  const textAlign = layout?.textAlign || "left";
   const viewportRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -35,12 +38,12 @@ export function StoryCarousel() {
   }, [paused, stories.length]);
 
   return (
-    <section id="carousel" className="story-carousel" aria-label="Zucero stories" onFocus={() => setPaused(true)} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false); }}>
+    <section id="carousel" className="story-carousel" style={cmsSectionStyle(layout)} aria-label="Zucero stories" onFocus={() => setPaused(true)} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false); }}>
       <div className="carousel-viewport" ref={viewportRef}>
         {stories.map((story) => (
           <Link className="marquee-image" href={story.href || "#"} key={story.id}>
             <Image src={story.image} alt={story.alt || story.title} width={768} height={512} sizes="(max-width: 640px) 82vw, 360px" />
-            <span><strong>{story.title}</strong><small>{story.copy}</small></span>
+            <span style={{ textAlign }}><strong>{story.title}</strong><small>{story.copy}</small></span>
           </Link>
         ))}
       </div>
