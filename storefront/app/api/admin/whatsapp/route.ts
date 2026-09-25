@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAuthorizedAdminOrInternal } from "@/lib/api-auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { sendWhatsAppTextReply } from "@/lib/whatsapp-inbox";
+import {
+  fetchCustomerOrdersForWaId,
+  sendWhatsAppTextReply,
+  startWhatsAppConversation,
+} from "@/lib/whatsapp-inbox";
+import { sendOutboundWhatsAppConfirmation } from "@/lib/whatsapp-outbound";
 
 const idSchema = z.string().uuid();
 const sendSchema = z.object({
@@ -35,7 +40,18 @@ export async function GET(request: Request) {
     if (error) throw error;
 
     let messages: unknown[] = [];
+    let customerOrders: unknown[] = [];
     if (selected) {
+      const { data: conv } = await db
+        .from("whatsapp_conversations")
+        .select("wa_id")
+        .eq("id", selected)
+        .single();
+
+      if (conv?.wa_id) {
+        customerOrders = await fetchCustomerOrdersForWaId(conv.wa_id);
+      }
+
       const { data, error: messageError } = await db
         .from("whatsapp_messages")
         .select("id, conversation_id, meta_message_id, direction, message_type, body, status, error_code, sent_at")
@@ -46,7 +62,11 @@ export async function GET(request: Request) {
       messages = (data || []).reverse();
     }
 
-    return NextResponse.json({ conversations: conversations || [], messages }, {
+    return NextResponse.json({
+      conversations: conversations || [],
+      messages,
+      customerOrders,
+    }, {
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch (error) {
@@ -60,14 +80,43 @@ export async function POST(request: Request) {
   if (denied) return denied;
 
   try {
-    const input = sendSchema.parse(await request.json());
+    const bodyJson = await request.json();
+
+    if (bodyJson.action === "start_conversation") {
+      const startSchema = z.object({
+        phone: z.string().trim().min(8).max(20),
+        customerName: z.string().trim().max(100).optional(),
+        body: z.string().trim().min(1).max(4096),
+      });
+      const input = startSchema.parse(bodyJson);
+      const result = await startWhatsAppConversation(input);
+      return NextResponse.json(result);
+    }
+
+    if (bodyJson.action === "resend_order_confirmation") {
+      const orderSchema = z.object({
+        orderId: z.string().uuid(),
+      });
+      const input = orderSchema.parse(bodyJson);
+      const result = await sendOutboundWhatsAppConfirmation(input.orderId);
+      if (!result.success) {
+        return NextResponse.json(
+          { error: result.error || result.reason || "Could not send order confirmation template" },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json({ ok: true, messageId: result.messageId });
+    }
+
+    // Default: text reply in existing conversation
+    const input = sendSchema.parse(bodyJson);
     const message = await sendWhatsAppTextReply(input.conversationId, input.body);
     return NextResponse.json({ message });
   } catch (error) {
     const message = error instanceof z.ZodError
-      ? "Enter a message between 1 and 4,096 characters."
-      : error instanceof Error ? error.message : "Could not send the message.";
-    console.error("WhatsApp reply failed:", error);
+      ? "Invalid input. Please check the phone number and message length."
+      : error instanceof Error ? error.message : "Could not process request.";
+    console.error("WhatsApp action failed:", error);
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

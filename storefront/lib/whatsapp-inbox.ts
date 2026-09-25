@@ -165,3 +165,210 @@ export async function sendWhatsAppTextReply(conversationId: string, body: string
   }).eq("id", conversation.id);
   return saved;
 }
+
+export async function recordOutboundWhatsAppMessage(input: {
+  recipient: string;
+  customerName?: string;
+  bodyText: string;
+  metaMessageId: string;
+  messageType?: string;
+  rawPayload?: Record<string, unknown>;
+}) {
+  const db = supabaseAdmin();
+  const waId = input.recipient.replace(/\D/g, "");
+  if (!waId) return null;
+  const now = new Date().toISOString();
+
+  const { data: conversation, error: convError } = await db
+    .from("whatsapp_conversations")
+    .upsert({
+      wa_id: waId,
+      ...(input.customerName ? { profile_name: input.customerName.trim() } : {}),
+      last_message_preview: input.bodyText.slice(0, 240),
+      last_message_at: now,
+      updated_at: now,
+    }, { onConflict: "wa_id" })
+    .select("id")
+    .single();
+
+  if (convError || !conversation) {
+    console.error("[WhatsApp Inbox] Failed to upsert conversation for outbound message:", convError);
+    return null;
+  }
+
+  const { data: message, error: msgError } = await db
+    .from("whatsapp_messages")
+    .upsert({
+      conversation_id: conversation.id,
+      meta_message_id: input.metaMessageId,
+      direction: "outbound",
+      message_type: input.messageType || "text",
+      body: input.bodyText,
+      status: "sent",
+      raw_payload: input.rawPayload || {},
+      sent_at: now,
+      updated_at: now,
+    }, { onConflict: "meta_message_id" })
+    .select("*")
+    .single();
+
+  if (msgError) {
+    console.error("[WhatsApp Inbox] Failed to record outbound message:", msgError);
+    return null;
+  }
+
+  return { conversation, message };
+}
+
+export async function startWhatsAppConversation(input: {
+  phone: string;
+  customerName?: string;
+  body: string;
+}) {
+  const db = supabaseAdmin();
+  const digits = input.phone.replace(/\D/g, "");
+  let waId = digits;
+  if (digits.length === 10) {
+    waId = `91${digits}`;
+  } else if (digits.length === 11 && digits.startsWith("0")) {
+    waId = `91${digits.slice(1)}`;
+  } else if (digits.length === 12 && digits.startsWith("91")) {
+    waId = digits;
+  }
+
+  if (waId.length < 10 || waId.length > 15) {
+    throw new Error("Please enter a valid 10-digit Indian phone number or international number.");
+  }
+
+  const now = new Date().toISOString();
+  const { data: conversation, error: convError } = await db
+    .from("whatsapp_conversations")
+    .upsert({
+      wa_id: waId,
+      ...(input.customerName ? { profile_name: input.customerName.trim() } : {}),
+      last_message_preview: input.body.slice(0, 240),
+      last_message_at: now,
+      updated_at: now,
+    }, { onConflict: "wa_id" })
+    .select("*")
+    .single();
+
+  if (convError || !conversation) {
+    throw new Error(convError?.message || "Could not create conversation");
+  }
+
+  const apiToken = process.env.WHATSAPP_API_TOKEN?.trim();
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  if (!apiToken || !phoneNumberId) throw new Error("WhatsApp Cloud API credentials are not configured");
+
+  const response = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: waId,
+      type: "text",
+      text: { preview_url: false, body: input.body },
+    }),
+    cache: "no-store",
+  });
+
+  const result = await response.json() as { messages?: Array<{ id?: string }>; error?: { message?: string; code?: number } };
+  if (!response.ok) {
+    if (result.error?.code === 131047 || result.error?.message?.includes("24 hours")) {
+      throw new Error("Meta 24-Hour Policy: Meta rejects free-form messages to a phone number that has not messaged you within the last 24 hours. Once the customer initiates a chat or receives an order template, you can reply directly.");
+    }
+    throw new Error(result.error?.message || `Meta WhatsApp API error (${response.status})`);
+  }
+
+  const messageId = result.messages?.[0]?.id;
+  if (!messageId) throw new Error("Meta did not return a message ID");
+
+  const { data: saved, error: saveError } = await db.from("whatsapp_messages").upsert({
+    conversation_id: conversation.id,
+    meta_message_id: messageId,
+    direction: "outbound",
+    message_type: "text",
+    body: input.body,
+    status: "sent",
+    raw_payload: result,
+    sent_at: now,
+    updated_at: now,
+  }, { onConflict: "meta_message_id" }).select("*").single();
+
+  if (saveError) throw new Error(`Message sent but could not be saved: ${saveError.message}`);
+
+  return { conversation, message: saved };
+}
+
+export type CustomerOrderBrief = {
+  id: string;
+  orderNumber: string;
+  createdAt: string;
+  status: string;
+  paymentStatus: string;
+  totalPaise: number;
+  trackingAwb?: string | null;
+  courierName?: string | null;
+  trackingUrl?: string | null;
+  estimatedDeliveryWindow?: string | null;
+  itemsSummary?: string;
+};
+
+export async function fetchCustomerOrdersForWaId(waId: string): Promise<CustomerOrderBrief[]> {
+  const db = supabaseAdmin();
+  const digits = waId.replace(/\D/g, "");
+  const last10 = digits.slice(-10);
+  if (last10.length < 10) return [];
+
+  const { data: orders } = await db
+    .from("orders")
+    .select("id, order_number, created_at, status, payment_status, total_paise, tracking_awb, courier_name, tracking_url, estimated_delivery_window, customer_phone")
+    .or(`customer_phone.ilike.%${last10}%,shipping_address->>phone.ilike.%${last10}%`)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  type RawOrderRow = {
+    id: string;
+    order_number: string;
+    created_at: string;
+    status: string;
+    payment_status: string;
+    total_paise: number;
+    tracking_awb?: string | null;
+    courier_name?: string | null;
+    tracking_url?: string | null;
+    estimated_delivery_window?: string | null;
+    customer_phone?: string | null;
+  };
+
+  const rows = (orders || []) as RawOrderRow[];
+  if (rows.length === 0) return [];
+
+  const orderIds = rows.map((o) => o.id);
+  const { data: items } = await db
+    .from("order_items")
+    .select("order_id, product_name, variant_label, quantity")
+    .in("order_id", orderIds);
+
+  const itemsByOrder = new Map<string, string>();
+  for (const it of (items || []) as Array<{ order_id: string; product_name: string; variant_label: string; quantity: number }>) {
+    const prev = itemsByOrder.get(it.order_id);
+    itemsByOrder.set(it.order_id, prev ? `${prev}, ${it.product_name} (${it.variant_label}) × ${it.quantity}` : `${it.product_name} (${it.variant_label}) × ${it.quantity}`);
+  }
+
+  return rows.map((o) => ({
+    id: o.id,
+    orderNumber: o.order_number,
+    createdAt: o.created_at,
+    status: o.status,
+    paymentStatus: o.payment_status,
+    totalPaise: o.total_paise,
+    trackingAwb: o.tracking_awb,
+    courierName: o.courier_name,
+    trackingUrl: o.tracking_url,
+    estimatedDeliveryWindow: o.estimated_delivery_window,
+    itemsSummary: itemsByOrder.get(o.id) || "Zucero Pure Sugar Products",
+  }));
+}

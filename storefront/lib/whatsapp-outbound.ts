@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { whatsappLink } from "@/lib/whatsapp";
+import { recordOutboundWhatsAppMessage } from "@/lib/whatsapp-inbox";
 
 export type OutboundWhatsAppResult = {
   success: boolean;
@@ -191,6 +192,19 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
 
     const messageId = result.messages?.[0]?.id;
     console.info(`[WhatsApp Outbound] Sent WhatsApp message ${messageId} for order ${order.order_number} to ${recipient}`);
+
+    const formattedBody = `Hello ${customerName}, thank you for ordering with Zucero! Your order ${order.order_number} for ${itemsSummary || "Zucero Pure Sugar Products"} has been received. Total: INR ${totalRupeesFormatted}. Expected delivery: ${deliveryWindow}. We will share your live tracking link as soon as your order is dispatched.`;
+
+    if (messageId) {
+      await recordOutboundWhatsAppMessage({
+        recipient,
+        customerName,
+        bodyText: formattedBody,
+        metaMessageId: messageId,
+        messageType: "template",
+        rawPayload: result as Record<string, unknown>,
+      }).catch((err) => console.error("[WhatsApp Outbound] Failed to record in admin inbox:", err));
+    }
 
     await db.from("payment_events").insert({
       provider: "whatsapp",
