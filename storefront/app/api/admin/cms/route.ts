@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { isAuthorizedAdminOrInternal } from "@/lib/api-auth";
+import { authorizeZuceroCmsRequest } from "@/lib/squargraph-control-auth";
 import {
   getLiveCMSConfig,
   getCMSCommits,
@@ -12,8 +12,12 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  if (!(await isAuthorizedAdminOrInternal(request))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await authorizeZuceroCmsRequest(request, "read");
+  if (!access.authorized) {
+    return NextResponse.json(
+      { error: access.reason || "Unauthorized", code: "SITE_CONTROL_ACCESS_DENIED" },
+      { status: access.status }
+    );
   }
 
   try {
@@ -28,8 +32,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!(await isAuthorizedAdminOrInternal(request))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await authorizeZuceroCmsRequest(request, "publish");
+  if (!access.authorized) {
+    return NextResponse.json(
+      { error: access.reason || "Publishing unavailable", code: "SITE_CONTROL_ACCESS_DENIED" },
+      { status: access.status }
+    );
   }
 
   try {
@@ -85,8 +93,12 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  if (!(await isAuthorizedAdminOrInternal(request))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await authorizeZuceroCmsRequest(request, "publish");
+  if (!access.authorized) {
+    return NextResponse.json(
+      { error: access.reason || "Rollback unavailable", code: "SITE_CONTROL_ACCESS_DENIED" },
+      { status: access.status }
+    );
   }
 
   try {
