@@ -58,7 +58,8 @@ export function CMSProvider({
     const fontFaces = (t.uploadedFonts || []).map((font) => {
       const safeName = font.name.replace(/["\\]/g, "");
       const safeUrl = font.url.replace(/["\\]/g, "");
-      return `@font-face{font-family:"${safeName}";src:url("${safeUrl}") format("${font.format}");font-style:normal;font-weight:100 900;font-display:swap;}`;
+      const cssFormat = font.format === "ttf" ? "truetype" : font.format === "otf" ? "opentype" : font.format;
+      return `@font-face{font-family:"${safeName}";src:url("${safeUrl}") format("${cssFormat}");font-style:normal;font-weight:100 900;font-display:swap;}`;
     }).join("\n");
 
     const rules = [
