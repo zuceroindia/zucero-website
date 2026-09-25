@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { ingestWhatsAppWebhook } from "@/lib/whatsapp-inbox";
 
 function hasValidMetaSignature(rawBody: string, suppliedSignature: string | null) {
   const appSecret = process.env.WHATSAPP_APP_SECRET?.trim();
@@ -56,13 +57,17 @@ export async function POST(request: Request) {
     // Log receipt to payment_events for tracking and auditing
     if (payload.entry) {
       const db = supabaseAdmin();
-      await db.from("payment_events").insert({
+      const eventId = `wa:webhook:${createHash("sha256").update(rawBody).digest("hex")}`;
+      const { data: event } = await db.from("payment_events").upsert({
         provider: "whatsapp",
-        provider_event_id: `wa:webhook:${createHash("sha256").update(rawBody).digest("hex")}`,
+        provider_event_id: eventId,
         event_type: "whatsapp.webhook_event",
         payload,
         processed_at: new Date().toISOString(),
-      }).catch(() => {});
+      }, { onConflict: "provider,provider_event_id", ignoreDuplicates: true }).select("id").maybeSingle();
+
+      // Only process a delivery once; Meta retries webhooks until it receives 200.
+      if (event) await ingestWhatsAppWebhook(payload);
     }
 
     return NextResponse.json({ status: "success" }, { status: 200 });
