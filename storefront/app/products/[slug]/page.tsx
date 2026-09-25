@@ -72,7 +72,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       : [["Clear ingredients", product.ingredients], ["Multiple sizes", product.variants.map((variant) => variant.label).join(", ")], ["Zucero quality", "Product details, pricing and pack information are presented transparently on the storefront."]];
 
   const productUrl = absoluteUrl(`/products/${product.slug}`);
-  const offers = product.variants.filter((variant) => variant.pricePaise !== null).map((variant) => ({
+  const offers = product.variants.filter((variant) => (variant.pricePaise ?? 0) > 0).map((variant) => ({
     "@type": "Offer",
     url: productUrl,
     priceCurrency: "INR",
