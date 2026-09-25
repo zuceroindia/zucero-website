@@ -197,6 +197,21 @@ export type CMSFooter = {
   copyrightText: string;
 };
 
+export type CMSBranding = {
+  headerLogo: string;
+  footerLogo: string;
+  faviconImage: string;
+  socialShareImage: string;
+  fssaiLogo: string;
+};
+
+export type CMSProductDetail = {
+  recommendationEnabled: boolean;
+  recommendationHeading: string;
+  recommendationPricePrefix: string;
+  recommendationCtaText: string;
+};
+
 export type CMSConfig = {
   homepage: CMSHomepage;
   products: Product[];
@@ -205,6 +220,8 @@ export type CMSConfig = {
   contact: CMSContact;
   header: CMSHeader;
   footer: CMSFooter;
+  branding: CMSBranding;
+  productDetail: CMSProductDetail;
   policies: CMSPolicies;
   guides: CMSGuides;
   typography: CMSTypography;
@@ -402,6 +419,19 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
     companyName: "TIARA TRIVERSE PRIVATE LIMITED",
     registeredOffice: "Sector-2, Rohtak, 124001, Haryana, India",
     copyrightText: "© 2026 Zucero. All rights reserved.",
+  },
+  branding: {
+    headerLogo: "/images/zucero-highres-logo.png",
+    footerLogo: "/images/zucero-highres-logo.png",
+    faviconImage: "/images/zucero-favicon.webp",
+    socialShareImage: "/images/zucero-highres-logo.png",
+    fssaiLogo: "/images/fssai-logo.png",
+  },
+  productDetail: {
+    recommendationEnabled: true,
+    recommendationHeading: "You may also like",
+    recommendationPricePrefix: "From",
+    recommendationCtaText: "View product",
   },
   policies: {
     shipping: {
@@ -664,6 +694,14 @@ export function mergeWithDefaultCMS(partial?: Partial<CMSConfig> | null): CMSCon
     footer: {
       ...DEFAULT_CMS_CONFIG.footer,
       ...(partial.footer ?? {}),
+    },
+    branding: {
+      ...DEFAULT_CMS_CONFIG.branding,
+      ...(partial.branding ?? {}),
+    },
+    productDetail: {
+      ...DEFAULT_CMS_CONFIG.productDetail,
+      ...(partial.productDetail ?? {}),
     },
     policies: {
       shipping: {
