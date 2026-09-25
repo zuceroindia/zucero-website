@@ -2080,6 +2080,7 @@ export function AdminCMSEditor() {
                       image: "",
                       imageAlt: "",
                       imagePosition: "right" as const,
+                      textAlign: "left" as const,
                       theme: "light" as const,
                     };
                     setConfig({
@@ -2173,12 +2174,25 @@ export function AdminCMSEditor() {
                     <div>
                       <label style={labelStyle}>Image position</label>
                       <select style={inputStyle} value={section.imagePosition} onChange={(e) => {
-                        const next = [...config.homepage.customSections]; next[idx] = { ...section, imagePosition: e.target.value as "left" | "right" | "none" };
+                        const next = [...config.homepage.customSections]; next[idx] = { ...section, imagePosition: e.target.value as "left" | "right" | "top" | "bottom" | "none" };
                         setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
                       }}>
                         <option value="left">Image left</option>
                         <option value="right">Image right</option>
+                        <option value="top">Image above text</option>
+                        <option value="bottom">Image below text</option>
                         <option value="none">No image</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Text alignment</label>
+                      <select style={inputStyle} value={section.textAlign || "left"} onChange={(e) => {
+                        const next = [...config.homepage.customSections]; next[idx] = { ...section, textAlign: e.target.value as "left" | "center" | "right" };
+                        setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                      }}>
+                        <option value="left">Left Align</option>
+                        <option value="center">Center Align</option>
+                        <option value="right">Right Align</option>
                       </select>
                     </div>
                     <div style={{ gridColumn: "1 / -1" }}>
@@ -2196,15 +2210,23 @@ export function AdminCMSEditor() {
                           setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
                         }} />
                         <label style={{ padding: "0.5rem 0.75rem", borderRadius: "6px", background: "#f4ede0", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
-                          <Upload size={14} /> Upload
+                          <Upload size={14} /> Upload / Replace
                           <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) handleImageUpload(file, (url) => {
-                              const next = [...config.homepage.customSections]; next[idx] = { ...section, image: url };
+                              const next = [...config.homepage.customSections]; next[idx] = { ...section, image: url, imagePosition: section.imagePosition === "none" ? "right" : section.imagePosition };
                               setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
                             });
                           }} />
                         </label>
+                        {section.image && (
+                          <button type="button" onClick={() => {
+                            const next = [...config.homepage.customSections]; next[idx] = { ...section, image: "", imageAlt: "", imagePosition: "none" };
+                            setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
+                          }} style={{ padding: "0.5rem 0.65rem", borderRadius: "6px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer" }}>
+                            Remove Image
+                          </button>
+                        )}
                       </div>
                   {renderImagePreview(section.image, section.imageAlt || section.title || "Custom section image")}
                     </div>
@@ -2224,6 +2246,14 @@ export function AdminCMSEditor() {
               )}
             </div>
           )}
+
+          {homeSubTab !== "customSections" && (() => {
+            const meta = homeLayoutMeta[homeSubTab as Exclude<HomeSubTab, "customSections">];
+            return renderSectionLayoutControls(meta.key, meta.label, {
+              imageEnabled: meta.imageEnabled,
+              imageNote: meta.imageNote,
+            });
+          })()}
         </div>
       )}
 
