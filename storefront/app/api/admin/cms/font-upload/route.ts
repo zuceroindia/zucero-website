@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAuthorizedAdminOrInternal } from "@/lib/api-auth";
+import { authorizeZuceroCmsRequest } from "@/lib/squargraph-control-auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -7,8 +7,12 @@ export const dynamic = "force-dynamic";
 const allowedExtensions = new Set(["woff2", "woff", "ttf", "otf"]);
 
 export async function POST(request: Request) {
-  if (!(await isAuthorizedAdminOrInternal(request))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await authorizeZuceroCmsRequest(request, "media");
+  if (!access.authorized) {
+    return NextResponse.json(
+      { error: access.reason || "Media uploads unavailable", code: "SITE_CONTROL_ACCESS_DENIED" },
+      { status: access.status }
+    );
   }
 
   try {
