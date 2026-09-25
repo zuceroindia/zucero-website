@@ -646,7 +646,14 @@ export function AdminCMSEditor() {
       imageAlt: "",
       imagePosition: "none",
     };
+    const live: CMSSectionLayout = originalConfig?.sectionLayouts?.[sectionKey] || {
+      textAlign: "left",
+      image: "",
+      imageAlt: "",
+      imagePosition: "none",
+    };
     const imageEnabled = options.imageEnabled !== false;
+    const formatSize = (value: number | undefined) => value && value > 0 ? `${value}px` : "Theme default / responsive";
 
     const updateLayout = (patch: Partial<CMSSectionLayout>) => {
       setConfig({
@@ -714,21 +721,37 @@ export function AdminCMSEditor() {
               ["paddingBottomPx", "Bottom padding"],
               ["paddingInlinePx", "Side padding"],
               ["imageHeightPx", "Section image height"],
-            ].map(([key, label]) => (
-              <div key={key}>
-                <label style={labelStyle}>{label} (px)</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={2400}
-                  style={inputStyle}
-                  value={Number(current[key as keyof CMSSectionLayout] || 0)}
-                  onChange={(e) => updateLayout({
-                    [key]: Math.max(0, Number(e.target.value) || 0),
-                  } as Partial<CMSSectionLayout>)}
-                />
-              </div>
-            ))}
+            ].map(([key, label]) => {
+              const typedKey = key as keyof CMSSectionLayout;
+              const liveValue = Number(live[typedKey] || 0);
+              const nextValue = Number(current[typedKey] || 0);
+              const changed = liveValue !== nextValue;
+              return (
+                <div key={key} style={{ padding: "0.7rem", border: changed ? "1px solid #d8b456" : "1px solid #e6decb", borderRadius: "7px", background: changed ? "#fffaf0" : "#fff" }}>
+                  <label style={labelStyle}>{label} (px)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={2400}
+                    style={inputStyle}
+                    value={nextValue}
+                    onChange={(e) => updateLayout({
+                      [key]: Math.max(0, Number(e.target.value) || 0),
+                    } as Partial<CMSSectionLayout>)}
+                  />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem", marginTop: "0.55rem" }}>
+                    <div style={{ padding: "0.4rem 0.5rem", borderRadius: "5px", background: "#f4f7f5", border: "1px solid #d8e4dd" }}>
+                      <span style={{ display: "block", fontSize: "0.62rem", textTransform: "uppercase", color: "#6b786f", fontWeight: 700 }}>Current Live</span>
+                      <strong style={{ display: "block", marginTop: "0.15rem", color: "#234235", fontSize: "0.76rem" }}>{formatSize(liveValue)}</strong>
+                    </div>
+                    <div style={{ padding: "0.4rem 0.5rem", borderRadius: "5px", background: changed ? "#fff4cf" : "#f8f8f8", border: changed ? "1px solid #e5c65d" : "1px solid #e6e6e6" }}>
+                      <span style={{ display: "block", fontSize: "0.62rem", textTransform: "uppercase", color: "#6b6659", fontWeight: 700 }}>After Update</span>
+                      <strong style={{ display: "block", marginTop: "0.15rem", color: changed ? "#7b5b00" : "#555", fontSize: "0.76rem" }}>{formatSize(nextValue)}</strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -794,7 +817,11 @@ export function AdminCMSEditor() {
                 onChange={(e) => updateLayout({ imageAlt: e.target.value })}
               />
             </div>
-            {renderImagePreview(current.image, current.imageAlt || `${sectionLabel} section image`)}
+            {renderImagePreview(
+              current.image,
+              current.imageAlt || `${sectionLabel} section image`,
+              live.image
+            )}
           </div>
         )}
       </div>
