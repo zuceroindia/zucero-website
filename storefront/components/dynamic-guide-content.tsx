@@ -19,7 +19,7 @@ export function DynamicGuideContent({
   }
 
   return (
-    <ContentPage eyebrow={guide.eyebrow} title={guide.title} intro={guide.intro}>
+    <ContentPage eyebrow={guide.eyebrow} title={guide.title} intro={guide.intro} layout={config.sectionLayouts?.[`guide.${guideKey}`]}>
       {defaultContent}
       {guide.faqs && guide.faqs.length > 0 && (
         <section style={{ marginTop: "2rem" }}>
