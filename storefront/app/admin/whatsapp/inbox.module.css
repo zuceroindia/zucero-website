@@ -445,6 +445,28 @@
   color: #fff;
 }
 
+.orderActionBtnDirect {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #17683c;
+  color: #fff !important;
+  border: 1px solid #17683c;
+  padding: 0.3rem 0.65rem;
+  border-radius: 5px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.orderActionBtnDirect:hover {
+  background: #1e7d49;
+  border-color: #1e7d49;
+}
+
 .orderStatusBadge {
   background: #e6f4ea;
   color: #137333;
@@ -646,14 +668,15 @@
 /* --- Composer --- */
 .composer {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 0.7rem;
   padding: 0.75rem 1rem;
   background: #f9f6ef;
   border-top: 1px solid rgba(16, 34, 24, 0.12);
 }
 
-.composer textarea {
+.composer textarea,
+.composer input[type="text"] {
   resize: none;
   border: 1px solid rgba(16, 34, 24, 0.18);
   background: #fff;
@@ -664,7 +687,8 @@
   font-family: inherit;
 }
 
-.composer textarea:focus {
+.composer textarea:focus,
+.composer input[type="text"]:focus {
   border-color: #8a6b2f;
 }
 
@@ -680,6 +704,27 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s ease;
+}
+
+.waDirectBtn {
+  border: 0;
+  background: #17683c;
+  color: white !important;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+.waDirectBtn:hover {
+  background: #1e7d49;
 }
 
 .composer button:hover:not(:disabled) {
@@ -830,5 +875,13 @@
   }
   .windowNote {
     display: none;
+  }
+  .composer {
+    grid-template-columns: 1fr auto;
+  }
+  .waDirectBtn {
+    grid-column: 1 / -1;
+    justify-content: center;
+    padding: 0.5rem;
   }
 }

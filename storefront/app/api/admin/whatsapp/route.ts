@@ -62,12 +62,49 @@ export async function GET(request: Request) {
 
       const { data, error: messageError } = await db
         .from("whatsapp_messages")
-        .select("id, conversation_id, meta_message_id, direction, message_type, body, status, error_code, sent_at")
+        .select("id, conversation_id, meta_message_id, direction, message_type, body, status, error_code, raw_payload, sent_at")
         .eq("conversation_id", selected)
         .order("sent_at", { ascending: false })
         .limit(200);
       if (messageError) throw messageError;
-      messages = (data || []).reverse();
+      type RawMessageRow = {
+        id: string;
+        conversation_id: string;
+        meta_message_id?: string | null;
+        direction: "inbound" | "outbound";
+        message_type: string;
+        body: string;
+        status: string;
+        error_code: string | null;
+        raw_payload?: {
+          errors?: Array<{
+            code?: number;
+            message?: string;
+            error_data?: { details?: string };
+          }>;
+        } | null;
+        sent_at: string;
+      };
+      messages = ((data || []) as RawMessageRow[]).map((m) => {
+        let error_message: string | null = null;
+        if (m.raw_payload?.errors?.[0]?.error_data?.details) {
+          error_message = m.raw_payload.errors[0].error_data.details;
+        } else if (m.raw_payload?.errors?.[0]?.message) {
+          error_message = m.raw_payload.errors[0].message;
+        }
+        return {
+          id: m.id,
+          conversation_id: m.conversation_id,
+          meta_message_id: m.meta_message_id,
+          direction: m.direction,
+          message_type: m.message_type,
+          body: m.body,
+          status: m.status,
+          error_code: m.error_code,
+          error_message,
+          sent_at: m.sent_at,
+        };
+      }).reverse();
     }
 
     return NextResponse.json({

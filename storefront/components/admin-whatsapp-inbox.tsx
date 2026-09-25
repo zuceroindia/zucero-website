@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Check,
   CheckCheck,
+  ExternalLink,
   FileText,
   MessageCircle,
   Package,
@@ -380,14 +381,18 @@ export function AdminWhatsAppInbox() {
   const activeOrder = customerOrders[selectedOrderIndex] || customerOrders[0];
 
   function renderStatus(message: Message) {
-    if (message.direction !== "outbound") return null;
     if (message.error_code || message.status === "failed") {
+      const is24h =
+        message.error_code === "131047" ||
+        message.error_message?.toLowerCase().includes("24 hour");
       const tooltip =
         message.error_message ||
-        "Freeform message rejected by Meta (24h customer window expired). Use 'Meta Template' in the order panel above.";
+        (is24h
+          ? "Meta Cloud API policy: Customer has not messaged in the last 24 hours. Click '1-Click WhatsApp Send' or 'WhatsApp Web' to message them directly."
+          : "Message delivery failed via Meta Cloud API.");
       return (
         <span className={styles.statusFailed} title={tooltip}>
-          ⚠️ Failed
+          ⚠️ Failed {is24h ? "(24h window closed)" : ""}
         </span>
       );
     }
@@ -699,6 +704,20 @@ export function AdminWhatsAppInbox() {
                     >
                       <Send size={13} /> Meta Template
                     </button>
+                    <a
+                      href={`https://wa.me/${selected.wa_id.replace(/\D/g, "")}?text=${encodeURIComponent(
+                        buildOrderSummaryMessage(
+                          activeOrder,
+                          selected.profile_name || activeOrder.customerName || undefined
+                        )
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.orderActionBtnDirect}
+                      title="Send order details directly via WhatsApp Web / App (100% delivered, bypasses 24h Meta restriction)"
+                    >
+                      <ExternalLink size={13} /> 1-Click WhatsApp Send
+                    </a>
                   </div>
                 </div>
               )}
@@ -754,13 +773,25 @@ export function AdminWhatsAppInbox() {
                   type="submit"
                   disabled={sending || !draft.trim()}
                   className={styles.sendBtn}
-                  aria-label="Send message"
+                  aria-label="Send via Meta API"
+                  title="Send via official Meta WhatsApp Cloud API"
                 >
                   <Send size={16} />
                 </button>
+                <a
+                  href={`https://wa.me/${selected.wa_id.replace(/\D/g, "")}?text=${encodeURIComponent(
+                    draft.trim() || `Hello ${selected.profile_name || ""}, regarding your Zucero order...`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.waDirectBtn}
+                  title="Open directly in WhatsApp Web / App (bypasses Meta 24h restriction)"
+                >
+                  <ExternalLink size={15} /> WhatsApp Web
+                </a>
               </form>
               <p className={styles.windowNote}>
-                💡 Freeform messages require the customer to have contacted within 24 hours. Outside 24h, click <strong>&quot;Meta Template&quot;</strong> in the order panel above.
+                💡 <strong>Note on Meta 24h Policy:</strong> Freeform messages require the customer to have contacted within 24 hours. To contact any customer whose 24h window is closed, click <strong>&quot;1-Click WhatsApp Send&quot;</strong> or <strong>&quot;WhatsApp Web&quot;</strong> above to message them directly. Once they reply, CRM chat opens automatically!
               </p>
             </>
           )}
