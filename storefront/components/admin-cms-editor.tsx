@@ -405,17 +405,7 @@ export function AdminCMSEditor() {
     showToast("success", "New collection product added. Complete its collection copy and image here, then set sizes, price and SKU in Products & Prices before publishing.");
   };
 
-  const removeCurrentProduct = () => {
-    if (config.products.length <= 1) {
-      showToast("error", "At least one product must remain in the collection.");
-      return;
-    }
-    if (!confirm(`Remove ${currentProduct.name} from the live collection?`)) return;
-    const products = config.products.filter((_, idx) => idx !== selectedProductIdx);
-    setConfig({ ...config, products });
-    setSelectedProductIdx(Math.max(0, selectedProductIdx - 1));
-    setSelectedVariantIdx(0);
-  };
+  const removeCurrentProduct = () => removeProductAtIndex(selectedProductIdx);
 
   const addVariant = () => {
     const suffix = Date.now().toString(36);
@@ -473,6 +463,67 @@ export function AdminCMSEditor() {
     marginBottom: "0.3rem",
     textTransform: "uppercase" as const,
     letterSpacing: "0.04em",
+  };
+
+  const renderImagePreview = (src: string | undefined | null, alt = "Current image") => (
+    <div style={{
+      marginTop: "0.65rem",
+      border: "1px solid #e6decb",
+      borderRadius: "8px",
+      background: "#faf8f2",
+      padding: "0.6rem",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "0.75rem",
+      maxWidth: "100%",
+    }}>
+      {src ? (
+        <>
+          <img
+            src={src}
+            alt={alt}
+            style={{
+              width: "120px",
+              height: "82px",
+              objectFit: "cover",
+              borderRadius: "6px",
+              border: "1px solid #ddd4c3",
+              background: "#fff",
+            }}
+          />
+          <span style={{ fontSize: "0.75rem", color: "#665e52", wordBreak: "break-all", maxWidth: "520px" }}>
+            Current image
+          </span>
+        </>
+      ) : (
+        <span style={{ fontSize: "0.78rem", color: "#8a8174" }}>No image selected</span>
+      )}
+    </div>
+  );
+
+  const removeProductAtIndex = (productIdx: number) => {
+    if (config.products.length <= 1) {
+      showToast("error", "At least one product must remain in the collection.");
+      return;
+    }
+    const product = config.products[productIdx];
+    if (!product || !confirm(`Delete ${product.name} from the Collection and storefront?`)) return;
+
+    const products = config.products.filter((_, idx) => idx !== productIdx);
+    const nextStories = { ...(config.homepage.collectionProductStories || {}) };
+    delete nextStories[product.slug];
+
+    setConfig({
+      ...config,
+      products,
+      homepage: {
+        ...config.homepage,
+        collectionProductStories: nextStories,
+      },
+    });
+    setSelectedProductIdx((current) => Math.min(current, products.length - 1));
+    setSelectedVariantIdx(0);
+    showToast("success", `${product.name} removed. Save & Commit to publish the deletion.`);
   };
 
   const cardStyle = {
@@ -867,6 +918,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
+                  {renderImagePreview(config.homepage.heroPosterImage, "Homepage hero poster")}
                 </div>
               </div>
             </div>
@@ -940,12 +992,13 @@ export function AdminCMSEditor() {
                             showToast("error", "Keep at least one story slide.");
                             return;
                           }
+                          if (!confirm(`Delete story slide ${idx + 1}: ${story.title || "Untitled"}?`)) return;
                           const next = config.homepage.storyCarousel.filter((_, i) => i !== idx);
                           setConfig({ ...config, homepage: { ...config.homepage, storyCarousel: next } });
                         }}
-                        style={{ padding: "0.38rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "5px", cursor: "pointer" }}
                         title="Delete slide"
-                      ><Trash2 size={14} /></button>
+                        style={{ padding: "0.38rem 0.55rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "5px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", fontWeight: 700 }}
+                      ><Trash2 size={14} /> Delete Slide</button>
                     </div>
                   </div>
 
@@ -1043,6 +1096,7 @@ export function AdminCMSEditor() {
                           />
                         </label>
                       </div>
+                      {renderImagePreview(story.image, story.alt || story.title || "Story carousel image")}
                     </div>
                   </div>
                 </div>
@@ -1157,9 +1211,18 @@ export function AdminCMSEditor() {
 
               {config.products.map((product, pIdx) => (
                 <div key={product.slug} style={cardStyle}>
-                  <h3 style={{ margin: "0 0 0.3rem", fontSize: "1.05rem", color: "#102218" }}>
-                    Collection Product Card {pIdx + 1} — {product.name}
-                  </h3>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "center", flexWrap: "wrap", marginBottom: "0.3rem" }}>
+                    <h3 style={{ margin: 0, fontSize: "1.05rem", color: "#102218" }}>
+                      Collection Product Card {pIdx + 1} — {product.name}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => removeProductAtIndex(pIdx)}
+                      style={{ padding: "0.42rem 0.65rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+                    >
+                      <Trash2 size={14} /> Delete Collection Card
+                    </button>
+                  </div>
                   <p style={{ margin: "0 0 1rem", fontSize: "0.78rem", color: "#665e52" }}>
                     Edit how this product appears inside The Collection. Pricing/sizes remain managed in Products &amp; Prices.
                   </p>
@@ -1227,6 +1290,7 @@ export function AdminCMSEditor() {
                           }} />
                         </label>
                       </div>
+                      {renderImagePreview(product.image, product.name)}
                     </div>
                   </div>
                 </div>
@@ -1426,6 +1490,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
+                  {renderImagePreview(config.homepage.natureSolutionImage, "Nature solution image")}
                 </div>
                 <div>
                   <label style={labelStyle}>Paragraphs</label>
@@ -1514,6 +1579,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
+                  {renderImagePreview(config.homepage.craftImage, "Artisan craft image")}
                 </div>
               </div>
             </div>
@@ -1643,6 +1709,7 @@ export function AdminCMSEditor() {
                       />
                     </label>
                   </div>
+                  {renderImagePreview(config.homepage.founderImage, config.homepage.founderName || "Founder portrait")}
                 </div>
                 <div style={{ gridColumn: "1 / -1" }}>
                   <label style={labelStyle}>Founder Story Lead</label>
@@ -1824,11 +1891,12 @@ export function AdminCMSEditor() {
                       <button
                         type="button"
                         onClick={() => {
+                          if (!confirm(`Delete custom section ${idx + 1}?`)) return;
                           const next = config.homepage.customSections.filter((_, i) => i !== idx);
                           setConfig({ ...config, homepage: { ...config.homepage, customSections: next } });
                         }}
-                        style={{ padding: "0.35rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "4px" }}
-                      ><Trash2 size={14} /></button>
+                        style={{ padding: "0.35rem 0.55rem", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: "4px", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                      ><Trash2 size={14} /> Delete Section</button>
                     </div>
                   </div>
 
@@ -1894,6 +1962,7 @@ export function AdminCMSEditor() {
                           }} />
                         </label>
                       </div>
+                  {renderImagePreview(section.image, section.imageAlt || section.title || "Custom section image")}
                     </div>
                     <div style={{ gridColumn: "1 / -1" }}>
                       <label style={labelStyle}>Image alt text</label>
@@ -1989,7 +2058,7 @@ export function AdminCMSEditor() {
                   onClick={removeCurrentProduct}
                   style={{ width: "100%", padding: "0.55rem 0.8rem", borderRadius: "6px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", fontWeight: 700, cursor: "pointer" }}
                 >
-                  Remove This Product
+                  Delete This Product
                 </button>
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
@@ -2028,6 +2097,7 @@ export function AdminCMSEditor() {
                     />
                   </label>
                 </div>
+                  {renderImagePreview(currentProduct.image, currentProduct.name)}
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={labelStyle}>Short Description</label>
@@ -2295,10 +2365,13 @@ export function AdminCMSEditor() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeGalleryPhoto(pIdx)}
-                      style={{ padding: "0.4rem", borderRadius: "4px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", cursor: "pointer" }}
+                      onClick={() => {
+                        if (!confirm(`Delete gallery photo ${pIdx + 1}?`)) return;
+                        removeGalleryPhoto(pIdx);
+                      }}
+                      style={{ padding: "0.4rem 0.55rem", borderRadius: "4px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", fontWeight: 700 }}
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={14} /> Delete Photo
                     </button>
                   </div>
                 </div>
