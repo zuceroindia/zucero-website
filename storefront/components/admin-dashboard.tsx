@@ -18,11 +18,9 @@ import {
   Mail,
   Globe,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
-import { AdminCMSEditor } from "@/components/admin-cms-editor";
 import styles from "@/app/admin/admin.module.css";
 
-type Tab = "overview" | "orders" | "customers" | "export" | "cms";
+type Tab = "overview" | "orders" | "customers" | "export";
 
 type Metrics = {
   totalRevenueRupees: string;
@@ -103,9 +101,7 @@ type Customer = {
 };
 
 export function AdminDashboard() {
-  const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab") as Tab | null;
-  const [activeTab, setActiveTab] = useState<Tab>(tabParam === "cms" ? "cms" : "overview");
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [isPending, startTransition] = useTransition();
 
   // Metrics
@@ -376,16 +372,16 @@ export function AdminDashboard() {
         </button>
         <button
           type="button"
-          className={`${styles.tabBtn} ${activeTab === "cms" ? styles.activeTab : ""}`}
-          onClick={() => setActiveTab("cms")}
+          className={styles.tabBtn}
+          aria-disabled="true"
+          title="Update Live Website"
+          onClick={() => undefined}
+          style={{ cursor: "default" }}
         >
           <Globe size={16} />
           Update Live Website
         </button>
       </nav>
-
-      {/* ─── TAB: CMS (UPDATE LIVE WEBSITE) ─── */}
-      {activeTab === "cms" && <AdminCMSEditor />}
 
       {/* ─── TAB 1: OVERVIEW ─── */}
       {activeTab === "overview" && (
