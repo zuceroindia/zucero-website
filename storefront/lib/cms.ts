@@ -260,14 +260,6 @@ export type CMSConfig = {
   updatedAt: string;
 };
 
-export type CMSCommit = {
-  id: string;
-  message: string;
-  author: string;
-  timestamp: string;
-  configSnapshot: CMSConfig;
-};
-
 export const DEFAULT_CMS_CONFIG: CMSConfig = {
   homepage: {
     heroEyebrow: "Rooted in Indian sugar-making",
@@ -667,7 +659,6 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
 
 const BUCKET_NAME = "site-cms";
 const CONFIG_PATH = "config/live-site-content.json";
-const COMMITS_PATH = "config/commits.json";
 
 export function mergeWithDefaultCMS(partial?: Partial<CMSConfig> | null): CMSConfig {
   if (!partial) return JSON.parse(JSON.stringify(DEFAULT_CMS_CONFIG));
@@ -846,18 +837,6 @@ export function mergeWithDefaultCMS(partial?: Partial<CMSConfig> | null): CMSCon
   };
 }
 
-async function ensureBucket() {
-  try {
-    const db = supabaseAdmin();
-    const { data: buckets } = await db.storage.listBuckets();
-    if (!buckets?.find((b: { name: string }) => b.name === BUCKET_NAME)) {
-      await db.storage.createBucket(BUCKET_NAME, { public: true });
-    }
-  } catch {
-    // Ignore if bucket already exists
-  }
-}
-
 export async function getLiveCMSConfig(): Promise<CMSConfig> {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -880,92 +859,4 @@ export async function getLiveCMSConfig(): Promise<CMSConfig> {
     // Fallback to default config
   }
   return mergeWithDefaultCMS(null);
-}
-
-export async function saveLiveCMSConfig(
-  newConfig: CMSConfig,
-  commitMessage: string = "Updated live website content via Admin CMS",
-  author: string = "Admin"
-): Promise<{ success: boolean; commitId?: string; error?: string }> {
-  try {
-    await ensureBucket();
-    const db = supabaseAdmin();
-    const cleanConfig = mergeWithDefaultCMS(newConfig);
-    cleanConfig.updatedAt = new Date().toISOString();
-
-    const configBlob = Buffer.from(JSON.stringify(cleanConfig, null, 2), "utf-8");
-    const { error: uploadError } = await db.storage
-      .from(BUCKET_NAME)
-      .upload(CONFIG_PATH, configBlob, {
-        contentType: "application/json",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      return { success: false, error: uploadError.message };
-    }
-
-    const commitId = `commit_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const newCommit: CMSCommit = {
-      id: commitId,
-      message: commitMessage,
-      author,
-      timestamp: new Date().toISOString(),
-      configSnapshot: cleanConfig,
-    };
-
-    let existingCommits: CMSCommit[] = [];
-    try {
-      const { data: commitData } = await db.storage.from(BUCKET_NAME).download(COMMITS_PATH);
-      if (commitData) {
-        existingCommits = JSON.parse(await commitData.text());
-      }
-    } catch {
-      existingCommits = [];
-    }
-
-    const updatedCommits = [newCommit, ...(Array.isArray(existingCommits) ? existingCommits.slice(0, 49) : [])];
-    await db.storage.from(BUCKET_NAME).upload(COMMITS_PATH, Buffer.from(JSON.stringify(updatedCommits, null, 2), "utf-8"), {
-      contentType: "application/json",
-      upsert: true,
-    });
-
-    return { success: true, commitId };
-  } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : "Failed to save CMS configuration" };
-  }
-}
-
-export async function getCMSCommits(): Promise<CMSCommit[]> {
-  try {
-    const db = supabaseAdmin();
-    const { data, error } = await db.storage.from(BUCKET_NAME).download(COMMITS_PATH);
-    if (!error && data) {
-      return JSON.parse(await data.text());
-    }
-  } catch {
-    // Return empty list on failure
-  }
-  return [];
-}
-
-export async function rollbackCMSCommit(commitId: string): Promise<{ success: boolean; config?: CMSConfig; error?: string }> {
-  try {
-    const commits = await getCMSCommits();
-    const target = commits.find((c) => c.id === commitId);
-    if (!target) {
-      return { success: false, error: "Commit snapshot not found" };
-    }
-    const result = await saveLiveCMSConfig(
-      target.configSnapshot,
-      `Rollback to snapshot ${commitId} (${target.message})`,
-      "Admin Rollback"
-    );
-    if (!result.success) {
-      return { success: false, error: result.error };
-    }
-    return { success: true, config: target.configSnapshot };
-  } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : "Rollback failed" };
-  }
 }
