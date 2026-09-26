@@ -80,8 +80,10 @@ export function AdminHeader() {
             <span>Dashboard</span>
           </Link>
 
-          <Link
-            href="/admin?tab=cms"
+          <button
+            type="button"
+            aria-disabled="true"
+            title="Update Live Website"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -90,16 +92,16 @@ export function AdminHeader() {
               borderRadius: "6px",
               fontSize: "0.82rem",
               fontWeight: 600,
-              textDecoration: "none",
               background: "transparent",
               color: "#e2ded6",
               border: "1px solid transparent",
               transition: "all 0.15s ease",
+              cursor: "default",
             }}
           >
             <Globe size={15} />
             <span>Update Live Website</span>
-          </Link>
+          </button>
 
           <Link
             href="/admin/whatsapp"
