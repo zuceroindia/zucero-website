@@ -16,6 +16,7 @@ import {
   X,
   Phone,
   Mail,
+  Globe,
 } from "lucide-react";
 import styles from "@/app/admin/admin.module.css";
 
@@ -368,6 +369,17 @@ export function AdminDashboard() {
         >
           <Download size={16} />
           Supabase Data Export
+        </button>
+        <button
+          type="button"
+          className={styles.tabBtn}
+          aria-disabled="true"
+          title="Update Live Website"
+          onClick={() => undefined}
+          style={{ cursor: "default" }}
+        >
+          <Globe size={16} />
+          Update Live Website
         </button>
       </nav>
 

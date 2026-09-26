@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, useCallback, type FormEvent } from "react";
 import { StoreHeader } from "@/components/store-header";
 import { useCart } from "@/components/cart-provider";
+import { useCMS } from "@/components/cms-provider";
 import { formatPrice } from "@/lib/catalog";
 import { SiteFooter } from "@/components/site-footer";
 import type { CustomerDetails } from "@/lib/customer-details";
@@ -85,12 +86,15 @@ function loadRazorpay() {
 
 export default function CheckoutPage() {
   const { lines, subtotalPaise, clear } = useCart();
+  const { config: cmsConfig } = useCMS();
   const [details, setDetails] = useState<CustomerDetails>(emptyCustomerDetails);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  // Unified referral field
+  // Unified discount / referral field
   const [promoInput, setPromoInput] = useState("");
-  const [appliedReferral, setAppliedReferral] = useState("");
+  const [appliedPromoCode, setAppliedPromoCode] = useState("");
+  const [appliedPromoType, setAppliedPromoType] = useState<"coupon" | "referral" | "">("");
+  const [appliedDiscountPercentage, setAppliedDiscountPercentage] = useState(0);
   const [promoMessage, setPromoMessage] = useState("");
   const [promoError, setPromoError] = useState(false);
   const [promoLoading, setPromoLoading] = useState(false);
@@ -103,6 +107,7 @@ export default function CheckoutPage() {
   const [shippingLoading, setShippingLoading] = useState(false);
   const [shippingError, setShippingError] = useState("");
   // Success state
+  const [referralPopupDismissed, setReferralPopupDismissed] = useState(false);
   const [completed, setCompleted] = useState<{
     orderNumber: string;
     localOrderId: string;
@@ -115,9 +120,11 @@ export default function CheckoutPage() {
   } | null>(null);
 
   const discountPaise = useMemo(() => {
-    if (appliedReferral) return Math.round(subtotalPaise * 0.10);
+    if (appliedPromoCode && appliedDiscountPercentage > 0) {
+      return Math.round(subtotalPaise * appliedDiscountPercentage / 100);
+    }
     return 0;
-  }, [subtotalPaise, appliedReferral]);
+  }, [subtotalPaise, appliedPromoCode, appliedDiscountPercentage]);
 
   const shippingPaise = shippingQuote ? shippingQuote.shippingPaise : 0;
 
@@ -260,20 +267,22 @@ export default function CheckoutPage() {
   }
 
   function clearPromo() {
-    setAppliedReferral("");
+    setAppliedPromoCode("");
+    setAppliedPromoType("");
+    setAppliedDiscountPercentage(0);
     setPromoInput("");
-    setPromoMessage("Referral code removed.");
+    setPromoMessage("Discount code removed.");
     setPromoError(false);
   }
 
   async function handlePromo() {
-    if (appliedReferral) {
+    if (appliedPromoCode) {
       clearPromo();
       return;
     }
     const raw = promoInput.trim().toUpperCase();
     if (!raw) {
-      setPromoMessage("Please enter a referral code.");
+      setPromoMessage("Please enter a discount or referral code.");
       setPromoError(true);
       return;
     }
@@ -281,6 +290,23 @@ export default function CheckoutPage() {
     setPromoMessage("");
     setPromoError(false);
     try {
+      const couponRes = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code: raw }),
+      });
+      const couponData = await couponRes.json();
+      if (couponRes.ok && couponData.valid) {
+        const percentage = Number(couponData.discountPercentage) || 0;
+        setAppliedPromoCode(couponData.code || raw);
+        setAppliedPromoType("coupon");
+        setAppliedDiscountPercentage(percentage);
+        setPromoInput(couponData.code || raw);
+        setPromoMessage(`Discount code applied! ${percentage}% off your product subtotal.`);
+        setPromoError(false);
+        return;
+      }
+
       const refRes = await fetch("/api/referrals/validate", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -288,16 +314,20 @@ export default function CheckoutPage() {
       });
       const refData = await refRes.json();
       if (refData.valid) {
-        setAppliedReferral(raw);
+        const percentage = Number(refData.discountPercentage) || 10;
+        setAppliedPromoCode(raw);
+        setAppliedPromoType("referral");
+        setAppliedDiscountPercentage(percentage);
         setPromoInput(raw);
-        setPromoMessage(`Referral code applied! You get an additional 10% discount on referral.`);
+        setPromoMessage(`Referral code applied! You get an additional ${percentage}% discount.`);
         setPromoError(false);
         return;
       }
-      setPromoMessage(refData.error || "This referral code is not valid. Check for typos or try another.");
+
+      setPromoMessage(refData.error || couponData.error || "This code is not valid. Check for typos or try another.");
       setPromoError(true);
     } catch {
-      setPromoMessage("Could not validate referral code. Please try again.");
+      setPromoMessage("Could not validate this code. Please try again.");
       setPromoError(true);
     } finally {
       setPromoLoading(false);
@@ -315,7 +345,8 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           customer: { ...details, country: "India" },
           lines: lines.map((line) => ({ variantId: line.variantId, quantity: line.quantity })),
-          referralCode: appliedReferral || undefined,
+          couponCode: appliedPromoType === "coupon" ? appliedPromoCode : undefined,
+          referralCode: appliedPromoType === "referral" ? appliedPromoCode : undefined,
           useWallet,
         }),
       });
@@ -325,17 +356,19 @@ export default function CheckoutPage() {
       // Wallet-only path (100% covered by wallet credits)
       if (order.walletOnly) {
         clear();
-        // Fetch referral code to show on success screen
-        let referralCode: string | undefined;
-        try {
-          const refRes = await fetch("/api/referrals/generate", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ orderId: order.localOrderId, token: order.invoiceToken }),
-          });
-          const refData = await refRes.json();
-          referralCode = refData.code;
-        } catch {}
+        let referralCode: string | undefined = order.referralCode || undefined;
+        if (!referralCode) {
+          try {
+            const refRes = await fetch("/api/referrals/generate", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ orderId: order.localOrderId, token: order.invoiceToken }),
+            });
+            const refData = await refRes.json();
+            referralCode = refData.code;
+          } catch {}
+        }
+        if (referralCode) setReferralPopupDismissed(false);
         setCompleted({
           orderNumber: order.orderNumber,
           localOrderId: order.localOrderId,
@@ -377,21 +410,24 @@ export default function CheckoutPage() {
             const result = await verification.json();
             if (!verification.ok && verification.status !== 202) throw new Error(result.error ?? "Payment confirmation failed.");
             clear();
-            // Generate referral code to show on success screen
-            let referralCode: string | undefined;
-            try {
-              const refRes = await fetch("/api/referrals/generate", {
-                method: "POST",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({ orderId: order.localOrderId, token: order.invoiceToken }),
-              });
-              const refData = await refRes.json();
-              referralCode = refData.code;
-            } catch {}
+            const captured = result.captured === true;
+            let referralCode: string | undefined = captured ? (result.referralCode || undefined) : undefined;
+            if (captured && !referralCode) {
+              try {
+                const refRes = await fetch("/api/referrals/generate", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ orderId: order.localOrderId, token: order.invoiceToken }),
+                });
+                const refData = await refRes.json();
+                referralCode = refData.code;
+              } catch {}
+            }
+            if (referralCode) setReferralPopupDismissed(false);
             setCompleted({
               orderNumber: result.orderNumber ?? order.orderNumber,
               localOrderId: order.localOrderId,
-              captured: result.captured !== false,
+              captured,
               deliveryWindow: order.deliveryWindow,
               customerEmail: details.email,
               customerName: details.fullName,
@@ -425,6 +461,72 @@ export default function CheckoutPage() {
     return (
       <main className="store-page">
         <StoreHeader />
+        {completed.captured && completed.referralCode && !referralPopupDismissed && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="referral-unlocked-title"
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 1000,
+              background: "rgba(4, 13, 9, 0.72)",
+              display: "grid",
+              placeItems: "center",
+              padding: "20px",
+            }}
+          >
+            <div
+              style={{
+                width: "min(520px, 100%)",
+                background: "linear-gradient(135deg, #10271d 0%, #1e4d38 100%)",
+                color: "#fff",
+                borderRadius: "14px",
+                padding: "28px",
+                boxShadow: "0 24px 80px rgba(0,0,0,0.35)",
+                border: "1px solid rgba(216,180,86,0.45)",
+              }}
+            >
+              <p style={{ margin: "0 0 6px", color: "#d8b456", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "0.76rem" }}>
+                Referral unlocked
+              </p>
+              <h2 id="referral-unlocked-title" style={{ margin: "0 0 10px", color: "#fff", fontFamily: "Georgia,serif", fontSize: "1.8rem" }}>
+                Your prepaid order is confirmed.
+              </h2>
+              <p style={{ margin: "0 0 18px", color: "#d7eadf", lineHeight: 1.55 }}>
+                Your unique referral code is now active and has also been added to your Zucero profile.
+              </p>
+              <div style={{ background: "rgba(255,255,255,0.12)", padding: "14px 16px", borderRadius: "8px", marginBottom: "16px" }}>
+                <span style={{ display: "block", fontSize: "0.72rem", color: "#a3d5b8", textTransform: "uppercase" }}>Your referral code</span>
+                <strong style={{ display: "block", marginTop: "4px", fontFamily: "monospace", fontSize: "1.7rem", letterSpacing: "2px" }}>{completed.referralCode}</strong>
+              </div>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(completed.referralCode ?? "")}
+                  style={{ background: "#fff", color: "#10271d", border: 0, borderRadius: "6px", padding: "10px 16px", fontWeight: 700, cursor: "pointer" }}
+                >
+                  Copy code
+                </button>
+                <a
+                  href={referralWaLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ background: "#25D366", color: "#fff", borderRadius: "6px", padding: "10px 16px", fontWeight: 700, textDecoration: "none" }}
+                >
+                  Share on WhatsApp
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setReferralPopupDismissed(true)}
+                  style={{ marginLeft: "auto", background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,0.4)", borderRadius: "6px", padding: "10px 16px", cursor: "pointer" }}
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <section className="empty-cart" style={{ maxWidth: "660px", margin: "48px auto", textAlign: "left", padding: "0 24px" }}>
           <p className="eyebrow" style={{ color: "#2f5d47" }}>Order Successful!</p>
           <h1 style={{ fontFamily: "Georgia,serif", fontSize: "2.1rem", margin: "8px 0 16px 0", color: "#10271d" }}>
@@ -648,25 +750,29 @@ export default function CheckoutPage() {
         </fieldset>
       )}
 
-      {/* Referral Code (Exclusively unlocks 10% discount) */}
+      {/* Discount / Referral Code */}
       <fieldset>
-        <legend>Referral Code</legend>
+        <legend>Discount or Referral Code</legend>
         <p style={{ margin: "0 0 10px 0", fontSize: "0.88rem", color: "#4a6358" }}>
-          Get an additional discount of 10% on referral.
+          Enter a Zucero discount coupon or referral code. Only one code can be applied per order.
         </p>
         <div className="field-grid">
-          <label className="wide"><span>Referral code</span>
+          <label className="wide"><span>Code</span>
             <input
               value={promoInput}
               onChange={(e) => {
                 setPromoInput(e.target.value.toUpperCase());
                 setPromoMessage("");
                 setPromoError(false);
-                if (appliedReferral) { setAppliedReferral(""); }
+                if (appliedPromoCode) {
+                  setAppliedPromoCode("");
+                  setAppliedPromoType("");
+                  setAppliedDiscountPercentage(0);
+                }
               }}
-              placeholder="Enter referral code (e.g. REF-XXXXX)"
+              placeholder="Enter discount or referral code"
               autoComplete="off"
-              disabled={Boolean(appliedReferral)}
+              disabled={Boolean(appliedPromoCode)}
             />
           </label>
           <button
@@ -676,7 +782,7 @@ export default function CheckoutPage() {
             disabled={promoLoading}
             style={{ alignSelf: "end" }}
           >
-            {promoLoading ? "Checking…" : appliedReferral ? "Remove" : "Apply code"}
+            {promoLoading ? "Checking…" : appliedPromoCode ? "Remove" : "Apply code"}
           </button>
         </div>
         {promoMessage && (
@@ -706,13 +812,15 @@ export default function CheckoutPage() {
       <div className="checkout-line">
         <div>
           <span>Product subtotal</span>
-          <div style={{ fontSize: "0.72rem", color: "#8a6616", fontWeight: 600 }}>Introductory price for first 100 orders only</div>
+          <div style={{ fontSize: "0.72rem", color: "#8a6616", fontWeight: 600 }}>{cmsConfig.promotions.introductoryPriceText}</div>
         </div>
         <strong>{formatPrice(subtotalPaise)}</strong>
       </div>
       {discountPaise > 0 && (
         <div className="checkout-line">
-          <span>Referral discount ({appliedReferral}) · 10% off</span>
+          <span>
+            {appliedPromoType === "coupon" ? "Coupon discount" : "Referral discount"} ({appliedPromoCode}) · {appliedDiscountPercentage}% off
+          </span>
           <strong style={{ color: "#1b5e20" }}>-{formatPrice(discountPaise)}</strong>
         </div>
       )}

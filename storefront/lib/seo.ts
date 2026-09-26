@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const SITE_URL = "https://www.thegoodsugar.in";
 export const SITE_NAME = "Zucero — The Good Sugar";
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/images/hero-cinematic-poster.png`;
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/api/social-preview`;
 
 export const coreKeywords = [
   "Zucero",
@@ -37,7 +37,7 @@ export function buildPageMetadata({
   title,
   description,
   path,
-  image = "/images/hero-cinematic-poster.png",
+  image = DEFAULT_OG_IMAGE,
   keywords = [],
 }: {
   title: string;

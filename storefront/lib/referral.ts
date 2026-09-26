@@ -56,6 +56,18 @@ export async function getOrCreateReferralCode(input: {
   const db = supabaseAdmin();
   const normalizedEmail = input.email.trim().toLowerCase();
 
+  // Referral ownership is earned only after a successfully captured prepaid order.
+  const { data: paidOrders, error: paidOrderError } = await db
+    .from("orders")
+    .select("id")
+    .ilike("customer_email", normalizedEmail)
+    .eq("payment_status", "captured")
+    .limit(1);
+
+  if (paidOrderError || !paidOrders?.length) {
+    return null;
+  }
+
   // 1. Check if customer already has a code
   const { data: existing } = await db
     .from("referral_codes")
@@ -154,6 +166,17 @@ export async function validateReferralCode(
 
   if (!ref.active) {
     return { valid: false, error: "This referral code is no longer active." };
+  }
+
+  const { data: ownerPaidOrders } = await db
+    .from("orders")
+    .select("id")
+    .ilike("customer_email", ref.owner_email)
+    .eq("payment_status", "captured")
+    .limit(1);
+
+  if (!ownerPaidOrders?.length) {
+    return { valid: false, error: "This referral code is not eligible for use yet." };
   }
 
   if (buyerEmail && ref.owner_email.toLowerCase() === buyerEmail.trim().toLowerCase()) {

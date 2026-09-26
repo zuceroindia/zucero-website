@@ -3,7 +3,7 @@ import { CollectionSection } from "@/components/heritage-sections";
 import { SiteFooter } from "@/components/site-footer";
 import { StoreHeader } from "@/components/store-header";
 import { products } from "@/lib/catalog";
-import { absoluteUrl, safeJsonLd } from "@/lib/seo";
+import { absoluteUrl, DEFAULT_OG_IMAGE, safeJsonLd } from "@/lib/seo";
 
 const title = "Desi Khand & Khand Mishri Collection";
 const description = "Shop Zucero Desi Khand and Original Brown Khand Mishri, traditional Indian sugarcane sweetness with clear ingredients, sizes, pricing and product information.";
@@ -18,13 +18,13 @@ export const metadata: Metadata = {
     url: absoluteUrl("/products"),
     title: `${title} | Zucero`,
     description,
-    images: [{ url: "/images/carousel-khand-matka-v2.png", alt: "Zucero Desi Khand and traditional sugar collection" }],
+    images: [{ url: DEFAULT_OG_IMAGE, alt: "Zucero — The Good Sugar" }],
   },
   twitter: {
     card: "summary_large_image",
     title: `${title} | Zucero`,
     description,
-    images: ["/images/carousel-khand-matka-v2.png"],
+    images: [DEFAULT_OG_IMAGE],
   },
 };
 
