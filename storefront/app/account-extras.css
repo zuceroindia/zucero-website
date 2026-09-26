@@ -1,0 +1,28 @@
+.social-auth{display:grid;gap:.75rem}
+.social-auth-button{min-height:48px;width:100%;display:flex;align-items:center;justify-content:center;gap:.75rem;border:1px solid #b9ae9c;background:#fff;color:var(--ink);font:600 .75rem/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;transition:.2s}
+.social-auth-button:hover{border-color:var(--gold);transform:translateY(-1px)}
+.social-auth-button:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.social-auth-mark{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1px solid var(--line);font-weight:700;text-transform:none}
+.apple-mark{font-size:.6rem;background:var(--ink);color:#fff}
+.auth-divider{display:flex;align-items:center;gap:.75rem;color:var(--muted);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase}
+.auth-divider:before,.auth-divider:after{content:"";height:1px;flex:1;background:var(--line)}
+.orders-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:2rem;margin-bottom:2.5rem}
+.orders-heading h1{margin:.2rem 0;font:500 clamp(2.8rem,5vw,4.8rem)/1 var(--serif)}
+.orders-email{margin:0;color:var(--muted);font-size:.86rem}
+.account-orders-list{display:grid;gap:1.25rem;max-width:1050px}
+.account-order-card{border:1px solid var(--line);background:var(--paper);padding:clamp(1.25rem,3vw,2rem)}
+.account-order-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid var(--line)}
+.account-order-head h2{margin:0;font:500 clamp(1.5rem,3vw,2.2rem)/1.1 var(--serif)}
+.order-status{display:inline-flex;align-items:center;min-height:30px;padding:.35rem .7rem;border:1px solid var(--line);border-radius:999px;font-size:.68rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;background:#fff}
+.order-status-delivered{border-color:#8aa887;background:#edf5eb}
+.order-status-shipped,.order-status-out-for-delivery{border-color:#cba45c;background:#fff8e9}
+.order-status-delivery-exception,.order-status-cancelled,.order-status-rto{border-color:#c38f86;background:#fff2ef}
+.account-order-items{display:grid;gap:.55rem;padding:1.25rem 0}
+.account-order-items>div{display:flex;justify-content:space-between;gap:1rem;font-size:.9rem}
+.account-order-money{display:flex;flex-wrap:wrap;gap:1.5rem;padding:1rem 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:.82rem;color:var(--muted)}
+.account-order-money strong{color:var(--ink);margin-left:.35rem}
+.account-order-tracking{padding-top:1rem}
+.account-order-tracking p{margin:.35rem 0;color:var(--muted);font-size:.86rem}
+.account-order-tracking .button{margin-top:.75rem}
+.signed-in-card{display:grid;gap:1rem}
+@media(max-width:700px){.orders-heading{align-items:flex-start;flex-direction:column}.account-order-head{flex-direction:column}.account-order-items>div{align-items:flex-start}.account-order-money{display:grid;gap:.4rem}}
