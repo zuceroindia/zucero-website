@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { StoreHeader } from "@/components/store-header";
 import { SiteFooter } from "@/components/site-footer";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, DEFAULT_OG_IMAGE } from "@/lib/seo";
 
 const title = "Journal | Desi Khand, Indian Sweetness & Everyday Rituals";
 const description = "Read Zucero notes on Desi Khand, traditional Indian sweetness, sugar alternatives, craft, mindful consumption and everyday food rituals.";
@@ -18,13 +18,13 @@ export const metadata: Metadata = {
     url: absoluteUrl("/journal"),
     title: `${title} | Zucero`,
     description,
-    images: [{ url: "/images/journal_editorial.webp", alt: "Zucero Journal on traditional Indian sweetness" }],
+    images: [{ url: DEFAULT_OG_IMAGE, alt: "Zucero — The Good Sugar" }],
   },
   twitter: {
     card: "summary_large_image",
     title: `${title} | Zucero`,
     description,
-    images: ["/images/journal_editorial.webp"],
+    images: [DEFAULT_OG_IMAGE],
   },
 };
 

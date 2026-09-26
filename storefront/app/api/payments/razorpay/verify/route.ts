@@ -4,7 +4,7 @@ import { fulfilPaidOrder } from "@/lib/order-fulfilment";
 import { notifyPaidOrder } from "@/lib/notifications";
 import { fetchRazorpayPayment, verifyRazorpayPaymentSignature } from "@/lib/razorpay";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { creditReferralReward, debitWallet } from "@/lib/referral";
+import { creditReferralReward, debitWallet, getOrCreateReferralCode } from "@/lib/referral";
 
 const schema = z.object({
   localOrderId: z.string().uuid(),
@@ -83,10 +83,25 @@ export async function POST(request: Request) {
 
     const fulfilment = fulfilmentResult.status === "fulfilled" ? fulfilmentResult.value : null;
 
+    let referralCode: string | null = null;
+    try {
+      const address = (order.shipping_address ?? {}) as Record<string, unknown>;
+      const referral = await getOrCreateReferralCode({
+        email: order.customer_email,
+        name: typeof address.fullName === "string" ? address.fullName : undefined,
+        phone: order.customer_phone || undefined,
+        userId: order.user_id ?? null,
+      });
+      referralCode = referral?.code ?? null;
+    } catch (referralError) {
+      console.error("Referral code creation failed after captured payment:", referralError);
+    }
+
     return NextResponse.json({
       ok: true,
       captured: true,
       orderNumber: order.order_number,
+      referralCode,
       fulfilment,
     });
   } catch (error) {

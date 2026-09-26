@@ -7,8 +7,9 @@ import { useEffect, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/components/cart-provider";
+import { useCMS } from "@/components/cms-provider";
 
-const links = [["Our story", "/#philosophy"], ["Products", "/products"], ["How it’s made", "/#process"], ["Contact", "/contact"]];
+const defaultLinks = [["Our story", "/our-story"], ["Products", "/products"], ["How it’s made", "/#process"], ["Contact", "/contact"]];
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -92,14 +93,38 @@ export function Header() {
     target.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   const { count } = useCart();
+  const { config } = useCMS();
+  const navLinks = (config.header?.navLinks && config.header.navLinks.length > 0)
+    ? config.header.navLinks
+    : defaultLinks.map(([label, href]) => ({ label, href }));
+
   return (
     <>
+    {config.header?.announcementEnabled && config.header?.announcementText && (
+      <aside
+        style={{
+          background: "#8a6616",
+          color: "#fff",
+          fontSize: "0.78rem",
+          fontWeight: 600,
+          textAlign: "center",
+          padding: "0.45rem 1rem",
+          letterSpacing: "0.03em",
+          zIndex: 101,
+          position: "relative",
+        }}
+      >
+        <Link href={config.header.announcementLink || "/products"} style={{ color: "#fff", textDecoration: "none" }}>
+          {config.header.announcementText}
+        </Link>
+      </aside>
+    )}
     <header ref={headerRef} className={`site-header ${lightBackground && !open ? "nav-on-light" : "nav-on-dark"} ${scrolled || open ? "is-scrolled" : "is-at-top"}`}>
       <Link href="/" className="brand" aria-label="Zucero home" onClick={() => setOpen(false)}>
-        <Image src="/images/zucero-highres-logo.png" alt="Zucero — The Good Sugar" width={180} height={120} priority />
+        <Image src={config.branding?.headerLogo || "/images/zucero-highres-logo.png"} alt="Zucero — The Good Sugar" width={180} height={120} priority />
       </Link>
       <nav id="primary-navigation" className={open ? "nav open" : "nav"} aria-label="Primary navigation">
-        {links.map(([label, href]) => <Link key={href} href={href} onClick={(event) => { setOpen(false); followSection(event, href); }}>{label}</Link>)}
+        {navLinks.map(({ label, href }) => <Link key={href} href={href} onClick={(event) => { setOpen(false); followSection(event, href); }}>{label}</Link>)}
       </nav>
       <div className="header-actions">
         <Link href="/account" className="icon-button" aria-label="Account" onClick={() => setOpen(false)}><UserRound size={20} /></Link>
@@ -107,10 +132,17 @@ export function Header() {
         <button ref={menuButtonRef} className="icon-button mobile-menu" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} aria-controls="primary-navigation" onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button>
       </div>
     </header>
-      {showPriorityNotice && !collectionInView && !pathname?.startsWith("/admin") && (
+      {showPriorityNotice && !collectionInView && !pathname?.startsWith("/admin") && config.promotions?.popupEnabled !== false && (
         <aside className="priority-popup" aria-label="Exclusive referral offer">
           <button type="button" aria-label="Dismiss referral offer" onClick={() => setShowPriorityNotice(false)}><X size={16} /></button>
-          <Link href="/products#collection-title"><Gem aria-hidden="true" /><span><strong>Exclusive Referral Offer</strong><small>Get an additional discount of 10% on referral</small></span><ArrowRight aria-hidden="true" /></Link>
+          <Link href="/products#collection-title">
+            <Gem aria-hidden="true" />
+            <span>
+              <strong>{config.promotions.popupHeading || "Exclusive Referral Offer"}</strong>
+              <small>{config.promotions.referralOfferText || config.promotions.popupDescription || "Get an additional discount of 10% on referral"}</small>
+            </span>
+            <ArrowRight aria-hidden="true" />
+          </Link>
         </aside>
       )}
     </>

@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: "Desi Khand & Traditional Sugar Alternatives | Zucero",
     description: "Traditional Indian sweetness from sugarcane, with clear ingredients, honest product information and a modern approach to Desi Khand and Khand Mishri.",
-    images: [{ url: DEFAULT_OG_IMAGE, width: 1600, height: 900, alt: "Zucero — The Good Sugar" }],
+    images: [{ url: DEFAULT_OG_IMAGE, alt: "Zucero — The Good Sugar" }],
   },
   twitter: {
     card: "summary_large_image",
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  icons: { icon: "/images/zucero-favicon.webp", apple: "/images/zucero-favicon.webp" },
+  icons: { icon: "/api/site-icon", apple: "/api/site-icon" },
 };
 
 const organizationJsonLd = {
@@ -58,7 +58,7 @@ const organizationJsonLd = {
   alternateName: "Zucero — The Good Sugar",
   legalName: "TIARA TRIVERSE PRIVATE LIMITED",
   url: SITE_URL,
-  logo: `${SITE_URL}/images/zucero-highres-logo.png`,
+  logo: `${SITE_URL}/api/site-logo`,
   image: DEFAULT_OG_IMAGE,
   email: "zucero.thegoodsugar@gmail.com",
   telephone: "+91 87963 49977",
@@ -89,9 +89,15 @@ const websiteJsonLd = {
   publisher: { "@id": `${SITE_URL}/#organization` },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+import { CMSProvider } from "@/components/cms-provider";
+import { getLiveCMSConfig } from "@/lib/cms";
+
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const initialCMS = await getLiveCMSConfig();
   return <html lang="en-IN"><body>
-    <CartProvider>{children}<BackToTop /><PublicWhatsAppWidget /></CartProvider>
+    <CMSProvider initialConfig={initialCMS}>
+      <CartProvider>{children}<BackToTop /><PublicWhatsAppWidget /></CartProvider>
+    </CMSProvider>
     <GoogleAnalytics />
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationJsonLd) }} />
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(websiteJsonLd) }} />

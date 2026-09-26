@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { findCatalogProductAndVariant } from "@/lib/catalog";
+import { useCMS } from "@/components/cms-provider";
 
 export type CartLine = {
   variantId: string;
@@ -29,10 +30,14 @@ type CartContextValue = {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { config } = useCMS();
   const [lines, setLines] = useState<CartLine[]>([]);
   const [ready, setReady] = useState(false);
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
     queueMicrotask(() => {
       try {
         const saved = localStorage.getItem("zucero-cart-prelaunch-v2");
@@ -40,7 +45,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           const storedLines = JSON.parse(saved) as CartLine[];
           const migratedLines: CartLine[] = [];
           for (const rawLine of storedLines) {
-            const match = findCatalogProductAndVariant(rawLine.variantId);
+            const match = findCatalogProductAndVariant(rawLine.variantId, config.products);
             if (!match) continue; // remove discontinued items that have no match
 
             const { product, variant } = match;
@@ -71,7 +76,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       setReady(true);
     });
-  }, []);
+  }, [config.products]);
 
   useEffect(() => {
     if (ready) localStorage.setItem("zucero-cart-prelaunch-v2", JSON.stringify(lines));

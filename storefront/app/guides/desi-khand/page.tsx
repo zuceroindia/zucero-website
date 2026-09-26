@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ContentPage } from "@/components/content-page";
-import { absoluteUrl, safeJsonLd } from "@/lib/seo";
+import { absoluteUrl, DEFAULT_OG_IMAGE, safeJsonLd } from "@/lib/seo";
 
 const title = "What Is Desi Khand? Shudh Khand, Organic Khand & Sugar Alternatives";
 const description = "A clear guide to Desi Khand: what Khand is, how it differs from refined sugar, what Shudh Khand and organic Khand mean, and how to read purity claims.";
@@ -17,13 +17,13 @@ export const metadata: Metadata = {
     url,
     title: `${title} | Zucero`,
     description,
-    images: [{ url: "/images/khand-branded-jar.png", alt: "Zucero Desi Khand" }],
+    images: [{ url: DEFAULT_OG_IMAGE, alt: "Zucero — The Good Sugar" }],
   },
   twitter: {
     card: "summary_large_image",
     title: `${title} | Zucero`,
     description,
-    images: ["/images/khand-branded-jar.png"],
+    images: [DEFAULT_OG_IMAGE],
   },
 };
 

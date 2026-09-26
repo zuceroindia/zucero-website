@@ -2,12 +2,14 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { findCatalogProductAndVariant } from "@/lib/catalog";
+import { getLiveCMSConfig } from "@/lib/cms";
 import { isIndianState } from "@/lib/india";
 import { createRazorpayOrder, razorpayPublicKeyId } from "@/lib/razorpay";
 import { getPrepaidShippingQuote } from "@/lib/shiprocket";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { calculateCheckoutTotal } from "@/lib/tax";
-import { creditReferralReward, debitWallet, getOrCreateWallet, refundWalletCredits, validateReferralCode } from "@/lib/referral";
+import { creditReferralReward, debitWallet, getOrCreateReferralCode, getOrCreateWallet, refundWalletCredits, validateReferralCode } from "@/lib/referral";
+import { validateDiscountCoupon } from "@/lib/coupons";
 import { fulfilPaidOrder } from "@/lib/order-fulfilment";
 import { notifyPaidOrder } from "@/lib/notifications";
 import { authenticatedEmail } from "@/lib/server-auth";
@@ -49,29 +51,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Please select a valid Indian state or union territory." }, { status: 400 });
     }
 
+    const cms = await getLiveCMSConfig();
     const resolved = input.lines.map((line) => {
-      const match = catalogLine(line.variantId);
+      const match = findCatalogProductAndVariant(line.variantId, cms.products);
       if (!match) throw new Error("A product in your bag is no longer available. Please update your bag.");
       return { ...line, variantId: match.variant.id, ...match };
     });
 
     const subtotalPaise = resolved.reduce((sum, line) => sum + (line.variant.pricePaise ?? 0) * line.quantity, 0);
 
-    // ── Referral code (exclusively unlocks 10% discount) ───────────────────
-    const rawReferral = (input.referralCode || input.couponCode)?.trim().toUpperCase() || "";
+    // ── Discount coupon or referral code (one code per order) ──────────────
+    const rawCoupon = input.couponCode.trim().toUpperCase();
+    const rawReferral = input.referralCode.trim().toUpperCase();
+
+    if (rawCoupon && rawReferral) {
+      return NextResponse.json({ error: "Only one discount or referral code can be applied per order." }, { status: 400 });
+    }
 
     let discountPaise = 0;
+    let discountPercentage = 0;
+    let validatedCouponCode: string | null = null;
     let validatedReferralCode: string | null = null;
 
-    if (rawReferral) {
+    if (rawCoupon) {
+      const couponResult = await validateDiscountCoupon(rawCoupon);
+      if (!couponResult.valid) {
+        return NextResponse.json({ error: couponResult.error ?? "Invalid discount code." }, { status: 400 });
+      }
+      validatedCouponCode = couponResult.code;
+      discountPercentage = couponResult.percentage;
+      discountPaise = Math.round(subtotalPaise * discountPercentage / 100);
+    } else if (rawReferral) {
       const referralResult = await validateReferralCode(rawReferral, input.customer.email);
       if (!referralResult.valid) {
-        return NextResponse.json({
-          error: referralResult.error ?? "Invalid referral code. The 10% discount is exclusively unlocked by applying a valid referral code.",
-        }, { status: 400 });
+        return NextResponse.json({ error: referralResult.error ?? "Invalid referral code." }, { status: 400 });
       }
       validatedReferralCode = referralResult.code!;
-      discountPaise = Math.round(subtotalPaise * (referralResult.discountPercentage ?? 10) / 100);
+      discountPercentage = referralResult.discountPercentage ?? 10;
+      discountPaise = Math.round(subtotalPaise * discountPercentage / 100);
     }
 
     // ── Shipping ─────────────────────────────────────────────────────────────
@@ -115,6 +132,7 @@ export async function POST(request: Request) {
       ...input.customer,
       estimated_delivery_window: shippingQuote.deliveryWindowText,
       invoice_number: invoiceNum,
+      ...(validatedCouponCode ? { discount_coupon_code: validatedCouponCode } : {}),
     };
 
     const { error: orderError } = await db.from("orders").insert({
@@ -140,12 +158,12 @@ export async function POST(request: Request) {
     });
     if (orderError) throw new Error("Could not create order record");
 
-    // Referral discount per line item
-    const isReferralDiscount = Boolean(validatedReferralCode);
-
+    // Discount per line item for tax calculation
     const { error: itemsError } = await db.from("order_items").insert(resolved.map((line) => {
       const lineSubtotalPaise = (line.variant.pricePaise ?? 0) * line.quantity;
-      const lineDiscountPaise = isReferralDiscount ? Math.round(lineSubtotalPaise * 0.10) : 0;
+      const lineDiscountPaise = discountPercentage > 0
+        ? Math.round(lineSubtotalPaise * discountPercentage / 100)
+        : 0;
       return {
         order_id: localOrderId,
         sku: line.variant.sku,
@@ -192,6 +210,18 @@ export async function POST(request: Request) {
         creditReferralReward(localOrderId).catch((err) => console.error("Referral credit error (wallet-only):", err)),
       ]);
 
+      let referralCode: string | null = null;
+      try {
+        const referral = await getOrCreateReferralCode({
+          email: input.customer.email,
+          name: input.customer.fullName,
+          phone: input.customer.phone,
+        });
+        referralCode = referral?.code ?? null;
+      } catch (referralError) {
+        console.error("Referral code creation failed after wallet-paid order:", referralError);
+      }
+
       return NextResponse.json({
         localOrderId,
         orderNumber: number,
@@ -200,6 +230,7 @@ export async function POST(request: Request) {
         walletOnly: true,
         amountPaise: 0,
         amountRupees: 0,
+        referralCode,
         deliveryWindow: shippingQuote.deliveryWindowText,
         breakdown,
       });
@@ -216,6 +247,7 @@ export async function POST(request: Request) {
         shipping_courier: shippingQuote.courierName,
         delivery_window: shippingQuote.deliveryWindowText,
         ...(validatedReferralCode ? { referral_code: validatedReferralCode } : {}),
+        ...(validatedCouponCode ? { coupon_code: validatedCouponCode, coupon_discount_percentage: String(discountPercentage) } : {}),
         ...(walletSpentPaise > 0 ? { wallet_spent_paise: String(walletSpentPaise) } : {}),
       },
     });
@@ -235,6 +267,8 @@ export async function POST(request: Request) {
       amountRupees: breakdown.payableRupees,
       keyId: razorpayPublicKeyId(),
       referralCode: validatedReferralCode || null,
+      couponCode: validatedCouponCode || null,
+      discountPercentage,
       walletSpentPaise,
       totalWeightGrams,
       deliveryWindow: shippingQuote.deliveryWindowText,

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ExternalLink, LayoutDashboard, LogOut, MessageSquare } from "lucide-react";
+import { ExternalLink, Globe, LayoutDashboard, LogOut, MessageSquare } from "lucide-react";
 
 export function AdminHeader() {
   const pathname = usePathname();
@@ -79,6 +79,29 @@ export function AdminHeader() {
             <LayoutDashboard size={15} />
             <span>Dashboard</span>
           </Link>
+
+          <button
+            type="button"
+            aria-disabled="true"
+            title="Update Live Website"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              padding: "0.4rem 0.85rem",
+              borderRadius: "6px",
+              fontSize: "0.82rem",
+              fontWeight: 600,
+              background: "transparent",
+              color: "#e2ded6",
+              border: "1px solid transparent",
+              transition: "all 0.15s ease",
+              cursor: "default",
+            }}
+          >
+            <Globe size={15} />
+            <span>Update Live Website</span>
+          </button>
 
           <Link
             href="/admin/whatsapp"

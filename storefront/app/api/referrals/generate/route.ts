@@ -18,31 +18,53 @@ export async function POST(request: Request) {
   try {
     const input = schema.parse(await request.json());
     const user = await authenticatedUser();
-    let email = user?.email?.trim().toLowerCase() ?? null;
+    const signedInEmail = user?.email?.trim().toLowerCase() ?? null;
+    let email: string | null = null;
     let name = input.name;
     let phone = input.phone;
     let userId = user?.id ?? null;
 
-    if (email) {
-      if (input.email && input.email.trim().toLowerCase() !== email) {
-        return NextResponse.json({ error: "You can only generate a referral code for your signed-in account." }, { status: 403 });
-      }
-      const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
-      name ||= typeof metadata.full_name === "string" ? metadata.full_name : undefined;
-      phone ||= typeof metadata.phone === "string" ? metadata.phone : undefined;
-    } else if (input.orderId && input.token) {
+    // A referral code is only unlocked after a successfully captured prepaid order.
+    // When an order token is supplied, verify that exact paid order first.
+    if (input.orderId && input.token) {
       const { data: order } = await supabaseAdmin().from("orders")
         .select("id,customer_email,customer_phone,shipping_address,payment_status,status")
         .eq("id", input.orderId)
         .eq("idempotency_key", input.token)
         .maybeSingle();
-      const placed = order && (order.payment_status === "captured" || ["paid", "processing", "shipped", "delivered"].includes(String(order.status).toLowerCase()));
-      if (!placed) return NextResponse.json({ error: "A verified paid order is required to generate a referral code." }, { status: 403 });
+
+      if (!order || order.payment_status !== "captured") {
+        return NextResponse.json({ error: "A successfully paid prepaid order is required before a referral code is unlocked." }, { status: 403 });
+      }
+
+      const orderEmail = order.customer_email.trim().toLowerCase();
+      if (signedInEmail && signedInEmail !== orderEmail) {
+        return NextResponse.json({ error: "This paid order belongs to a different account." }, { status: 403 });
+      }
+
       const address = (order.shipping_address ?? {}) as Record<string, unknown>;
-      email = order.customer_email.trim().toLowerCase();
-      name = typeof address.fullName === "string" ? address.fullName : undefined;
-      phone = order.customer_phone;
-      userId = null;
+      email = orderEmail;
+      name = typeof address.fullName === "string" ? address.fullName : name;
+      phone = order.customer_phone || phone;
+    } else if (signedInEmail) {
+      if (input.email && input.email.trim().toLowerCase() !== signedInEmail) {
+        return NextResponse.json({ error: "You can only access the referral code for your signed-in account." }, { status: 403 });
+      }
+
+      const { data: paidOrders, error: paidOrderError } = await supabaseAdmin().from("orders")
+        .select("id,payment_status")
+        .ilike("customer_email", signedInEmail)
+        .eq("payment_status", "captured")
+        .limit(1);
+
+      if (paidOrderError || !paidOrders?.length) {
+        return NextResponse.json({ error: "Your referral code unlocks after your first successful prepaid order." }, { status: 403 });
+      }
+
+      const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
+      email = signedInEmail;
+      name ||= typeof metadata.full_name === "string" ? metadata.full_name : undefined;
+      phone ||= typeof metadata.phone === "string" ? metadata.phone : undefined;
     } else {
       return NextResponse.json({ error: "Please sign in or use your verified paid-order link." }, { status: 401 });
     }
