@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZUCERO | Checkout</title>
+  <meta name="description" content="Secure checkout — ZUCERO.">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .checkout-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 5rem;
+    }
+    .form-group { margin-bottom: 1.5rem; }
+    input, select {
+      width: 100%;
+      padding: 1rem;
+      border: 1px solid rgba(197,160,89,0.2);
+      background: transparent;
+      font-family: var(--sans);
+      font-size: 0.95rem;
+      font-weight: 300;
+      color: var(--charcoal);
+      transition: border-color 0.3s ease;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+    input::placeholder { color: rgba(20,20,20,0.35); }
+    .order-summary {
+      background: var(--cream);
+      padding: 2.5rem;
+      height: fit-content;
+      position: sticky;
+      top: 100px;
+    }
+    @media (max-width: 900px) {
+      .checkout-grid { grid-template-columns: 1fr; gap: 3rem; }
+      .order-summary { position: static; }
+    }
+  </style>
+  <link rel="icon" href="assets/images/zucero-favicon.webp" type="image/webp">
+  <link rel="apple-touch-icon" href="assets/images/zucero-favicon.webp">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="canonical" href="https://thegoodsugar.in/checkout.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ZUCERO — The Good Sugar">
+  <meta property="og:url" content="https://thegoodsugar.in/checkout.html">
+  <meta property="og:title" content="ZUCERO | Checkout">
+  <meta property="og:description" content="Secure checkout — ZUCERO.">
+  <meta property="og:image" content="https://thegoodsugar.in/assets/images/hero_cinematic.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ZUCERO | Checkout">
+  <meta name="twitter:description" content="Secure checkout — ZUCERO.">
+  <meta name="twitter:image" content="https://thegoodsugar.in/assets/images/hero_cinematic.webp">
+</head>
+<body class="theme-ivory">
+
+  <nav style="justify-content: center;">
+    <a href="index.html" class="brand-logo">
+      <img src="assets/images/zucerothegoodsugar-logo.webp" alt="ZUCERO" class="logo-img">
+    </a>
+  </nav>
+
+  <section style="padding-top: 14vh; min-height: 85vh;" data-theme="ivory">
+    <div class="container reveal" style="max-width: 1100px;">
+
+      <div style="text-align:center; margin-bottom: clamp(3rem, 5vw, 4rem);">
+        <span class="chapter-mark" style="opacity:0.3;">Secure Checkout</span>
+        <div class="crystal-dots" style="justify-content:center;"><span></span></div>
+      </div>
+
+      <div class="checkout-grid">
+        <div>
+          <h2 class="serif" style="font-size: 1.8rem; margin-bottom: 2rem;">Shipping</h2>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group"><input type="text" placeholder="First Name"></div>
+            <div class="form-group"><input type="text" placeholder="Last Name"></div>
+          </div>
+          <div class="form-group"><input type="email" placeholder="Email"></div>
+          <div class="form-group"><input type="text" placeholder="Address"></div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group"><input type="text" placeholder="City"></div>
+            <div class="form-group"><input type="text" placeholder="Postal Code"></div>
+          </div>
+
+          <div class="divider-gold" style="margin: 3rem 0;"></div>
+
+          <h2 class="serif" style="font-size: 1.8rem; margin-bottom: 2rem;">Payment</h2>
+          <div class="form-group"><input type="text" placeholder="Card Number"></div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group"><input type="text" placeholder="MM / YY"></div>
+            <div class="form-group"><input type="text" placeholder="CVC"></div>
+          </div>
+
+          <div class="divider-gold" style="margin: 3rem 0;"></div>
+
+          <h2 class="serif" style="font-size: 1.8rem; margin-bottom: 1rem;">Gift Note</h2>
+          <p class="body-regular" style="opacity:0.5; margin-bottom: 1.5rem; font-size: 0.9rem;">Include a handwritten note with your order.</p>
+          <div class="form-group"><input type="text" placeholder="Your message (optional)"></div>
+
+          <a href="order-confirmation.html" class="btn-primary" style="margin-top: 2rem; width: 100%; text-align: center;">Place Order</a>
+        </div>
+
+        <div class="order-summary">
+          <h3 class="serif" style="font-size: 1.4rem; margin-bottom: 2rem;">Order Summary</h3>
+          <div style="display: flex; gap: 1.5rem; align-items: center; padding-bottom: 2rem; border-bottom: 1px solid rgba(197,160,89,0.15);">
+            <img src="assets/images/khand_gold_reserve.webp" alt="Khand" style="width: 60px; height: 75px; object-fit: cover;">
+            <div style="flex: 1;">
+              <h4 class="serif" style="font-size: 1.1rem;">Khand Gold Reserve</h4>
+              <span class="caption" style="opacity:0.4;">Qty: 1</span>
+            </div>
+            <span class="serif">$45</span>
+          </div>
+
+          <div style="margin-top: 2rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem;">
+              <span class="body-regular" style="opacity:0.5; font-size:0.9rem;">Subtotal</span>
+              <span class="serif">$45.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem;">
+              <span class="body-regular" style="opacity:0.5; font-size:0.9rem;">Shipping</span>
+              <span class="serif" style="color: var(--gold);">Complimentary</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(197,160,89,0.15);">
+              <span class="caption">Total</span>
+              <span class="serif" style="font-size: 1.5rem; color: var(--gold);">$45.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+  
+<!-- ═══ Pre-Footer ═══ -->
+  <div class="pre-footer reveal">
+    <p class="pre-footer-text">Every story<br>begins with <em>sweetness.</em></p>
+  </div>
+
+  <footer>
+    <div class="footer-main">
+      <div class="footer-brand-col">
+        <img src="assets/images/zucerothegoodsugar-logo.webp" alt="ZUCERO" class="footer-logo-img">
+        <p class="footer-brand-statement">Modern rituals around sweetness.<br>Crafted through heritage.<br>Refined for today.</p>
+      </div>
+      <div>
+        <p class="footer-col-title">Explore</p>
+        <ul class="footer-col-links">
+          <li><a href="collection.html">Collection</a></li>
+          <li><a href="stories.html">Journal</a></li>
+          <li><a href="founder.html">Heritage</a></li>
+          <li><a href="founder.html">Founder</a></li>
+          <li><a href="stories.html">Stories</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="footer-col-title">Products</p>
+        <ul class="footer-col-links">
+          <li><a href="product.html">Khand</a></li>
+          <li><a href="product.html">Jaggery</a></li>
+          <li><a href="product.html">Mishri</a></li>
+          <li><a href="collection.html">Gift Collections</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="footer-col-title">Connect</p>
+        <ul class="footer-social-links">
+          <li>
+            <a href="https://www.instagram.com/zuceroindia" target="_blank" rel="noopener" aria-label="Instagram">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            </a>
+          </li>
+          <li>
+            <a href="https://www.facebook.com/zuceroindia" target="_blank" rel="noopener" aria-label="Facebook">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            </a>
+          </li>
+          <li>
+            <a href="https://www.linkedin.com/company/zuceroindia" target="_blank" rel="noopener" aria-label="LinkedIn">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            </a>
+          </li>
+                    <li>
+            <a href="https://x.com/zuceroindia" target="_blank" rel="noopener" aria-label="X (Twitter)">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </a>
+          </li>
+<li>
+            <a href="https://www.youtube.com/@ZuceroIndia" target="_blank" rel="noopener" aria-label="YouTube">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
+            </a>
+          </li>
+          <li>
+            <a href="mailto:tamannaatf07@gmail.com" aria-label="Email">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <p class="footer-col-title">Legal</p>
+        <ul class="footer-col-links">
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Use</a></li>
+          <li><a href="#">Shipping Policy</a></li>
+          <li><a href="#">Returns Policy</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-legal">&copy; 2026 ZUCERO by The Good Sugar. All Rights Reserved.</span>
+      <span class="footer-credit">Made with ❤️ by <a href="https://squargraph.com" target="_blank" rel="noopener">SQUARGRAPH™</a></span>
+    </div>
+  </footer>
+  
+  <script src="js/animations.js"></script>
+</body>
+</html>
