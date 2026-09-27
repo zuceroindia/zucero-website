@@ -338,6 +338,81 @@
   overflow-x: auto;
 }
 
+.orderFinder {
+  width: 100%;
+  display: grid;
+  gap: 0.55rem;
+  padding-top: 0.35rem;
+}
+
+.orderFilterGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.orderFilterLabel {
+  min-width: 0;
+  display: grid;
+  gap: 0.24rem;
+}
+
+.orderFilterLabel > span {
+  color: #8a6b2f;
+  font-size: 0.61rem;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.orderSelect {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  border: 1px solid rgba(16, 34, 24, 0.16);
+  border-radius: 5px;
+  background: #fff;
+  color: #102218;
+  padding: 0 1.75rem 0 0.55rem;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  outline: none;
+  text-overflow: ellipsis;
+}
+
+.orderSelect:focus {
+  border-color: #8a6b2f;
+  box-shadow: 0 0 0 2px rgba(138, 107, 47, 0.1);
+}
+
+.orderSelect:disabled {
+  color: #8a8378;
+  background: #f2eee6;
+}
+
+.orderFilterSummary {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: #746e64;
+  font-size: 0.65rem;
+}
+
+.orderFilterSummary button {
+  border: 0;
+  background: transparent;
+  color: #8a6b2f;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
 .orderTabBtn {
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(16, 34, 24, 0.16);
@@ -1494,6 +1569,19 @@
   padding-top: 0.25rem;
 }
 
+.chatWithDetails .orderFinder {
+  padding-top: 0.15rem;
+}
+
+.chatWithDetails .orderFilterGrid {
+  grid-template-columns: 1fr;
+}
+
+.chatWithDetails .orderSelect {
+  height: 36px;
+  font-size: 0.72rem;
+}
+
 .chatWithDetails .orderIntelDetails {
   grid-template-columns: 1fr;
   gap: 0.7rem;
@@ -1688,5 +1776,17 @@
 
   .sendBtnLabel {
     display: none;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .orderFilterGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .orderFilterSummary {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
