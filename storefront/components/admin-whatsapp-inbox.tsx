@@ -271,7 +271,10 @@ export function AdminWhatsAppInbox() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
-  const [selectedOrderIndex, setSelectedOrderIndex] = useState(0);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [orderDateFilter, setOrderDateFilter] = useState("all");
+  const [orderProductFilter, setOrderProductFilter] = useState("all");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [draft, setDraft] = useState("");
@@ -312,8 +315,10 @@ export function AdminWhatsAppInbox() {
       const nextOrders = (data.customerOrders || []) as CustomerOrder[];
       setCustomerOrders(nextOrders);
       setSavedReplies(data.savedReplies || []);
-      setSelectedOrderIndex((current) =>
-        nextOrders.length ? Math.min(current, nextOrders.length - 1) : 0
+      setSelectedOrderId((current) =>
+        current && nextOrders.some((order) => order.id === current)
+          ? current
+          : nextOrders[0]?.id || null
       );
       setError("");
     } catch (err) {
@@ -596,8 +601,106 @@ export function AdminWhatsAppInbox() {
     );
   }, [conversations, searchQuery]);
 
+  const orderDateOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const order of customerOrders) {
+      const date = new Date(order.createdAt);
+      if (!Number.isFinite(date.getTime())) continue;
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(date);
+      const year = parts.find((part) => part.type === "year")?.value || "";
+      const month = parts.find((part) => part.type === "month")?.value || "";
+      const day = parts.find((part) => part.type === "day")?.value || "";
+      const key = `${year}-${month}-${day}`;
+      const label = new Intl.DateTimeFormat("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }).format(date);
+      if (key !== "--") map.set(key, label);
+    }
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [customerOrders]);
+
+  const orderProductOptions = useMemo(() => {
+    const products = new Set<string>();
+    for (const order of customerOrders) {
+      for (const item of order.itemsList || []) {
+        if (item.name?.trim()) products.add(item.name.trim());
+      }
+    }
+    return Array.from(products).sort((a, b) => a.localeCompare(b));
+  }, [customerOrders]);
+
+  const orderStatusOptions = useMemo(() => {
+    const statuses = new Set<string>();
+    for (const order of customerOrders) {
+      const value = order.shipmentStatus || order.status;
+      if (value) statuses.add(value);
+    }
+    return Array.from(statuses).sort((a, b) => statusText(a).localeCompare(statusText(b)));
+  }, [customerOrders]);
+
+  const filteredCustomerOrders = useMemo(() => {
+    return customerOrders.filter((order) => {
+      if (orderDateFilter !== "all") {
+        const date = new Date(order.createdAt);
+        const parts = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Kolkata",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).formatToParts(date);
+        const key = `${parts.find((part) => part.type === "year")?.value || ""}-${parts.find((part) => part.type === "month")?.value || ""}-${parts.find((part) => part.type === "day")?.value || ""}`;
+        if (key !== orderDateFilter) return false;
+      }
+
+      if (
+        orderProductFilter !== "all" &&
+        !(order.itemsList || []).some((item) => item.name === orderProductFilter)
+      ) {
+        return false;
+      }
+
+      if (
+        orderStatusFilter !== "all" &&
+        (order.shipmentStatus || order.status) !== orderStatusFilter
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [customerOrders, orderDateFilter, orderProductFilter, orderStatusFilter]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    setOrderDateFilter("all");
+    setOrderProductFilter("all");
+    setOrderStatusFilter("all");
+    setSelectedOrderId(null);
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!filteredCustomerOrders.length) {
+      setSelectedOrderId(null);
+      return;
+    }
+    if (!selectedOrderId || !filteredCustomerOrders.some((order) => order.id === selectedOrderId)) {
+      setSelectedOrderId(filteredCustomerOrders[0].id);
+    }
+  }, [filteredCustomerOrders, selectedOrderId]);
+
   const selected = conversations.find((item) => item.id === selectedId);
-  const activeOrder = customerOrders[selectedOrderIndex] || customerOrders[0];
+  const activeOrder =
+    filteredCustomerOrders.find((order) => order.id === selectedOrderId) ||
+    filteredCustomerOrders[0] ||
+    null;
   const serviceWindowOpen = hasOpenServiceWindow(messages);
 
   function renderStatus(message: Message) {
@@ -801,17 +904,92 @@ export function AdminWhatsAppInbox() {
                       <Package size={15} color="#8a6b2f" />
                       <span>Customer Orders ({customerOrders.length})</span>
                       {customerOrders.length > 1 && (
-                        <div className={styles.orderTabs}>
-                          {customerOrders.map((ord, idx) => (
-                            <button
-                              key={ord.id}
-                              type="button"
-                              className={`${styles.orderTabBtn} ${selectedOrderIndex === idx ? styles.orderTabBtnActive : ""}`}
-                              onClick={() => setSelectedOrderIndex(idx)}
+                        <div className={styles.orderFinder}>
+                          <div className={styles.orderFilterGrid}>
+                            <label className={styles.orderFilterLabel}>
+                              <span>Date</span>
+                              <select
+                                value={orderDateFilter}
+                                onChange={(event) => setOrderDateFilter(event.target.value)}
+                                className={styles.orderSelect}
+                              >
+                                <option value="all">All dates</option>
+                                {orderDateOptions.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+
+                            <label className={styles.orderFilterLabel}>
+                              <span>Product</span>
+                              <select
+                                value={orderProductFilter}
+                                onChange={(event) => setOrderProductFilter(event.target.value)}
+                                className={styles.orderSelect}
+                              >
+                                <option value="all">All products</option>
+                                {orderProductOptions.map((product) => (
+                                  <option key={product} value={product}>
+                                    {product}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+
+                            <label className={styles.orderFilterLabel}>
+                              <span>Status</span>
+                              <select
+                                value={orderStatusFilter}
+                                onChange={(event) => setOrderStatusFilter(event.target.value)}
+                                className={styles.orderSelect}
+                              >
+                                <option value="all">All statuses</option>
+                                {orderStatusOptions.map((status) => (
+                                  <option key={status} value={status}>
+                                    {statusText(status)}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+
+                          <label className={styles.orderFilterLabel}>
+                            <span>Select order</span>
+                            <select
+                              value={activeOrder?.id || ""}
+                              onChange={(event) => setSelectedOrderId(event.target.value)}
+                              className={styles.orderSelect}
+                              disabled={filteredCustomerOrders.length === 0}
                             >
-                              #{ord.orderNumber}
-                            </button>
-                          ))}
+                              {filteredCustomerOrders.length === 0 ? (
+                                <option value="">No matching orders</option>
+                              ) : (
+                                filteredCustomerOrders.map((ord) => (
+                                  <option key={ord.id} value={ord.id}>
+                                    #{ord.orderNumber} · {fullDateTime(ord.createdAt)} · {ord.itemsList?.[0]?.name || "Order"} · ₹{ord.totalRupees || (ord.totalPaise / 100).toFixed(0)}
+                                  </option>
+                                ))
+                              )}
+                            </select>
+                          </label>
+
+                          <div className={styles.orderFilterSummary}>
+                            <span>{filteredCustomerOrders.length} of {customerOrders.length} orders</span>
+                            {(orderDateFilter !== "all" || orderProductFilter !== "all" || orderStatusFilter !== "all") && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOrderDateFilter("all");
+                                  setOrderProductFilter("all");
+                                  setOrderStatusFilter("all");
+                                }}
+                              >
+                                Clear filters
+                              </button>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
