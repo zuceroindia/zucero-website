@@ -172,6 +172,10 @@ export default function OrdersPage() {
   const client = useMemo(() => (isSupabaseConfigured() ? createSupabaseBrowserClient() : null), []);
   const [section, setSection] = useState<Section>("overview");
   const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [orderDateFilter, setOrderDateFilter] = useState("all");
+  const [orderProductFilter, setOrderProductFilter] = useState("all");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -553,6 +557,90 @@ export default function OrdersPage() {
       setError(err instanceof Error ? err.message : "Subscription update failed.");
     }
   }
+
+  const orderDateOptions = useMemo(() => {
+    const values = new Map<string, string>();
+    for (const order of orders) {
+      const date = new Date(order.created_at);
+      if (!Number.isFinite(date.getTime())) continue;
+      const key = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(date);
+      const label = new Intl.DateTimeFormat("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }).format(date);
+      values.set(key, label);
+    }
+    return Array.from(values.entries()).map(([value, label]) => ({ value, label }));
+  }, [orders]);
+
+  const orderProductOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const order of orders) {
+      for (const item of order.items || []) {
+        if (item.product_name?.trim()) values.add(item.product_name.trim());
+      }
+    }
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  }, [orders]);
+
+  const orderStatusOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const order of orders) {
+      const value = order.shipment_status || order.display_status || order.status;
+      if (value) values.add(value);
+    }
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  }, [orders]);
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      if (orderDateFilter !== "all") {
+        const dateKey = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Kolkata",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).format(new Date(order.created_at));
+        if (dateKey !== orderDateFilter) return false;
+      }
+
+      if (
+        orderProductFilter !== "all" &&
+        !(order.items || []).some((item) => item.product_name === orderProductFilter)
+      ) {
+        return false;
+      }
+
+      const statusValue = order.shipment_status || order.display_status || order.status || "";
+      if (orderStatusFilter !== "all" && statusValue !== orderStatusFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [orders, orderDateFilter, orderProductFilter, orderStatusFilter]);
+
+  useEffect(() => {
+    if (!filteredOrders.length) {
+      setSelectedOrderId(null);
+      return;
+    }
+    if (!selectedOrderId || !filteredOrders.some((order) => order.id === selectedOrderId)) {
+      setSelectedOrderId(filteredOrders[0].id);
+    }
+  }, [filteredOrders, selectedOrderId]);
+
+  const selectedOrder =
+    filteredOrders.find((order) => order.id === selectedOrderId) ||
+    filteredOrders[0] ||
+    null;
 
   const latestOrder = orders[0];
   const viralShareText = referralCode
@@ -1315,9 +1403,10 @@ export default function OrdersPage() {
                 <div className={styles.panelHead}>
                   <div>
                     <h2>Your orders</h2>
-                    <p>Live delivery status and tracking for purchases placed with {email}.</p>
+                    <p>Find any order instantly and view its live delivery status, invoice and tracking.</p>
                   </div>
                 </div>
+
                 {!orders.length ? (
                   <div className={styles.empty}>
                     <p>No orders to show yet.</p>
@@ -1326,10 +1415,106 @@ export default function OrdersPage() {
                     </Link>
                   </div>
                 ) : (
-                  <div className={styles.orderList}>
-                    {orders.map((order) => {
+                  <>
+                    <div className={styles.customerOrderFinder}>
+                      <div className={styles.customerOrderFilterGrid}>
+                        <label>
+                          <span>Date</span>
+                          <select
+                            value={orderDateFilter}
+                            onChange={(event) => setOrderDateFilter(event.target.value)}
+                          >
+                            <option value="all">All dates</option>
+                            {orderDateOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label>
+                          <span>Product</span>
+                          <select
+                            value={orderProductFilter}
+                            onChange={(event) => setOrderProductFilter(event.target.value)}
+                          >
+                            <option value="all">All products</option>
+                            {orderProductOptions.map((product) => (
+                              <option key={product} value={product}>
+                                {product}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label>
+                          <span>Status</span>
+                          <select
+                            value={orderStatusFilter}
+                            onChange={(event) => setOrderStatusFilter(event.target.value)}
+                          >
+                            <option value="all">All statuses</option>
+                            {orderStatusOptions.map((status) => (
+                              <option key={status} value={status}>
+                                {status.replaceAll("_", " ")}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <label className={styles.customerOrderSelector}>
+                        <span>Select order</span>
+                        <select
+                          value={selectedOrder?.id || ""}
+                          onChange={(event) => setSelectedOrderId(event.target.value)}
+                          disabled={filteredOrders.length === 0}
+                        >
+                          {filteredOrders.length === 0 ? (
+                            <option value="">No matching orders</option>
+                          ) : (
+                            filteredOrders.map((order) => (
+                              <option key={order.id} value={order.id}>
+                                {order.order_number} · {new Date(order.created_at).toLocaleDateString("en-IN", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                })} · {order.items?.[0]?.product_name || "Order"} · {formatPrice(order.total_paise)}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                      </label>
+
+                      <div className={styles.customerOrderFilterSummary}>
+                        <span>{filteredOrders.length} of {orders.length} orders</span>
+                        {(orderDateFilter !== "all" || orderProductFilter !== "all" || orderStatusFilter !== "all") && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOrderDateFilter("all");
+                              setOrderProductFilter("all");
+                              setOrderStatusFilter("all");
+                            }}
+                          >
+                            Clear filters
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {!selectedOrder ? (
+                      <div className={styles.empty}>
+                        <p>No orders match your selected filters.</p>
+                      </div>
+                    ) : (() => {
+                      const order = selectedOrder;
                       const progress = orderProgress(order.display_status);
-                      const isPlaced = order.payment_status === "captured" || ["paid", "processing", "shipped", "delivered"].includes(order.display_status?.toLowerCase());
+                      const isPlaced =
+                        order.payment_status === "captured" ||
+                        ["paid", "processing", "shipped", "delivered"].includes(order.display_status?.toLowerCase());
+
                       return (
                         <article className={styles.orderCard} key={order.id}>
                           <div className={styles.orderHead}>
@@ -1357,37 +1542,29 @@ export default function OrdersPage() {
                             </div>
                             <span className={styles.status}>{order.display_status}</span>
                           </div>
-                          <div
-                            style={{
-                              margin: "10px 0 14px",
-                              padding: "10px 12px",
-                              border: "1px solid rgba(16,39,29,.12)",
-                              background: "#fbfaf5",
-                              borderRadius: "6px",
-                              fontSize: "0.82rem",
-                              lineHeight: 1.5,
-                            }}
-                          >
+
+                          <div className={styles.liveOrderStatus}>
                             <div>
                               <strong>Live shipment status:</strong>{" "}
                               {order.shipment_status || order.display_status}
                             </div>
                             {order.shipment_status_updated_at && (
-                              <div style={{ color: "#797368" }}>
+                              <div>
                                 Last updated: {statusTime(order.shipment_status_updated_at)}
                               </div>
                             )}
                             {order.shiprocket_clone_count && order.shiprocket_clone_count > 0 ? (
-                              <div style={{ color: "#8a6b2f", marginTop: "4px" }}>
-                                Shipment record was recreated in Shiprocket. Current tracking details shown below are the latest.
+                              <div className={styles.orderNotice}>
+                                Shipment record was recreated in Shiprocket. The tracking details below are the latest.
                               </div>
                             ) : null}
                             {order.admin_archived && (
-                              <div style={{ color: "#a33a2b", marginTop: "4px", fontWeight: 600 }}>
+                              <div className={styles.orderCancelledNotice}>
                                 Zucero update: {order.admin_archived_reason || "This order was cancelled/archived by Zucero."}
                               </div>
                             )}
                           </div>
+
                           <div className={styles.items}>
                             {order.items.map((item) => (
                               <div className={styles.itemRow} key={`${order.id}-${item.sku}`}>
@@ -1398,6 +1575,7 @@ export default function OrdersPage() {
                               </div>
                             ))}
                           </div>
+
                           <div className={styles.money}>
                             <div>
                               <span>Shipping</span>
@@ -1412,11 +1590,13 @@ export default function OrdersPage() {
                               <strong>{formatPrice(order.total_paise)}</strong>
                             </div>
                           </div>
+
                           <div className={styles.timeline} aria-label={`Order progress: ${order.display_status}`}>
                             {[1, 2, 3, 4, 5].map((step) => (
                               <span key={step} className={`${styles.step} ${progress >= step ? styles.done : ""}`} />
                             ))}
                           </div>
+
                           <div className={styles.tracking}>
                             <p>
                               <strong>Payment:</strong>{" "}
@@ -1446,14 +1626,13 @@ export default function OrdersPage() {
                                 <strong>Delivery:</strong> Estimated 5–7 days. Your order is being prepared and tracking details will appear once shipped.
                               </p>
                             )}
-                            <div style={{ display: "flex", gap: "10px", marginTop: "12px", flexWrap: "wrap" }}>
+                            <div className={styles.orderButtonRow}>
                               {isPlaced && (
                                 <a
                                   className="button button-dark"
                                   href={`/api/orders/${order.id}/invoice`}
                                   target="_blank"
                                   rel="noreferrer"
-                                  style={{ fontSize: "0.82rem", padding: "8px 14px", textDecoration: "none" }}
                                 >
                                   Download Tax Invoice (PDF)
                                 </a>
@@ -1464,7 +1643,6 @@ export default function OrdersPage() {
                                   href={order.tracking_url}
                                   target="_blank"
                                   rel="noreferrer"
-                                  style={{ fontSize: "0.82rem", padding: "8px 14px", textDecoration: "none" }}
                                 >
                                   Track shipment
                                 </a>
@@ -1473,8 +1651,8 @@ export default function OrdersPage() {
                           </div>
                         </article>
                       );
-                    })}
-                  </div>
+                    })()}
+                  </>
                 )}
               </div>
             )}
