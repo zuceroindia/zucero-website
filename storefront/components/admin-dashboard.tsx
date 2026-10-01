@@ -193,12 +193,6 @@ export function AdminDashboard() {
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
-  // Tracking Modal State
-  const [shippingOrder, setShippingOrder] = useState<Order | null>(null);
-  const [awbInput, setAwbInput] = useState("");
-  const [courierInput, setCourierInput] = useState("Shiprocket Express");
-  const [isUpdatingTracking, setIsUpdatingTracking] = useState(false);
-
   // Alert State
   const [bannerMessage, setBannerMessage] = useState<string | null>(null);
   const [bannerError, setBannerError] = useState<string | null>(null);
@@ -319,43 +313,6 @@ export function AdminDashboard() {
     return () => window.clearTimeout(timer);
   }, [activeTab, orders, fetchOrders]);
 
-  // Handle update tracking/shipment
-  async function handleSaveTracking(e: React.FormEvent) {
-    e.preventDefault();
-    if (!shippingOrder || !awbInput.trim()) return;
-
-    setIsUpdatingTracking(true);
-    setBannerError(null);
-    setBannerMessage(null);
-
-    try {
-      const res = await fetch(`/api/orders/${shippingOrder.id}/ship`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          awb: awbInput.trim(),
-          courierName: courierInput.trim() || "Shiprocket Express",
-          status: "shipped",
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update tracking");
-
-      setBannerMessage(`✅ Tracking saved for Order ${shippingOrder.orderNumber} (AWB: ${awbInput.trim()})`);
-      setShippingOrder(null);
-      setAwbInput("");
-
-      // Refresh orders and overview
-      await fetchOrders();
-      await fetchOverview();
-    } catch (err: unknown) {
-      setBannerError(err instanceof Error ? err.message : "Failed to update tracking");
-    } finally {
-      setIsUpdatingTracking(false);
-    }
-  }
-
   async function handleLiveShippingStatus(order: Order) {
     const busyKey = `${order.id}:sync`;
     setOrderActionBusy(busyKey);
@@ -370,29 +327,6 @@ export function AdminDashboard() {
       await fetchOverview();
     } catch (err) {
       setBannerError(err instanceof Error ? err.message : "Could not refresh shipping status");
-    } finally {
-      setOrderActionBusy(null);
-    }
-  }
-
-  async function handleAutoAssignShipping(order: Order) {
-    const busyKey = `${order.id}:assign`;
-    setOrderActionBusy(busyKey);
-    setBannerError(null);
-    setBannerMessage(null);
-    try {
-      const res = await fetch(`/api/orders/${order.id}/assign-shipping`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not assign courier/AWB");
-      setBannerMessage(`✅ ${order.orderNumber}: ${data.message || "Shipping assigned"}`);
-      await fetchOrders();
-      await fetchOverview();
-    } catch (err) {
-      setBannerError(err instanceof Error ? err.message : "Could not assign shipping");
     } finally {
       setOrderActionBusy(null);
     }
@@ -478,28 +412,6 @@ export function AdminDashboard() {
         failed = selectedOrders.length - succeeded;
         if (eligible.length < selectedOrders.length) {
           details.push(`${selectedOrders.length - eligible.length} order(s) had no Shiprocket order ID yet`);
-        }
-      }
-
-      if (bulkOrderAction === "assign") {
-        const eligible = selectedOrders.filter((order) => order.shiprocketShipmentId && !order.trackingAwb);
-        const results = await Promise.allSettled(
-          eligible.map((order) =>
-            fetch(`/api/orders/${order.id}/assign-shipping`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({}),
-            }).then(async (response) => {
-              const data = await response.json();
-              if (!response.ok) throw new Error(data.error || `Could not assign ${order.orderNumber}`);
-              return order.orderNumber;
-            })
-          )
-        );
-        succeeded = results.filter((result) => result.status === "fulfilled").length;
-        failed = selectedOrders.length - succeeded;
-        if (eligible.length < selectedOrders.length) {
-          details.push(`${selectedOrders.length - eligible.length} order(s) were already assigned or had no Shiprocket shipment ID`);
         }
       }
 
@@ -994,7 +906,6 @@ export function AdminDashboard() {
               >
                 <option value="">Choose bulk action…</option>
                 <option value="refresh">Refresh Live Shiprocket Status</option>
-                <option value="assign">Auto Assign Shipping / AWB</option>
                 <option value="delete">Delete / Archive Orders</option>
               </select>
               <button
@@ -1146,27 +1057,10 @@ export function AdminDashboard() {
                             >
                               {ord.courierName ? `${ord.courierName} · ` : ""}{ord.trackingAwb}
                             </a>
-                          ) : ord.shiprocketShipmentId ? (
-                            <button
-                              type="button"
-                              className={styles.actionBtn}
-                              disabled={orderActionBusy === `${ord.id}:assign`}
-                              onClick={() => void handleAutoAssignShipping(ord)}
-                            >
-                              <Truck size={13} /> {orderActionBusy === `${ord.id}:assign` ? "Assigning…" : "Auto Assign"}
-                            </button>
                           ) : (
-                            <button
-                              type="button"
-                              className={styles.actionBtn}
-                              onClick={() => {
-                                setShippingOrder(ord);
-                                setAwbInput("");
-                                setCourierInput("Shiprocket Express");
-                              }}
-                            >
-                              <Truck size={13} /> Add AWB
-                            </button>
+                            <small style={{ color: "#797368" }}>
+                              Assign courier/AWB in Shiprocket, then refresh status here.
+                            </small>
                           )}
                         </div>
                       </td>
@@ -1681,81 +1575,6 @@ export function AdminDashboard() {
         </div>
       )}
 
-      {/* ─── MODAL: UPDATE TRACKING / AWB ─── */}
-      {shippingOrder && (
-        <div className={styles.modalBackdrop}>
-          <div className={styles.modalCard}>
-            <div className={styles.modalHeader}>
-              <h3>Update Shipment Tracking</h3>
-              <button
-                type="button"
-                className={styles.closeBtn}
-                onClick={() => setShippingOrder(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleSaveTracking} className={styles.modalForm}>
-              <p style={{ margin: 0, fontSize: "0.85rem", color: "#555048" }}>
-                Order: <strong>{shippingOrder.orderNumber}</strong> ({shippingOrder.customerEmail})
-              </p>
-
-              <div className={styles.formGroup}>
-                <label htmlFor="courierName">Courier Partner</label>
-                <input
-                  id="courierName"
-                  className={styles.formInput}
-                  type="text"
-                  placeholder="e.g. Shiprocket, BlueDart, Delhivery"
-                  value={courierInput}
-                  onChange={(e) => setCourierInput(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label htmlFor="awbInput">Air Waybill (AWB) / Tracking Code</label>
-                <input
-                  id="awbInput"
-                  className={styles.formInput}
-                  type="text"
-                  placeholder="e.g. 143289012384"
-                  value={awbInput}
-                  onChange={(e) => setAwbInput(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </div>
-
-              <div className={styles.modalActions}>
-                <button
-                  type="button"
-                  className={styles.modalCancelBtn}
-                  onClick={() => setShippingOrder(null)}
-                  disabled={isUpdatingTracking}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className={styles.modalSaveBtn}
-                  disabled={isUpdatingTracking || !awbInput.trim()}
-                >
-                  {isUpdatingTracking ? (
-                    <>
-                      <RefreshCw size={14} className="spin" /> Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Truck size={14} /> Mark Shipped
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
