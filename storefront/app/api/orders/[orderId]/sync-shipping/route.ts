@@ -7,7 +7,7 @@ import {
   formatAccurateEdd,
   getShiprocketOrder,
 } from "@/lib/shiprocket";
-import { extractShiprocketSnapshot, mapShiprocketStatus } from "@/lib/shipping-status";
+import { buildShipmentEventKey, extractShiprocketSnapshot, mapShiprocketStatus } from "@/lib/shipping-status";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ORDER_NUMBER_PATTERN = /^ZUC-[A-Z0-9-]{6,40}$/;
@@ -111,7 +111,7 @@ export async function POST(
     const snapshot = extractShiprocketSnapshot(srData);
     const awb = snapshot.awb || order.tracking_awb;
     const courier = snapshot.courier || order.courier_name;
-    const rawStatus = snapshot.rawStatus || order.shipment_status || order.status || "Processing";
+    const rawStatus = snapshot.rawStatus || order.shipping_status || order.shipment_status || order.status || "Processing";
     const trackingUrl = snapshot.trackingUrl || (awb ? `https://shiprocket.co/tracking/${awb}` : order.tracking_url);
     const accurateEdd = formatAccurateEdd(snapshot.edd);
     const shipmentId = snapshot.shipmentId || order.shiprocket_shipment_id;
@@ -124,6 +124,9 @@ export async function POST(
     const update: Record<string, unknown> = {
       ...cloneUpdate,
       status,
+      shipping_status: String(rawStatus),
+      shipping_status_updated_at: statusUpdatedAt,
+      // Legacy compatibility until all readers use shipping_status.
       shipment_status: String(rawStatus),
       shipment_status_updated_at: statusUpdatedAt,
       last_shiprocket_sync_at: statusUpdatedAt,
@@ -143,7 +146,35 @@ export async function POST(
       throw new Error(`Could not save live Shiprocket status: ${updateError.message}`);
     }
 
-    if (isNewlyDispatched || statusChanged || cloneDetected) {
+    const eventKey = buildShipmentEventKey({
+      orderId: order.id,
+      shiprocketOrderId: resolvedShiprocketOrderId,
+      shipmentId: shipmentId || null,
+      awb: awb || null,
+      status: String(rawStatus),
+      edd: accurateEdd,
+    });
+    const { error: shipmentEventError } = await db.from("shipment_events").insert({
+      order_id: order.id,
+      status: String(rawStatus),
+      payload: {
+        source: "manual_or_admin_sync",
+        shiprocket_order_id: resolvedShiprocketOrderId,
+        shipment_id: shipmentId || null,
+        awb: awb || null,
+        courier: courier || null,
+        edd: accurateEdd,
+      },
+      occurred_at: statusUpdatedAt,
+      event_key: eventKey,
+    });
+    const duplicateEvent = shipmentEventError?.code === "23505";
+    if (shipmentEventError && !duplicateEvent) {
+      console.error("Could not record Shiprocket sync event:", shipmentEventError);
+    }
+
+    const meaningfulChange = isNewlyDispatched || statusChanged || cloneDetected;
+    if (meaningfulChange && !duplicateEvent) {
       const label = cloneDetected
         ? `Shiprocket order recreated · ${String(rawStatus)}`
         : String(rawStatus);
@@ -163,8 +194,9 @@ export async function POST(
       estimatedDeliveryWindow: accurateEdd || order.estimated_delivery_window || null,
       shiprocketOrderId: resolvedShiprocketOrderId,
       cloneDetected,
+      duplicateEvent,
       lastSyncedAt: statusUpdatedAt,
-      notified: isNewlyDispatched || statusChanged || cloneDetected,
+      notified: meaningfulChange && !duplicateEvent,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Sync failed";
