@@ -1,6 +1,5 @@
 import { products, resolveSku } from "@/lib/catalog";
-import { assignShiprocketAwb, createShiprocketOrder } from "@/lib/shiprocket";
-import { extractShiprocketSnapshot } from "@/lib/shipping-status";
+import { createShiprocketOrder } from "@/lib/shiprocket";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 function positiveNumber(value: string | undefined, fallback: number) {
@@ -151,48 +150,9 @@ export async function fulfilPaidOrder(orderId: string) {
       .eq("id", orderId);
     if (updateError) throw new Error("Could not save Shiprocket order IDs");
 
-    if (shipmentId) {
-      try {
-        const assignment = await assignShiprocketAwb({ shipmentId });
-        const snapshot = extractShiprocketSnapshot(assignment);
-        const awb = snapshot.awb;
-        const courier = snapshot.courier;
-        const assignedAt = new Date().toISOString();
-        await db
-          .from("orders")
-          .update({
-            ...(awb ? { tracking_awb: awb, tracking_url: `https://shiprocket.co/tracking/${awb}` } : {}),
-            ...(courier ? { courier_name: courier } : {}),
-            shipment_status: awb ? "AWB assigned · Ready to ship" : "Courier assignment requested",
-            shipment_status_updated_at: assignedAt,
-            last_shiprocket_sync_at: assignedAt,
-            shiprocket_sync_error: null,
-            updated_at: assignedAt,
-          })
-          .eq("id", orderId);
-
-        return {
-          fulfilled: true,
-          shiprocketOrderId,
-          shipmentId,
-          awbAssigned: Boolean(awb),
-          trackingAwb: awb,
-          courierName: courier,
-        };
-      } catch (assignmentError) {
-        const detail = assignmentError instanceof Error ? assignmentError.message : "Shiprocket AWB assignment failed";
-        await db
-          .from("orders")
-          .update({
-            shiprocket_sync_error: detail.slice(0, 500),
-            last_shiprocket_sync_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", orderId);
-        console.error("Automatic Shiprocket AWB assignment failed:", assignmentError);
-      }
-    }
-
+    // Deliberately stop after creating the Shiprocket order.
+    // Courier/AWB assignment is an explicit merchant action from the Admin dashboard.
+    // This keeps Shiprocket as the shipment system of record without auto-shipping paid orders.
     return { fulfilled: true, shiprocketOrderId, shipmentId, awbAssigned: false };
   } catch (error) {
     await db.from("orders").update({ status: "paid", updated_at: new Date().toISOString() }).eq("id", orderId);
