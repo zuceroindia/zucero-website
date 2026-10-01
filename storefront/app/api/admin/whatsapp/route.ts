@@ -152,7 +152,7 @@ export async function POST(request: Request) {
         orderId: z.string().uuid(),
       });
       const input = orderSchema.parse(bodyJson);
-      const result = await sendOutboundWhatsAppConfirmation(input.orderId);
+      const result = await sendOutboundWhatsAppConfirmation(input.orderId, { force: true });
       if (!result.success) {
         return NextResponse.json(
           { error: result.error || result.reason || "Could not send order confirmation template" },
