@@ -51,7 +51,7 @@ export function buildCustomerOrderWhatsAppLink(order: {
 }): string {
   const totalRupees = Math.round(order.totalPaise / 100);
   const delivery = order.estimatedDeliveryWindow || "5–7 days";
-  const text = `Hello Zucero! I have placed order ${order.orderNumber} for Rs ${totalRupees}. Expected delivery: ${delivery}. Please share order and shipment tracking updates on this WhatsApp number.`;
+  const text = `Hello Zucero! I have placed order ${order.orderNumber} for Rs ${totalRupees}. Estimated delivery: ${delivery}. Please share order and shipment tracking updates on this WhatsApp number.`;
   return whatsappLink(text);
 }
 
@@ -368,7 +368,7 @@ export async function sendOutboundWhatsAppConfirmation(
     const messageId = result.messages?.[0]?.id;
     console.info(`[WhatsApp Outbound] Sent WhatsApp message ${messageId} for order ${order.order_number} to ${recipient}`);
 
-    const formattedBody = `Hello ${customerName}, thank you for ordering with Zucero! Your order ${order.order_number} for ${itemsSummary || "Zucero Pure Sugar Products"} has been received. Total: INR ${totalRupeesFormatted}. Expected delivery: ${deliveryWindow}. We will share your live tracking link as soon as your order is dispatched.`;
+    const formattedBody = `Hello ${customerName}, thank you for ordering with Zucero! Your order ${order.order_number} for ${itemsSummary || "Zucero Pure Sugar Products"} has been received. Total: INR ${totalRupeesFormatted}. Estimated delivery: ${deliveryWindow}. We will share your live tracking link as soon as your order is dispatched.`;
 
     if (messageId) {
       try {
