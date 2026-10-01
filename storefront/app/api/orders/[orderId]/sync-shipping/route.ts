@@ -175,10 +175,7 @@ export async function POST(
 
     const meaningfulChange = isNewlyDispatched || statusChanged || cloneDetected;
     if (meaningfulChange && !duplicateEvent) {
-      const label = cloneDetected
-        ? `Shiprocket order recreated · ${String(rawStatus)}`
-        : String(rawStatus);
-      await notifyShipmentStatus(order.id, label).catch((err) => {
+      await notifyShipmentStatus(order.id, String(rawStatus)).catch((err) => {
         console.error("Shiprocket status notification error:", err);
       });
     }
