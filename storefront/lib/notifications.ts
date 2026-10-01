@@ -284,6 +284,8 @@ export async function notifyShipmentStatus(orderId: string, status: string) {
     lower.includes("undelivered") ||
     lower.includes("delivery exception") ||
     lower.includes("failed delivery") ||
+    lower.includes("delivery failed") ||
+    lower.includes("not delivered") ||
     lower.includes("rto") ||
     lower.includes("return to origin") ||
     lower.includes("lost") ||
