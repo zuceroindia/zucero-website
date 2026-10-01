@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAuthorizedAdminOrInternal } from "@/lib/api-auth";
-import { assignShiprocketAwb } from "@/lib/shiprocket";
+import { assignShiprocketAwb, formatAccurateEdd } from "@/lib/shiprocket";
 import { extractShiprocketSnapshot } from "@/lib/shipping-status";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
@@ -52,6 +52,8 @@ export async function POST(
     const awb = snapshot.awb || order.tracking_awb;
     const courier = snapshot.courier || order.courier_name;
     const now = new Date().toISOString();
+    const exactStatus = snapshot.rawStatus || (awb ? "AWB assigned · Ready to ship" : "Courier assignment requested");
+    const accurateEdd = formatAccurateEdd(snapshot.edd);
 
     const { error: updateError } = await db
       .from("orders")
@@ -61,7 +63,10 @@ export async function POST(
           tracking_url: snapshot.trackingUrl || `https://shiprocket.co/tracking/${awb}`,
         } : {}),
         ...(courier ? { courier_name: courier } : {}),
-        shipment_status: awb ? "AWB assigned · Ready to ship" : "Courier assignment requested",
+        ...(accurateEdd ? { estimated_delivery_window: accurateEdd } : {}),
+        shipping_status: exactStatus,
+        shipping_status_updated_at: now,
+        shipment_status: exactStatus,
         shipment_status_updated_at: now,
         last_shiprocket_sync_at: now,
         shiprocket_sync_error: null,
