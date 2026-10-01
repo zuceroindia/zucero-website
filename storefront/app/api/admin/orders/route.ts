@@ -28,6 +28,8 @@ type AdminOrderRecord = {
   razorpay_payment_id: string | null;
   shiprocket_order_id?: string | null;
   shiprocket_shipment_id?: string | null;
+  shipping_status?: string | null;
+  shipping_status_updated_at?: string | null;
   shipment_status?: string | null;
   shipment_status_updated_at?: string | null;
   shiprocket_clone_count?: number | null;
@@ -138,8 +140,8 @@ export async function GET(request: Request) {
       razorpayPaymentId: order.razorpay_payment_id,
       shiprocketOrderId: order.shiprocket_order_id || null,
       shiprocketShipmentId: order.shiprocket_shipment_id || null,
-      shipmentStatus: order.shipment_status || null,
-      shipmentStatusUpdatedAt: order.shipment_status_updated_at || null,
+      shipmentStatus: order.shipping_status || order.shipment_status || null,
+      shipmentStatusUpdatedAt: order.shipping_status_updated_at || order.shipment_status_updated_at || null,
       shiprocketCloneCount: Number(order.shiprocket_clone_count || 0),
       shiprocketClonedAt: order.shiprocket_cloned_at || null,
       lastShiprocketSyncAt: order.last_shiprocket_sync_at || null,
