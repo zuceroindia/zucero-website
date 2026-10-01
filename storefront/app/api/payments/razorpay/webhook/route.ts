@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { fulfilPaidOrder } from "@/lib/order-fulfilment";
 import { notifyPaidOrder } from "@/lib/notifications";
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
   const signature = request.headers.get("x-razorpay-signature");
   if (!signature) return NextResponse.json({ error: "Missing signature" }, { status: 401 });
   const rawBody = await request.text();
+  let reservedEventId: string | null = null;
 
   try {
     if (!verifyRazorpaySignature(rawBody, signature)) {
@@ -44,16 +46,24 @@ export async function POST(request: Request) {
     const razorpayPaymentId = payment?.id ?? refund?.payment_id;
 
     const eventId = request.headers.get("x-razorpay-event-id")
-      ?? `${event.event ?? "event"}:${refund?.id ?? payment?.id ?? razorpayOrderId ?? event.created_at ?? Date.now()}`;
+      ?? `payload:${createHash("sha256").update(rawBody).digest("hex")}`;
     const db = supabaseAdmin();
 
-    await db.from("payment_events").upsert({
+    const { error: eventReservationError } = await db.from("payment_events").insert({
       provider: "razorpay",
       provider_event_id: eventId,
       event_type: event.event ?? "unknown",
       payload: event,
       processed_at: new Date().toISOString(),
-    }, { onConflict: "provider,provider_event_id" });
+    });
+
+    if (eventReservationError) {
+      if (eventReservationError.code === "23505") {
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+      throw new Error(`Could not reserve Razorpay webhook event: ${eventReservationError.message}`);
+    }
+    reservedEventId = eventId;
 
     if (!razorpayOrderId && !razorpayPaymentId) {
       return NextResponse.json({ received: true });
@@ -169,6 +179,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error("Razorpay webhook processing failed", error);
+    if (reservedEventId) {
+      await supabaseAdmin()
+        .from("payment_events")
+        .delete()
+        .eq("provider", "razorpay")
+        .eq("provider_event_id", reservedEventId);
+    }
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 }
