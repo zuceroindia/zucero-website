@@ -119,7 +119,7 @@ export async function POST(
 
     const statusUpdatedAt = new Date().toISOString();
     const isNewlyDispatched = Boolean(awb && !order.tracking_awb);
-    const statusChanged = String(rawStatus) !== String(order.shipment_status || "");
+    const statusChanged = String(rawStatus) !== String(order.shipping_status || order.shipment_status || "");
 
     const update: Record<string, unknown> = {
       ...cloneUpdate,
