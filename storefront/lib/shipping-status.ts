@@ -60,6 +60,8 @@ export function isCustomerShipmentMilestone(rawStatus: unknown): boolean {
     raw.includes("undelivered") ||
     raw.includes("delivery exception") ||
     raw.includes("failed delivery") ||
+    raw.includes("delivery failed") ||
+    raw.includes("not delivered") ||
     raw.includes("rto") ||
     raw.includes("return to origin") ||
     raw.includes("returned to origin") ||
