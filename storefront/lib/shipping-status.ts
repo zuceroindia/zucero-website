@@ -132,6 +132,27 @@ export function displayShippingStatus(value: unknown): string {
   return normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+export function buildShipmentEventKey(input: {
+  orderId: string;
+  shiprocketOrderId?: string | null;
+  shipmentId?: string | null;
+  awb?: string | null;
+  status: string;
+  edd?: string | null;
+}): string {
+  const clean = (value: string | null | undefined) =>
+    String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  return [
+    "shiprocket",
+    clean(input.orderId),
+    clean(input.shiprocketOrderId),
+    clean(input.shipmentId),
+    clean(input.awb),
+    clean(input.status),
+    clean(input.edd),
+  ].join("|");
+}
+
 export type ShiprocketSnapshot = {
   rawStatus: string | null;
   awb: string | null;
