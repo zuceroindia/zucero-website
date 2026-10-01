@@ -129,6 +129,22 @@ export async function fulfilPaidOrder(orderId: string) {
     weight: Math.max(0.5, packageWeightGrams / 1000),
   };
 
+  const reservationKey = `shiprocket-create:${orderId}`;
+  const { error: reservationError } = await db.from("payment_events").insert({
+    provider: "internal",
+    provider_event_id: reservationKey,
+    event_type: "shiprocket.order_create_reserved",
+    payload: { order_id: orderId, order_number: claimed.order_number },
+    processed_at: new Date().toISOString(),
+  });
+
+  if (reservationError) {
+    if (reservationError.code === "23505") {
+      return { fulfilled: false, reason: "already_processing" };
+    }
+    throw new Error(`Could not reserve Shiprocket order creation: ${reservationError.message}`);
+  }
+
   try {
     const shiprocket = await createShiprocketOrder(payload) as { order_id?: number | string; shipment_id?: number | string };
     if (!shiprocket.order_id) throw new Error("Shiprocket did not return an order ID");
@@ -152,12 +168,42 @@ export async function fulfilPaidOrder(orderId: string) {
       .eq("id", orderId);
     if (updateError) throw new Error("Could not save Shiprocket order IDs");
 
+    await db.from("payment_events")
+      .update({
+        event_type: "shiprocket.order_created",
+        payload: {
+          order_id: orderId,
+          order_number: claimed.order_number,
+          shiprocket_order_id: shiprocketOrderId,
+          shiprocket_shipment_id: shipmentId,
+        },
+        processed_at: new Date().toISOString(),
+      })
+      .eq("provider", "internal")
+      .eq("provider_event_id", reservationKey);
+
     // Deliberately stop after creating the Shiprocket order.
     // Courier/AWB assignment is an explicit merchant action from the Admin dashboard.
     // This keeps Shiprocket as the shipment system of record without auto-shipping paid orders.
     return { fulfilled: true, shiprocketOrderId, shipmentId, awbAssigned: false };
   } catch (error) {
-    await db.from("orders").update({ status: "paid", updated_at: new Date().toISOString() }).eq("id", orderId);
+    const detail = error instanceof Error ? error.message : "Shiprocket order creation failed";
+    // Keep the reservation on an ambiguous external API failure. This is safer than
+    // automatically retrying and creating a duplicate Shiprocket order.
+    await db.from("payment_events")
+      .update({
+        event_type: "shiprocket.order_create_uncertain",
+        payload: { order_id: orderId, order_number: claimed.order_number, error: detail },
+        processed_at: new Date().toISOString(),
+      })
+      .eq("provider", "internal")
+      .eq("provider_event_id", reservationKey);
+    await db.from("orders").update({
+      status: "processing",
+      shiprocket_sync_error: detail.slice(0, 500),
+      last_shiprocket_sync_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq("id", orderId);
     throw error;
   }
 }
