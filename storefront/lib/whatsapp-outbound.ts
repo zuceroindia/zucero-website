@@ -166,7 +166,10 @@ export async function sendOutboundWhatsAppOrderUpdate(orderId: string): Promise<
   }
 }
 
-export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise<OutboundWhatsAppResult> {
+export async function sendOutboundWhatsAppConfirmation(
+  orderId: string,
+  options: { force?: boolean } = {}
+): Promise<OutboundWhatsAppResult> {
   const db = supabaseAdmin();
   const { data: order, error } = await db.from("orders").select("*").eq("id", orderId).single();
   if (error || !order) {
@@ -200,6 +203,45 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
   const templateName = process.env.WHATSAPP_TEMPLATE_NAME?.trim() || "zucero_order_confirmation";
   const languageCode = process.env.WHATSAPP_TEMPLATE_LANG?.trim() || "en_US";
+  const reservationKey = `order-confirmation:${order.id}`;
+  let reservationCreated = false;
+
+  if (!options.force) {
+    // Backward-compatible guard: historical orders may already have successful sends
+    // from before the stable reservation key was introduced.
+    const { data: previousSends, error: previousSendError } = await db
+      .from("payment_events")
+      .select("id")
+      .eq("provider", "whatsapp")
+      .eq("event_type", "whatsapp.sent")
+      .contains("payload", { order_id: order.id })
+      .limit(1);
+
+    if (previousSendError) {
+      return { success: false, error: `Could not check WhatsApp send history: ${previousSendError.message}` };
+    }
+    if (previousSends?.length) {
+      return { success: true, reason: "already_sent" };
+    }
+
+    // Reserve the automatic confirmation before calling Meta. The database unique
+    // constraint makes browser verification and webhook races collapse to one send.
+    const { error: reservationError } = await db.from("payment_events").insert({
+      provider: "whatsapp",
+      provider_event_id: reservationKey,
+      event_type: "whatsapp.order_confirmation_reserved",
+      payload: { order_id: order.id, recipient, template: templateName },
+      processed_at: new Date().toISOString(),
+    });
+
+    if (reservationError) {
+      if (reservationError.code === "23505") {
+        return { success: true, reason: "already_sent" };
+      }
+      return { success: false, error: `Could not reserve WhatsApp confirmation: ${reservationError.message}` };
+    }
+    reservationCreated = true;
+  }
 
   // If Meta API credentials are not yet set in environment:
   if (!apiToken || !phoneNumberId) {
@@ -221,6 +263,13 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
         processed_at: new Date().toISOString(),
       });
     } catch {}
+    if (reservationCreated) {
+      await db.from("payment_events")
+        .delete()
+        .eq("provider", "whatsapp")
+        .eq("provider_event_id", reservationKey);
+      reservationCreated = false;
+    }
     return { success: false, reason: "credentials_not_configured" };
   }
 
@@ -305,6 +354,13 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
           processed_at: new Date().toISOString(),
         });
       } catch {}
+      if (reservationCreated) {
+        await db.from("payment_events")
+          .delete()
+          .eq("provider", "whatsapp")
+          .eq("provider_event_id", reservationKey);
+        reservationCreated = false;
+      }
       const metaErr = metaWhatsAppErrorMessage(result);
       return { success: false, error: metaErr };
     }
@@ -339,6 +395,17 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
       });
     } catch {}
 
+    if (reservationCreated) {
+      await db.from("payment_events")
+        .update({
+          event_type: "whatsapp.order_confirmation_sent",
+          payload: { order_id: order.id, recipient, template: templateName, messageId },
+          processed_at: new Date().toISOString(),
+        })
+        .eq("provider", "whatsapp")
+        .eq("provider_event_id", reservationKey);
+    }
+
     // Try updating orders table if column exists
     try {
       await db.from("orders").update({
@@ -351,6 +418,21 @@ export async function sendOutboundWhatsAppConfirmation(orderId: string): Promise
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : "WhatsApp dispatch exception";
     console.error(`[WhatsApp Outbound] Failed to dispatch for order ${order.order_number}:`, error);
+
+    // A network exception after calling Meta has an ambiguous delivery outcome.
+    // Keep the reservation so an automatic retry cannot duplicate a message.
+    if (reservationCreated) {
+      await db.from("payment_events")
+        .update({
+          event_type: "whatsapp.order_confirmation_uncertain",
+          payload: { order_id: order.id, recipient, template: templateName, error: errorMsg },
+          processed_at: new Date().toISOString(),
+        })
+        .eq("provider", "whatsapp")
+        .eq("provider_event_id", reservationKey)
+        .catch(() => null);
+    }
+
     return { success: false, error: errorMsg };
   }
 }
