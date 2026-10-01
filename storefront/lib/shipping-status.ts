@@ -91,8 +91,7 @@ export function mapShiprocketStatus(rawStatus: unknown, hasAwb = false): LocalOr
   if (isPickupOnlyStatus(raw)) return "processing";
 
   if (raw.includes("cancel")) return "cancelled";
-  if (raw.includes("delivered")) return "delivered";
-  if (raw.includes("out for delivery") || raw.includes("out_for_delivery")) return "out_for_delivery";
+  if (raw.includes("out for delivery")) return "out_for_delivery";
   if (
     raw.includes("rto") ||
     raw.includes("return to origin") ||
@@ -107,10 +106,15 @@ export function mapShiprocketStatus(rawStatus: unknown, hasAwb = false): LocalOr
     raw.includes("delivery exception") ||
     raw.includes("exception") ||
     raw.includes("failed delivery") ||
+    raw.includes("delivery failed") ||
+    raw.includes("not delivered") ||
     raw.includes("lost") ||
     raw.includes("damaged")
   ) {
     return "delivery_exception";
+  }
+  if (raw.includes("delivered") && !raw.includes("undelivered") && !raw.includes("not delivered")) {
+    return "delivered";
   }
   if (
     raw.includes("shipped") ||
