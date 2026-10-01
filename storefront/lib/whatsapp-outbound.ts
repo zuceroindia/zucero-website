@@ -422,15 +422,16 @@ export async function sendOutboundWhatsAppConfirmation(
     // A network exception after calling Meta has an ambiguous delivery outcome.
     // Keep the reservation so an automatic retry cannot duplicate a message.
     if (reservationCreated) {
-      await db.from("payment_events")
-        .update({
-          event_type: "whatsapp.order_confirmation_uncertain",
-          payload: { order_id: order.id, recipient, template: templateName, error: errorMsg },
-          processed_at: new Date().toISOString(),
-        })
-        .eq("provider", "whatsapp")
-        .eq("provider_event_id", reservationKey)
-        .catch(() => null);
+      try {
+        await db.from("payment_events")
+          .update({
+            event_type: "whatsapp.order_confirmation_uncertain",
+            payload: { order_id: order.id, recipient, template: templateName, error: errorMsg },
+            processed_at: new Date().toISOString(),
+          })
+          .eq("provider", "whatsapp")
+          .eq("provider_event_id", reservationKey);
+      } catch {}
     }
 
     return { success: false, error: errorMsg };
