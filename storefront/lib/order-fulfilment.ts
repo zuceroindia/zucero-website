@@ -141,6 +141,8 @@ export async function fulfilPaidOrder(orderId: string) {
         shiprocket_order_id: shiprocketOrderId,
         shiprocket_shipment_id: shipmentId,
         status: "processing",
+        shipping_status: "Shiprocket order created",
+        shipping_status_updated_at: createdAt,
         shipment_status: "Shiprocket order created",
         shipment_status_updated_at: createdAt,
         last_shiprocket_sync_at: createdAt,
