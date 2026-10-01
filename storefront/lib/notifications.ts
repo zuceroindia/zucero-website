@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { generateInvoiceForOrder } from "@/lib/invoice";
 import { sendOutboundWhatsAppConfirmation } from "@/lib/whatsapp-outbound";
+import { isCustomerShipmentMilestone, isMerchantShipmentAlert } from "@/lib/shipping-status";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.thegoodsugar.in";
 const DEFAULT_MERCHANT_EMAIL = "zucero.thegoodsugar@gmail.com";
@@ -256,25 +257,50 @@ export async function notifyShipmentStatus(orderId: string, status: string) {
   const accountUrl = `${SITE_URL}/account/orders`;
   const trackingUrl = order.tracking_url || (order.tracking_awb ? `https://shiprocket.co/tracking/${order.tracking_awb}` : accountUrl);
   const keyStatus = normalized.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 80);
+  const customerShouldReceive = isCustomerShipmentMilestone(normalized);
+  const merchantShouldReceive = isMerchantShipmentAlert(normalized);
+  const deliveryEstimate = order.estimated_delivery_window || address.estimated_delivery_window || null;
+
+  // Routine pickup scheduling is operational noise. Customers are notified only
+  // for real delivery milestones; merchants still receive actionable exceptions.
+  if (!customerShouldReceive && !merchantShouldReceive) return;
 
   // Determine user-friendly subject and title
-  const lower = normalized.toLowerCase();
+  const lower = normalized.toLowerCase().replaceAll("_", " ");
   let subject = `Shipment update · ${order.order_number}`;
   let headline = `Your Zucero order is ${escapeHtml(normalized)}.`;
   let subheadline = "We have an update regarding your delivery";
 
-  if (lower.includes("shipped") || lower.includes("transit") || lower.includes("dispatched") || lower.includes("picked")) {
-    subject = `Your Zucero order is on the way! · ${order.order_number}`;
-    headline = "Your pure sweetness is on the way.";
-    subheadline = "Your parcel has been dispatched from our Gurugram facility";
-  } else if (lower.includes("out for delivery") || lower.includes("out_for_delivery")) {
+  if (lower.includes("out for delivery")) {
     subject = `Out for delivery today: Your Zucero order · ${order.order_number}`;
     headline = "Your order is out for delivery today!";
     subheadline = "The delivery agent will reach your address shortly";
-  } else if (lower.includes("delivered")) {
+  } else if (lower.includes("delivered") && !lower.includes("undelivered")) {
     subject = `Delivered: Your Zucero order · ${order.order_number}`;
     headline = "Your Zucero order has been delivered.";
-    subheadline = "Thank you for choosing pure, chemical-free sugarcane sweetness";
+    subheadline = "Thank you for choosing Zucero";
+  } else if (
+    lower.includes("ndr") ||
+    lower.includes("undelivered") ||
+    lower.includes("delivery exception") ||
+    lower.includes("failed delivery") ||
+    lower.includes("rto") ||
+    lower.includes("return to origin") ||
+    lower.includes("lost") ||
+    lower.includes("damaged")
+  ) {
+    subject = `Delivery attention needed · ${order.order_number}`;
+    headline = "There is an update affecting your delivery.";
+    subheadline = "Please check the latest courier status and tracking details below";
+  } else if (
+    lower.includes("shipped") ||
+    lower.includes("transit") ||
+    lower.includes("dispatched") ||
+    lower.includes("picked up")
+  ) {
+    subject = `Your Zucero order is on the way! · ${order.order_number}`;
+    headline = "Your Zucero order is on the way.";
+    subheadline = "Your parcel has entered the courier delivery network";
   }
 
   const trackingBox = order.tracking_awb ? `
@@ -290,6 +316,10 @@ export async function notifyShipmentStatus(orderId: string, status: string) {
     </div>
   `;
 
+  const deliveryEstimateHtml = deliveryEstimate
+    ? `<p style="margin:12px 0;font-size:14px;color:#10271d"><strong>Latest delivery estimate:</strong> ${escapeHtml(deliveryEstimate)}</p>`
+    : "";
+
   const customerHtml = `
     <div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#10271d;line-height:1.5">
       <div style="border-bottom:3px solid #10271d;padding-bottom:14px;margin-bottom:20px">
@@ -301,6 +331,7 @@ export async function notifyShipmentStatus(orderId: string, status: string) {
       <p>Your order <strong>${escapeHtml(order.order_number)}</strong> status has been updated to: <span style="display:inline-block;padding:3px 10px;background:#10271d;color:#fff;border-radius:12px;font-size:13px;font-weight:bold">${escapeHtml(normalized)}</span></p>
 
       ${trackingBox}
+      ${deliveryEstimateHtml}
 
       <table style="width:100%;border-collapse:collapse;margin:16px 0">${itemsHtml(items)}</table>
 
@@ -313,13 +344,14 @@ export async function notifyShipmentStatus(orderId: string, status: string) {
     </div>
   `;
 
-  const customerText = `${headline}\n\nOrder ${order.order_number}: ${normalized}\n${order.tracking_awb ? `Courier: ${order.courier_name}\nAWB: ${order.tracking_awb}\nTrack: ${trackingUrl}\n\n` : ""}${itemsText(items)}\n\nDelivery Address: ${address.fullName}, ${address.addressLine1}, ${address.city} ${address.postalCode}\n\nTrack: ${accountUrl}`;
+  const customerText = `${headline}\n\nOrder ${order.order_number}: ${normalized}\n${order.tracking_awb ? `Courier: ${order.courier_name}\nAWB: ${order.tracking_awb}\nTrack: ${trackingUrl}\n` : ""}${deliveryEstimate ? `Latest delivery estimate: ${deliveryEstimate}\n` : ""}\n${itemsText(items)}\n\nDelivery Address: ${address.fullName}, ${address.addressLine1}, ${address.city} ${address.postalCode}\n\nTrack: ${accountUrl}`;
 
   const merchantHtml = `
     <div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#10271d">
       <h2>Shipment Update: ${escapeHtml(normalized)}</h2>
       <p><strong>Order:</strong> ${escapeHtml(order.order_number)} (${escapeHtml(money(order.total_paise))})</p>
       <p><strong>Status:</strong> ${escapeHtml(normalized)}</p>
+      ${deliveryEstimate ? `<p><strong>Latest delivery estimate:</strong> ${escapeHtml(deliveryEstimate)}</p>` : ""}
       ${order.tracking_awb ? `<p><strong>Courier:</strong> ${escapeHtml(order.courier_name || "Shiprocket")}<br/><strong>AWB:</strong> ${escapeHtml(order.tracking_awb)}<br/><a href="${trackingUrl}">Live Tracking Link</a></p>` : ""}
       <p><strong>Customer:</strong><br/>${escapeHtml(address.fullName)}<br/>${escapeHtml(order.customer_email)}<br/>${escapeHtml(order.customer_phone)}</p>
       <p><strong>Delivery Address:</strong><br/>${escapeHtml(address.addressLine1)} ${escapeHtml(address.addressLine2 || "")}<br/>${escapeHtml(address.city)}, ${escapeHtml(address.state)} ${escapeHtml(address.postalCode)}</p>
@@ -327,17 +359,27 @@ export async function notifyShipmentStatus(orderId: string, status: string) {
     </div>
   `;
 
-  const merchantText = `Shipment Update: ${order.order_number} is ${normalized}\nCourier: ${order.courier_name || "Shiprocket"}\nAWB: ${order.tracking_awb || "Pending"}\nTrack: ${trackingUrl}\nCustomer: ${address.fullName} · ${order.customer_phone}\n${itemsText(items)}`;
+  const merchantText = `Shipment Update: ${order.order_number} is ${normalized}\nCourier: ${order.courier_name || "Shiprocket"}\nAWB: ${order.tracking_awb || "Pending"}\nTrack: ${trackingUrl}\n${deliveryEstimate ? `Latest delivery estimate: ${deliveryEstimate}\n` : ""}Customer: ${address.fullName} · ${order.customer_phone}\n${itemsText(items)}`;
 
-  const results = await Promise.allSettled([
-    once(`shipment-customer:${order.id}:${keyStatus}`, "shipment.status.customer", { order_id: order.id, status: normalized }, () =>
-      sendEmail({ to: order.customer_email, subject, html: customerHtml, text: customerText })
-    ),
-    once(`shipment-merchant:${order.id}:${keyStatus}`, "shipment.status.merchant", { order_id: order.id, status: normalized }, () =>
-      sendEmail({ to: merchantEmail, subject: `Merchant Alert: ${subject}`, html: merchantHtml, text: merchantText })
-    ),
-  ]);
+  const notificationJobs: Array<Promise<boolean>> = [];
 
+  if (customerShouldReceive) {
+    notificationJobs.push(
+      once(`shipment-customer:${order.id}:${keyStatus}`, "shipment.status.customer", { order_id: order.id, status: normalized }, () =>
+        sendEmail({ to: order.customer_email, subject, html: customerHtml, text: customerText })
+      )
+    );
+  }
+
+  if (merchantShouldReceive) {
+    notificationJobs.push(
+      once(`shipment-merchant:${order.id}:${keyStatus}`, "shipment.status.merchant", { order_id: order.id, status: normalized }, () =>
+        sendEmail({ to: merchantEmail, subject: `Merchant Alert: ${subject}`, html: merchantHtml, text: merchantText })
+      )
+    );
+  }
+
+  const results = await Promise.allSettled(notificationJobs);
   results.forEach((result) => {
     if (result.status === "rejected") console.error("Shipment email notification failed", result.reason);
   });
