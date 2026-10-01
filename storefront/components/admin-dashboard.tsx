@@ -1078,18 +1078,6 @@ export function AdminDashboard() {
                           <button
                             type="button"
                             className={styles.actionBtn}
-                            onClick={() => {
-                              setShippingOrder(ord);
-                              setAwbInput(ord.trackingAwb || "");
-                              setCourierInput(ord.courierName || "Shiprocket Express");
-                            }}
-                            title="Update shipping & courier tracking"
-                          >
-                            <Truck size={13} /> Ship
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.actionBtn}
                             disabled={orderActionBusy === `${ord.id}:sync` || !ord.shiprocketOrderId}
                             onClick={() => void handleLiveShippingStatus(ord)}
                             title={ord.shiprocketOrderId ? "Pull current status from Shiprocket" : "Shiprocket order not created yet"}
