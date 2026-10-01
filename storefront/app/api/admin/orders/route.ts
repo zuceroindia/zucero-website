@@ -233,9 +233,12 @@ export async function DELETE(request: Request) {
 
     if (canMarkCancelled) {
       update.status = "cancelled";
-      update.shipment_status = shiprocketCancellation === "cancelled"
+      const cancellationStatus = shiprocketCancellation === "cancelled"
         ? "Cancelled in Shiprocket by Zucero"
         : "Cancelled by Zucero";
+      update.shipping_status = cancellationStatus;
+      update.shipping_status_updated_at = now;
+      update.shipment_status = cancellationStatus;
       update.shipment_status_updated_at = now;
     }
 
