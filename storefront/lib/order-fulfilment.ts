@@ -183,8 +183,8 @@ export async function fulfilPaidOrder(orderId: string) {
       .eq("provider_event_id", reservationKey);
 
     // Deliberately stop after creating the Shiprocket order.
-    // Courier/AWB assignment is an explicit merchant action from the Admin dashboard.
-    // This keeps Shiprocket as the shipment system of record without auto-shipping paid orders.
+    // Courier/AWB assignment is an explicit merchant action inside Shiprocket.
+    // The Zucero website remains read-only for shipment assignment and only syncs status.
     return { fulfilled: true, shiprocketOrderId, shipmentId, awbAssigned: false };
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Shiprocket order creation failed";
