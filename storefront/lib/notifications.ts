@@ -179,7 +179,7 @@ export async function notifyPaidOrder(orderId: string) {
       
       <div style="background:#f4f7f4;border-left:4px solid #10271d;padding:12px 16px;margin:20px 0;border-radius:4px">
         <p style="margin:0;font-size:14px;color:#10271d;font-weight:bold">Estimated Delivery Window: ${escapeHtml(deliveryWindow)}</p>
-        <p style="margin:4px 0 0 0;font-size:12px;color:#4a6358">Dispatched from Gurugram, Haryana via insured express surface delivery.</p>
+        <p style="margin:4px 0 0 0;font-size:12px;color:#4a6358">This is a pre-dispatch estimate. We’ll update it with live courier tracking once your parcel is dispatched.</p>
       </div>
 
       <table style="width:100%;border-collapse:collapse;margin:16px 0">${itemsHtml(items)}</table>
@@ -200,7 +200,7 @@ export async function notifyPaidOrder(orderId: string) {
       <p style="margin:24px 0 16px 0"><a href="${accountUrl}" style="display:inline-block;padding:12px 22px;background:#10271d;color:white;text-decoration:none;border-radius:4px;font-weight:500">View Your Orders &amp; Invoices</a></p>
     </div>`;
 
-  const customerText = `Your Zucero order ${order.order_number} is confirmed.\n\nEstimated Delivery: ${deliveryWindow}\nOfficial Tax Invoice: Attached as ${invoiceNumber}.pdf\n\n${itemsText(items)}\n\nSubtotal: ${money(order.subtotal_paise)}\n${order.discount_paise ? `Coupon discount: -${money(order.discount_paise)}\n` : ""}Shipping: ${order.shipping_paise ? money(order.shipping_paise) : "Free"}\nGST: ${money(order.tax_paise)}\nTotal paid: ${money(order.total_paise)}\n\nView orders: ${accountUrl}`;
+  const customerText = `Your Zucero order ${order.order_number} is confirmed.\n\nEstimated Delivery (pre-dispatch): ${deliveryWindow}\nOfficial Tax Invoice: Attached as ${invoiceNumber}.pdf\n\n${itemsText(items)}\n\nSubtotal: ${money(order.subtotal_paise)}\n${order.discount_paise ? `Coupon discount: -${money(order.discount_paise)}\n` : ""}Shipping: ${order.shipping_paise ? money(order.shipping_paise) : "Free"}\nGST: ${money(order.tax_paise)}\nTotal paid: ${money(order.total_paise)}\n\nView orders: ${accountUrl}`;
 
   const merchantHtml = `
     <div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#10271d">
