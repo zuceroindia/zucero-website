@@ -39,6 +39,8 @@ export function isPickupOnlyStatus(rawStatus: unknown): boolean {
     raw.includes("pickup pending") ||
     raw.includes("pickup scheduled") ||
     raw.includes("pickup rescheduled") ||
+    raw.includes("pickup cancelled") ||
+    raw.includes("pickup canceled") ||
     raw.includes("ready for pickup") ||
     raw.includes("manifest")
   );
