@@ -27,6 +27,7 @@ type OrderRecord = {
   shipping_address?: JsonAddress | null;
   tracking_awb?: string | null;
   courier_name?: string | null;
+  shipping_status?: string | null;
   shipment_status?: string | null;
 };
 
@@ -174,7 +175,7 @@ export async function GET(request: Request) {
       db.auth.admin.listUsers({ page: 1, perPage: 1000 }),
       db
         .from("orders")
-        .select("id, order_number, user_id, customer_email, customer_phone, total_paise, status, payment_status, created_at, shipping_address, tracking_awb, courier_name, shipment_status")
+        .select("id, order_number, user_id, customer_email, customer_phone, total_paise, status, payment_status, created_at, shipping_address, tracking_awb, courier_name, shipping_status, shipment_status")
         .order("created_at", { ascending: false }),
       db.from("profiles").select("id, full_name, phone, created_at, updated_at"),
       db.from("wallets").select("id, email, user_id, balance_paise, created_at, updated_at"),
@@ -305,7 +306,7 @@ export async function GET(request: Request) {
           status: order.status,
           paymentStatus: order.payment_status,
           totalRupees: (Number(order.total_paise || 0) / 100).toFixed(2),
-          shipmentStatus: order.shipment_status || null,
+          shipmentStatus: order.shipping_status || order.shipment_status || null,
           trackingAwb: order.tracking_awb || null,
           courierName: order.courier_name || null,
         })),
@@ -374,7 +375,7 @@ export async function GET(request: Request) {
           status: order.status,
           paymentStatus: order.payment_status,
           totalRupees: (Number(order.total_paise || 0) / 100).toFixed(2),
-          shipmentStatus: order.shipment_status || null,
+          shipmentStatus: order.shipping_status || order.shipment_status || null,
           trackingAwb: order.tracking_awb || null,
           courierName: order.courier_name || null,
         })),

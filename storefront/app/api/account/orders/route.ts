@@ -14,7 +14,7 @@ type TrackingPayload = Record<string, unknown> & {
   tracking_data?: Record<string, unknown>;
   shipment_track?: Record<string, unknown> | Array<Record<string, unknown>>;
 };
-type OrderRow = Record<string, unknown> & { id: string; order_number: string; status?: string; tracking_awb?: string; courier_name?: string; tracking_url?: string; estimated_delivery_window?: string; invoice_number?: string; shipping_address?: Record<string, unknown>; shiprocket_order_id?: string; shipment_status?: string; shipment_status_updated_at?: string; admin_archived_at?: string; admin_archived_reason?: string; shiprocket_clone_count?: number; shiprocket_cloned_at?: string; last_shiprocket_sync_at?: string; shiprocket_sync_error?: string };
+type OrderRow = Record<string, unknown> & { id: string; order_number: string; status?: string; tracking_awb?: string; courier_name?: string; tracking_url?: string; estimated_delivery_window?: string; invoice_number?: string; shipping_address?: Record<string, unknown>; shiprocket_order_id?: string; shipping_status?: string; shipping_status_updated_at?: string; shipment_status?: string; shipment_status_updated_at?: string; admin_archived_at?: string; admin_archived_reason?: string; shiprocket_clone_count?: number; shiprocket_cloned_at?: string; last_shiprocket_sync_at?: string; shiprocket_sync_error?: string };
 type ItemRow = Record<string, unknown> & { order_id: string };
 
 function extractTracking(payload: TrackingPayload) {
@@ -51,7 +51,7 @@ export async function GET() {
   const db = supabaseAdmin();
   const { data: orders, error } = await db
     .from("orders")
-    .select("id,order_number,status,payment_status,currency,subtotal_paise,tax_paise,shipping_paise,total_paise,shiprocket_order_id,shiprocket_shipment_id,tracking_awb,courier_name,tracking_url,shipping_address,created_at,updated_at,estimated_delivery_window,invoice_number,shipment_status,shipment_status_updated_at,admin_archived_at,admin_archived_reason,shiprocket_clone_count,shiprocket_cloned_at,last_shiprocket_sync_at,shiprocket_sync_error")
+    .select("id,order_number,status,payment_status,currency,subtotal_paise,tax_paise,shipping_paise,total_paise,shiprocket_order_id,shiprocket_shipment_id,tracking_awb,courier_name,tracking_url,shipping_address,created_at,updated_at,estimated_delivery_window,invoice_number,shipping_status,shipping_status_updated_at,shipment_status,shipment_status_updated_at,admin_archived_at,admin_archived_reason,shiprocket_clone_count,shiprocket_cloned_at,last_shiprocket_sync_at,shiprocket_sync_error")
     .eq("customer_email", email)
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: "Could not load your orders." }, { status: 500 });
@@ -99,6 +99,8 @@ export async function GET() {
 
         if (liveStatus) {
           update.status = mapShiprocketStatus(liveStatus, Boolean(liveAwb));
+          update.shipping_status = liveStatus;
+          update.shipping_status_updated_at = now;
           update.shipment_status = liveStatus;
           update.shipment_status_updated_at = now;
         }
@@ -121,7 +123,7 @@ export async function GET() {
       }).eq("id", order.id);
     }
 
-    const effectiveRawStatus = liveStatus || order.shipment_status || order.status || "processing";
+    const effectiveRawStatus = liveStatus || order.shipping_status || order.shipment_status || order.status || "processing";
     const effectiveStatus = liveStatus
       ? mapShiprocketStatus(liveStatus, Boolean(liveAwb))
       : String(order.status || "processing");

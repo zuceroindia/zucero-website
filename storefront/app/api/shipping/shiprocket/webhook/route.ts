@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { notifyShipmentStatus } from "@/lib/notifications";
 import { formatAccurateEdd } from "@/lib/shiprocket";
-import { displayShippingStatus, mapShiprocketStatus } from "@/lib/shipping-status";
+import { buildShipmentEventKey, displayShippingStatus, mapShiprocketStatus } from "@/lib/shipping-status";
 
 function text(value: unknown) {
   return typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
@@ -137,6 +137,9 @@ export async function POST(request: Request) {
     const statusUpdatedAt = new Date().toISOString();
     const update: Record<string, unknown> = {
       status,
+      shipping_status: rawStatus,
+      shipping_status_updated_at: statusUpdatedAt,
+      // Keep legacy fields populated while older screens are migrated.
       shipment_status: rawStatus,
       shipment_status_updated_at: statusUpdatedAt,
       last_shiprocket_sync_at: statusUpdatedAt,
@@ -174,17 +177,46 @@ export async function POST(request: Request) {
     const { error } = await db.from("orders").update(update).eq("id", order.id);
     if (error) throw new Error(`Could not save shipment update: ${error.message}`);
 
-    const display = displayShippingStatus(rawStatus);
-    await notifyShipmentStatus(
-      order.id,
-      cloneDetected ? `Shiprocket order recreated · ${display}` : display
-    ).catch((notificationError) => {
-      console.error("Shipment notification failed", notificationError);
+    const eventKey = buildShipmentEventKey({
+      orderId: order.id,
+      shiprocketOrderId: shiprocketOrderId || existingShiprocketOrderId || null,
+      shipmentId: shipmentId || order.shiprocket_shipment_id || null,
+      awb: awb || null,
+      status: rawStatus,
+      edd: accurateEdd,
     });
+    const { error: shipmentEventError } = await db.from("shipment_events").insert({
+      order_id: order.id,
+      status: rawStatus,
+      payload: {
+        source: "shiprocket_webhook",
+        shiprocket_order_id: shiprocketOrderId || existingShiprocketOrderId || null,
+        shipment_id: shipmentId || order.shiprocket_shipment_id || null,
+        awb: awb || null,
+        courier: courier || null,
+        edd: accurateEdd,
+        raw: payload,
+      },
+      occurred_at: statusUpdatedAt,
+      event_key: eventKey,
+    });
+
+    const duplicateEvent = shipmentEventError?.code === "23505";
+    if (shipmentEventError && !duplicateEvent) {
+      console.error("Could not record Shiprocket shipment event", shipmentEventError);
+    }
+
+    if (!duplicateEvent) {
+      const display = displayShippingStatus(rawStatus);
+      await notifyShipmentStatus(order.id, display).catch((notificationError) => {
+        console.error("Shipment notification failed", notificationError);
+      });
+    }
 
     return NextResponse.json({
       received: true,
       matched: true,
+      duplicateEvent,
       orderNumber: order.order_number,
       status,
       shipmentStatus: rawStatus,

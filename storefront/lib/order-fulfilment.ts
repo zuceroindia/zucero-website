@@ -1,6 +1,5 @@
 import { products, resolveSku } from "@/lib/catalog";
-import { assignShiprocketAwb, createShiprocketOrder } from "@/lib/shiprocket";
-import { extractShiprocketSnapshot } from "@/lib/shipping-status";
+import { createShiprocketOrder } from "@/lib/shiprocket";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 function positiveNumber(value: string | undefined, fallback: number) {
@@ -130,6 +129,22 @@ export async function fulfilPaidOrder(orderId: string) {
     weight: Math.max(0.5, packageWeightGrams / 1000),
   };
 
+  const reservationKey = `shiprocket-create:${orderId}`;
+  const { error: reservationError } = await db.from("payment_events").insert({
+    provider: "internal",
+    provider_event_id: reservationKey,
+    event_type: "shiprocket.order_create_reserved",
+    payload: { order_id: orderId, order_number: claimed.order_number },
+    processed_at: new Date().toISOString(),
+  });
+
+  if (reservationError) {
+    if (reservationError.code === "23505") {
+      return { fulfilled: false, reason: "already_processing" };
+    }
+    throw new Error(`Could not reserve Shiprocket order creation: ${reservationError.message}`);
+  }
+
   try {
     const shiprocket = await createShiprocketOrder(payload) as { order_id?: number | string; shipment_id?: number | string };
     if (!shiprocket.order_id) throw new Error("Shiprocket did not return an order ID");
@@ -142,6 +157,8 @@ export async function fulfilPaidOrder(orderId: string) {
         shiprocket_order_id: shiprocketOrderId,
         shiprocket_shipment_id: shipmentId,
         status: "processing",
+        shipping_status: "Shiprocket order created",
+        shipping_status_updated_at: createdAt,
         shipment_status: "Shiprocket order created",
         shipment_status_updated_at: createdAt,
         last_shiprocket_sync_at: createdAt,
@@ -151,51 +168,42 @@ export async function fulfilPaidOrder(orderId: string) {
       .eq("id", orderId);
     if (updateError) throw new Error("Could not save Shiprocket order IDs");
 
-    if (shipmentId) {
-      try {
-        const assignment = await assignShiprocketAwb({ shipmentId });
-        const snapshot = extractShiprocketSnapshot(assignment);
-        const awb = snapshot.awb;
-        const courier = snapshot.courier;
-        const assignedAt = new Date().toISOString();
-        await db
-          .from("orders")
-          .update({
-            ...(awb ? { tracking_awb: awb, tracking_url: `https://shiprocket.co/tracking/${awb}` } : {}),
-            ...(courier ? { courier_name: courier } : {}),
-            shipment_status: awb ? "AWB assigned · Ready to ship" : "Courier assignment requested",
-            shipment_status_updated_at: assignedAt,
-            last_shiprocket_sync_at: assignedAt,
-            shiprocket_sync_error: null,
-            updated_at: assignedAt,
-          })
-          .eq("id", orderId);
+    await db.from("payment_events")
+      .update({
+        event_type: "shiprocket.order_created",
+        payload: {
+          order_id: orderId,
+          order_number: claimed.order_number,
+          shiprocket_order_id: shiprocketOrderId,
+          shiprocket_shipment_id: shipmentId,
+        },
+        processed_at: new Date().toISOString(),
+      })
+      .eq("provider", "internal")
+      .eq("provider_event_id", reservationKey);
 
-        return {
-          fulfilled: true,
-          shiprocketOrderId,
-          shipmentId,
-          awbAssigned: Boolean(awb),
-          trackingAwb: awb,
-          courierName: courier,
-        };
-      } catch (assignmentError) {
-        const detail = assignmentError instanceof Error ? assignmentError.message : "Shiprocket AWB assignment failed";
-        await db
-          .from("orders")
-          .update({
-            shiprocket_sync_error: detail.slice(0, 500),
-            last_shiprocket_sync_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", orderId);
-        console.error("Automatic Shiprocket AWB assignment failed:", assignmentError);
-      }
-    }
-
+    // Deliberately stop after creating the Shiprocket order.
+    // Courier/AWB assignment is an explicit merchant action inside Shiprocket.
+    // The Zucero website remains read-only for shipment assignment and only syncs status.
     return { fulfilled: true, shiprocketOrderId, shipmentId, awbAssigned: false };
   } catch (error) {
-    await db.from("orders").update({ status: "paid", updated_at: new Date().toISOString() }).eq("id", orderId);
+    const detail = error instanceof Error ? error.message : "Shiprocket order creation failed";
+    // Keep the reservation on an ambiguous external API failure. This is safer than
+    // automatically retrying and creating a duplicate Shiprocket order.
+    await db.from("payment_events")
+      .update({
+        event_type: "shiprocket.order_create_uncertain",
+        payload: { order_id: orderId, order_number: claimed.order_number, error: detail },
+        processed_at: new Date().toISOString(),
+      })
+      .eq("provider", "internal")
+      .eq("provider_event_id", reservationKey);
+    await db.from("orders").update({
+      status: "processing",
+      shiprocket_sync_error: detail.slice(0, 500),
+      last_shiprocket_sync_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq("id", orderId);
     throw error;
   }
 }
