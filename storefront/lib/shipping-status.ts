@@ -27,8 +27,66 @@ export type LocalOrderStatus =
   | "refunded"
   | "payment_failed";
 
+function normalizedCarrierStatus(rawStatus: unknown) {
+  return String(rawStatus ?? "").trim().toLowerCase().replaceAll("_", " ");
+}
+
+export function isPickupOnlyStatus(rawStatus: unknown): boolean {
+  const raw = normalizedCarrierStatus(rawStatus);
+  return (
+    raw.includes("out for pickup") ||
+    raw.includes("pickup exception") ||
+    raw.includes("pickup pending") ||
+    raw.includes("pickup scheduled") ||
+    raw.includes("pickup rescheduled") ||
+    raw.includes("ready for pickup") ||
+    raw.includes("manifest")
+  );
+}
+
+export function isCustomerShipmentMilestone(rawStatus: unknown): boolean {
+  const raw = normalizedCarrierStatus(rawStatus);
+  if (!raw || isPickupOnlyStatus(raw)) return false;
+  return (
+    raw.includes("shipped") ||
+    raw.includes("dispatched") ||
+    raw.includes("in transit") ||
+    raw.includes("picked up") ||
+    raw.includes("out for delivery") ||
+    raw.includes("delivered") ||
+    raw.includes("ndr") ||
+    raw.includes("undelivered") ||
+    raw.includes("delivery exception") ||
+    raw.includes("failed delivery") ||
+    raw.includes("rto") ||
+    raw.includes("return to origin") ||
+    raw.includes("returned to origin") ||
+    raw.includes("lost") ||
+    raw.includes("damaged") ||
+    raw.includes("cancel")
+  );
+}
+
+export function isMerchantShipmentAlert(rawStatus: unknown): boolean {
+  const raw = normalizedCarrierStatus(rawStatus);
+  if (!raw) return false;
+  if (isCustomerShipmentMilestone(raw)) return true;
+  return (
+    raw.includes("exception") ||
+    raw.includes("failed") ||
+    raw.includes("error") ||
+    raw.includes("rto") ||
+    raw.includes("return") ||
+    raw.includes("cancel")
+  );
+}
+
 export function mapShiprocketStatus(rawStatus: unknown, hasAwb = false): LocalOrderStatus {
-  const raw = String(rawStatus ?? "").trim().toLowerCase();
+  const raw = normalizedCarrierStatus(rawStatus);
+
+  // Pickup scheduling is an operational pre-dispatch state. Even with an AWB,
+  // it must not advance the customer order lifecycle to shipped/exception.
+  if (isPickupOnlyStatus(raw)) return "processing";
 
   if (raw.includes("cancel")) return "cancelled";
   if (raw.includes("delivered")) return "delivered";
@@ -54,11 +112,11 @@ export function mapShiprocketStatus(rawStatus: unknown, hasAwb = false): LocalOr
   }
   if (
     raw.includes("shipped") ||
+    raw.includes("dispatched") ||
     raw.includes("in transit") ||
-    raw.includes("in_transit") ||
-    raw.includes("picked") ||
-    raw.includes("pickup") ||
-    raw.includes("manifest") ||
+    raw.includes("picked up") ||
+    raw.includes("pickup done") ||
+    raw.includes("pickup complete") ||
     raw.includes("handover")
   ) {
     return "shipped";
