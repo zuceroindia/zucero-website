@@ -39,6 +39,8 @@ export async function POST(
     const trackingUrl = body.trackingUrl?.trim() || `https://shiprocket.co/tracking/${body.awb}`;
     const status = body.status?.trim() || "shipped";
 
+    const now = new Date().toISOString();
+    const exactStatus = "Dispatched & In Transit";
     const { error: updateError } = await db
       .from("orders")
       .update({
@@ -46,7 +48,11 @@ export async function POST(
         tracking_awb: body.awb,
         courier_name: courier,
         tracking_url: trackingUrl,
-        updated_at: new Date().toISOString(),
+        shipping_status: exactStatus,
+        shipping_status_updated_at: now,
+        shipment_status: exactStatus,
+        shipment_status_updated_at: now,
+        updated_at: now,
       })
       .eq("id", order.id);
 
