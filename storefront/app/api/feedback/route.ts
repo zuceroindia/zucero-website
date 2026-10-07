@@ -196,8 +196,6 @@ export async function POST(request: Request) {
         verified_purchase: true,
         source: "whatsapp_feedback",
         published_at: now,
-        customer_email: order.customer_email || null,
-        customer_phone: order.customer_phone || null,
         image_urls: imageUrls,
         updated_at: now,
       })
