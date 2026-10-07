@@ -6,8 +6,11 @@ import { ensureOutboundWhatsAppFeedbackTemplate } from "@/lib/whatsapp-outbound"
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
-  const raw = request.headers.get("x-zucero-bootstrap")?.trim();
+async function bootstrap(request: Request) {
+  const url = new URL(request.url);
+  const raw =
+    request.headers.get("x-zucero-bootstrap")?.trim() ||
+    url.searchParams.get("key")?.trim();
   if (!raw) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const digest = createHash("sha256").update(raw).digest("hex");
@@ -44,4 +47,12 @@ export async function POST(request: Request) {
   }).eq("id", event.id);
 
   return NextResponse.json(result, { status: result.success ? 200 : 400 });
+}
+
+export async function POST(request: Request) {
+  return bootstrap(request);
+}
+
+export async function GET(request: Request) {
+  return bootstrap(request);
 }
