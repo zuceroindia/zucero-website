@@ -246,6 +246,14 @@ function phone(value: string) {
 }
 
 
+function orderIsDelivered(order?: CustomerOrder | null) {
+  if (!order) return false;
+  if (String(order.status || "").toLowerCase() === "delivered") return true;
+  const carrier = String(order.shipmentStatus || "").toLowerCase();
+  if (/undelivered|not delivered|delivery failed/.test(carrier)) return false;
+  return /\bdelivered\b/.test(carrier);
+}
+
 function hasOpenServiceWindow(messages: Message[]) {
   const latestInbound = [...messages]
     .filter((message) => message.direction === "inbound")
@@ -406,7 +414,7 @@ export function AdminWhatsAppInbox() {
     if (!hasOpenServiceWindow(messages)) {
       setError("");
       setSuccessNote(
-        "Meta has closed the free-form reply window for this customer. Your custom draft is preserved. Use Order Confirmation or Order Update in the right panel to send immediately."
+        "Meta has closed the free-form reply window for this customer. Your custom draft is preserved. Use Order Confirmation, Order Update, or Feedback Request in the right panel to send immediately."
       );
       window.setTimeout(() => setSuccessNote(""), 7000);
       return;
@@ -506,6 +514,28 @@ export function AdminWhatsAppInbox() {
       setTimeout(() => setSuccessNote(""), 5000);
     } catch (err) {
       setError(friendlyWhatsAppError(err));
+    }
+  }
+
+  async function sendFeedbackTemplate(orderId: string) {
+    if (sending) return;
+    setSending(true);
+    setError("");
+    try {
+      const response = await fetch("/api/admin/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "send_feedback_request", orderId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not send feedback request");
+      setSuccessNote("Feedback Request template sent via Meta WhatsApp Cloud API!");
+      await load(true);
+      setTimeout(() => setSuccessNote(""), 5000);
+    } catch (err) {
+      setError(friendlyWhatsAppError(err));
+    } finally {
+      setSending(false);
     }
   }
 
@@ -1170,6 +1200,16 @@ export function AdminWhatsAppInbox() {
                     >
                       <Truck size={13} /> Order Update
                     </button>
+                    {orderIsDelivered(activeOrder) && (
+                      <button
+                        type="button"
+                        className={`${styles.orderActionBtn} ${styles.orderActionBtnPrimary}`}
+                        onClick={() => sendFeedbackTemplate(activeOrder.id)}
+                        title="Send approved Meta WhatsApp feedback request template"
+                      >
+                        <Sparkles size={13} /> Feedback Request
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -1210,15 +1250,24 @@ export function AdminWhatsAppInbox() {
                     key={item.id}
                     type="button"
                     className={styles.quickReplyChip}
-                    onClick={() =>
+                    onClick={() => {
+                      const isFeedbackReply = /ask for feedback/i.test(item.label);
+                      if (isFeedbackReply && activeOrder && !serviceWindowOpen) {
+                        if (!orderIsDelivered(activeOrder)) {
+                          setError("Feedback requests are available after the order is delivered.");
+                          return;
+                        }
+                        void sendFeedbackTemplate(activeOrder.id);
+                        return;
+                      }
                       setDraft(
                         applySavedReply(
                           item.body,
                           activeOrder,
                           selected?.profile_name || activeOrder?.customerName || undefined
                         )
-                      )
-                    }
+                      );
+                    }}
                   >
                     {item.label}
                   </button>
@@ -1256,6 +1305,14 @@ export function AdminWhatsAppInbox() {
                       >
                         <Truck size={13} /> Order Update
                       </button>
+                      {orderIsDelivered(activeOrder) && (
+                        <button
+                          type="button"
+                          onClick={() => sendFeedbackTemplate(activeOrder.id)}
+                        >
+                          <Sparkles size={13} /> Feedback Request
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
