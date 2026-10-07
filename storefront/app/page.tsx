@@ -10,6 +10,7 @@ import { StoryCarousel } from "@/components/story-carousel";
 import { SectionDivider } from "@/components/section-divider";
 import { LaunchListForm } from "@/components/launch-list-form";
 import { absoluteUrl, DEFAULT_OG_IMAGE } from "@/lib/seo";
+import { CustomerFeedbackSection } from "@/components/customer-feedback-section";
 
 export const metadata: Metadata = {
   title: "Desi Khand & Traditional Sugar Alternatives",
@@ -50,6 +51,7 @@ export default function Home() {
       <HeritageSections philosophy={<PhilosophySection />} />
       <DynamicCustomSections />
       <DynamicWhyZuceroSection />
+      <CustomerFeedbackSection />
       <DynamicLaunchListSection />
       <SiteFooter />
       <LocationConsent />
