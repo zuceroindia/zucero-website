@@ -437,3 +437,331 @@ export async function sendOutboundWhatsAppConfirmation(
     return { success: false, error: errorMsg };
   }
 }
+
+
+type FeedbackTemplateStatus = {
+  success: boolean;
+  name: string;
+  language: string;
+  status?: string;
+  templateId?: string;
+  category?: string;
+  created?: boolean;
+  error?: string;
+};
+
+const feedbackTemplateName = () =>
+  process.env.WHATSAPP_FEEDBACK_TEMPLATE_NAME?.trim() || "zucero_feedback_request";
+const feedbackTemplateLanguage = () =>
+  process.env.WHATSAPP_FEEDBACK_TEMPLATE_LANG?.trim() ||
+  process.env.WHATSAPP_TEMPLATE_LANG?.trim() ||
+  "en_US";
+const metaGraphVersion = () => process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v21.0";
+
+async function discoverWhatsAppBusinessAccountId(apiToken: string, phoneNumberId: string): Promise<string> {
+  const configured = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID?.trim();
+  if (configured) return configured;
+
+  const assignedResponse = await fetch(
+    `https://graph.facebook.com/${metaGraphVersion()}/me/assigned_whatsapp_business_accounts?fields=id,name&limit=50`,
+    {
+      headers: { Authorization: `Bearer ${apiToken}` },
+      cache: "no-store",
+    }
+  );
+  const assigned = await assignedResponse.json() as {
+    data?: Array<{ id?: string; name?: string }>;
+    error?: { message?: string };
+  };
+
+  if (!assignedResponse.ok) {
+    throw new Error(
+      assigned.error?.message ||
+      "Could not discover the WhatsApp Business Account. The Meta token needs whatsapp_business_management access."
+    );
+  }
+
+  for (const account of assigned.data || []) {
+    if (!account.id) continue;
+    const numbersResponse = await fetch(
+      `https://graph.facebook.com/${metaGraphVersion()}/${account.id}/phone_numbers?fields=id&limit=100`,
+      {
+        headers: { Authorization: `Bearer ${apiToken}` },
+        cache: "no-store",
+      }
+    );
+    if (!numbersResponse.ok) continue;
+    const numbers = await numbersResponse.json() as { data?: Array<{ id?: string }> };
+    if ((numbers.data || []).some((number) => String(number.id || "") === phoneNumberId)) {
+      return account.id;
+    }
+  }
+
+  throw new Error(
+    "Could not match the configured WhatsApp phone number to a Business Account. Set WHATSAPP_BUSINESS_ACCOUNT_ID or grant whatsapp_business_management to the Meta system-user token."
+  );
+}
+
+async function readFeedbackTemplate(
+  apiToken: string,
+  wabaId: string,
+  name: string,
+  language: string
+): Promise<FeedbackTemplateStatus | null> {
+  const response = await fetch(
+    `https://graph.facebook.com/${metaGraphVersion()}/${wabaId}/message_templates?fields=id,name,status,category,language,rejected_reason&limit=100`,
+    {
+      headers: { Authorization: `Bearer ${apiToken}` },
+      cache: "no-store",
+    }
+  );
+  const result = await response.json() as {
+    data?: Array<{
+      id?: string;
+      name?: string;
+      status?: string;
+      category?: string;
+      language?: string;
+      rejected_reason?: string;
+    }>;
+    error?: { message?: string };
+  };
+
+  if (!response.ok) {
+    throw new Error(result.error?.message || "Could not read WhatsApp message templates.");
+  }
+
+  const template = (result.data || []).find(
+    (item) => item.name === name && item.language === language
+  );
+  if (!template) return null;
+
+  return {
+    success: true,
+    name,
+    language,
+    status: template.status || "UNKNOWN",
+    templateId: template.id,
+    category: template.category,
+    error: template.rejected_reason || undefined,
+  };
+}
+
+export async function ensureOutboundWhatsAppFeedbackTemplate(): Promise<FeedbackTemplateStatus> {
+  const apiToken = process.env.WHATSAPP_API_TOKEN?.trim();
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  const name = feedbackTemplateName();
+  const language = feedbackTemplateLanguage();
+
+  if (!apiToken || !phoneNumberId) {
+    return { success: false, name, language, error: "Meta WhatsApp credentials are not configured." };
+  }
+
+  try {
+    const wabaId = await discoverWhatsAppBusinessAccountId(apiToken, phoneNumberId);
+    const existing = await readFeedbackTemplate(apiToken, wabaId, name, language);
+    if (existing) return existing;
+
+    const response = await fetch(
+      `https://graph.facebook.com/${metaGraphVersion()}/${wabaId}/message_templates`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          language,
+          category: "MARKETING",
+          allow_category_change: true,
+          components: [
+            {
+              type: "BODY",
+              text: "Hello {{1}}, thank you for choosing Zucero. We would love to hear about your experience with order #{{2}}. Please share a short review and, if you wish, a photo.",
+              example: {
+                body_text: [["Rupinder", "ZUC-12345"]],
+              },
+            },
+            {
+              type: "FOOTER",
+              text: "Zucero · The Good Sugar",
+            },
+            {
+              type: "BUTTONS",
+              buttons: [
+                {
+                  type: "URL",
+                  text: "Share Feedback",
+                  url: "https://www.thegoodsugar.in/feedback?order={{1}}",
+                  example: ["https://www.thegoodsugar.in/feedback?order=ZUC-12345"],
+                },
+              ],
+            },
+          ],
+        }),
+        cache: "no-store",
+      }
+    );
+
+    const result = await response.json() as {
+      id?: string;
+      status?: string;
+      category?: string;
+      error?: { message?: string };
+    };
+
+    if (!response.ok) {
+      return {
+        success: false,
+        name,
+        language,
+        error: result.error?.message || "Meta rejected the feedback template submission.",
+      };
+    }
+
+    return {
+      success: true,
+      name,
+      language,
+      status: result.status || "PENDING",
+      templateId: result.id,
+      category: result.category || "MARKETING",
+      created: true,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      name,
+      language,
+      error: error instanceof Error ? error.message : "Could not prepare the feedback template.",
+    };
+  }
+}
+
+function orderLooksDelivered(order: Record<string, unknown>) {
+  const commerce = String(order.status || "").toLowerCase();
+  const carrier = String(order.shipping_status || order.shipment_status || "").toLowerCase();
+  if (commerce === "delivered") return true;
+  if (/undelivered|not delivered|delivery failed/.test(carrier)) return false;
+  return /\bdelivered\b/.test(carrier);
+}
+
+export async function sendOutboundWhatsAppFeedbackRequest(orderId: string): Promise<OutboundWhatsAppResult> {
+  const db = supabaseAdmin();
+  const { data: order, error } = await db.from("orders").select("*").eq("id", orderId).single();
+  if (error || !order) return { success: false, reason: "order_not_found" };
+  if (!orderLooksDelivered(order as Record<string, unknown>)) {
+    return { success: false, reason: "order_not_delivered", error: "Feedback requests are available after delivery." };
+  }
+
+  const address = (order.shipping_address || {}) as WhatsAppAddress;
+  const rawPhone = order.customer_phone || address.phone;
+  if (!rawPhone) return { success: false, reason: "missing_phone" };
+
+  const recipient = normalizeWhatsAppRecipient(rawPhone);
+  if (!/^91[6-9]\d{9}$/.test(recipient)) {
+    return { success: false, reason: "invalid_phone" };
+  }
+
+  const apiToken = process.env.WHATSAPP_API_TOKEN?.trim();
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  if (!apiToken || !phoneNumberId) {
+    return { success: false, reason: "credentials_not_configured" };
+  }
+
+  const template = await ensureOutboundWhatsAppFeedbackTemplate();
+  if (!template.success) {
+    return { success: false, reason: "feedback_template_unavailable", error: template.error };
+  }
+  if (String(template.status || "").toUpperCase() !== "APPROVED") {
+    return {
+      success: false,
+      reason: "feedback_template_pending",
+      error: `The Meta feedback template is ${String(template.status || "PENDING").toLowerCase()}. It can be sent as soon as Meta approves it.`,
+    };
+  }
+
+  const customerName = address.fullName?.trim() || "Customer";
+  const orderNumber = String(order.order_number);
+  const feedbackUrl = `https://www.thegoodsugar.in/feedback?order=${encodeURIComponent(orderNumber)}`;
+
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/${metaGraphVersion()}/${phoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: recipient,
+          type: "template",
+          template: {
+            name: template.name,
+            language: { code: template.language },
+            components: [
+              {
+                type: "body",
+                parameters: [
+                  { type: "text", text: customerName },
+                  { type: "text", text: orderNumber },
+                ],
+              },
+              {
+                type: "button",
+                sub_type: "url",
+                index: "0",
+                parameters: [{ type: "text", text: orderNumber }],
+              },
+            ],
+          },
+        }),
+        cache: "no-store",
+      }
+    );
+
+    const result = await response.json() as MetaWhatsAppResponse;
+    if (!response.ok) {
+      return { success: false, error: metaWhatsAppErrorMessage(result) };
+    }
+
+    const messageId = result.messages?.[0]?.id;
+    const bodyText = `Hello ${customerName}, thank you for choosing Zucero. We would love to hear about your experience with order #${orderNumber}. Share your feedback: ${feedbackUrl}`;
+
+    if (messageId) {
+      await recordOutboundWhatsAppMessage({
+        recipient,
+        customerName,
+        bodyText,
+        metaMessageId: messageId,
+        messageType: "template",
+        rawPayload: result as Record<string, unknown>,
+      }).catch(() => null);
+    }
+
+    await db.from("payment_events").insert({
+      provider: "whatsapp",
+      provider_event_id: `feedback-request:sent:${order.id}:${messageId || Date.now()}`,
+      event_type: "whatsapp.feedback_request_sent",
+      payload: {
+        order_id: order.id,
+        order_number: orderNumber,
+        recipient,
+        template: template.name,
+        messageId,
+      },
+      processed_at: new Date().toISOString(),
+    }).catch?.(() => null);
+
+    return { success: true, messageId };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "WhatsApp feedback request dispatch exception",
+    };
+  }
+}
