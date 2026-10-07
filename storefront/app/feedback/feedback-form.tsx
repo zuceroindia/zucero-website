@@ -3,8 +3,10 @@
 import { FormEvent, useMemo, useState } from "react";
 import { Camera, CheckCircle2, Star } from "lucide-react";
 import styles from "@/app/feedback/feedback.module.css";
+import { useCMS } from "@/components/cms-provider";
 
 export function FeedbackForm({ initialOrder = "" }: { initialOrder?: string }) {
+  const { config } = useCMS();
   const [orderNumber, setOrderNumber] = useState(initialOrder);
   const [contact, setContact] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -20,6 +22,14 @@ export function FeedbackForm({ initialOrder = "" }: { initialOrder?: string }) {
     () => images.map((file) => file.name).join(", "),
     [images]
   );
+
+  const socialLinks = [
+    { label: "Instagram", href: config.contact.instagramUrl },
+    { label: "Facebook", href: config.contact.facebookUrl },
+    { label: "YouTube", href: config.contact.youtubeUrl },
+    { label: "LinkedIn", href: config.contact.linkedinUrl },
+    { label: "X", href: config.contact.twitterUrl },
+  ].filter((item): item is { label: string; href: string } => Boolean(item.href));
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -170,6 +180,23 @@ export function FeedbackForm({ initialOrder = "" }: { initialOrder?: string }) {
       <p className={styles.privacyNote}>
         For verification, your order contact is checked securely and is never displayed with your public review.
       </p>
+
+      {socialLinks.length > 0 && (
+        <div className={styles.followBlock}>
+          <div>
+            <p className="eyebrow">Follow Zucero</p>
+            <h3>Stay close to the good sugar.</h3>
+            <span>Recipes, serving ideas, product stories and everyday sweetness from Zucero.</span>
+          </div>
+          <div className={styles.socialLinks} role="group" aria-label="Follow Zucero on social media">
+            {socialLinks.map((item) => (
+              <a key={item.label} href={item.href} target="_blank" rel="noreferrer">
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </form>
   );
 }

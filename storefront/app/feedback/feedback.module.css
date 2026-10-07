@@ -34,3 +34,12 @@
 .privacyNote{font-size:.73rem;color:var(--muted);margin:0}
 @media(max-width:900px){.page{grid-template-columns:1fr}.intro{min-height:520px}.form{padding:4rem 7vw}.twoCol{grid-template-columns:1fr}}
 @media(max-width:640px){.page{min-height:calc(100svh - 92px)}.intro{padding:4.5rem 6vw;min-height:470px}.intro h1{font-size:clamp(3.4rem,16vw,5.4rem)}.form{padding:3.5rem 6vw}.promise{display:grid}.upload{grid-template-columns:auto 1fr}}
+
+.followBlock{margin-top:.35rem;padding:1.5rem;border:1px solid #c9beaa;background:#fffaf0;display:grid;gap:1rem}
+.followBlock .eyebrow{margin:0 0 .25rem}
+.followBlock h3{font:400 clamp(1.8rem,2.6vw,2.5rem)/1.05 var(--serif);margin:0 0 .45rem}
+.followBlock span{display:block;color:var(--muted);font-size:.86rem;max-width:560px}
+.socialLinks{display:flex;flex-wrap:wrap;gap:.55rem}
+.socialLinks a{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:.55rem .8rem;border:1px solid #b8973f;color:#5e481c;background:transparent;text-transform:uppercase;letter-spacing:.08em;font-size:.67rem;font-weight:600;transition:.2s}
+.socialLinks a:hover{background:#b8973f;color:#11130f}
+@media(max-width:640px){.socialLinks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.socialLinks a:last-child:nth-child(odd){grid-column:1/-1}}
