@@ -743,19 +743,21 @@ export async function sendOutboundWhatsAppFeedbackRequest(orderId: string): Prom
       }).catch(() => null);
     }
 
-    await db.from("payment_events").insert({
-      provider: "whatsapp",
-      provider_event_id: `feedback-request:sent:${order.id}:${messageId || Date.now()}`,
-      event_type: "whatsapp.feedback_request_sent",
-      payload: {
-        order_id: order.id,
-        order_number: orderNumber,
-        recipient,
-        template: template.name,
-        messageId,
-      },
-      processed_at: new Date().toISOString(),
-    }).catch?.(() => null);
+    try {
+      await db.from("payment_events").insert({
+        provider: "whatsapp",
+        provider_event_id: `feedback-request:sent:${order.id}:${messageId || Date.now()}`,
+        event_type: "whatsapp.feedback_request_sent",
+        payload: {
+          order_id: order.id,
+          order_number: orderNumber,
+          recipient,
+          template: template.name,
+          messageId,
+        },
+        processed_at: new Date().toISOString(),
+      });
+    } catch {}
 
     return { success: true, messageId };
   } catch (error) {
