@@ -7,7 +7,7 @@ import {
   sendWhatsAppTextReply,
   startWhatsAppConversation,
 } from "@/lib/whatsapp-inbox";
-import { sendOutboundWhatsAppConfirmation, sendOutboundWhatsAppOrderUpdate } from "@/lib/whatsapp-outbound";
+import { sendOutboundWhatsAppConfirmation, sendOutboundWhatsAppFeedbackRequest, sendOutboundWhatsAppOrderUpdate } from "@/lib/whatsapp-outbound";
 
 const idSchema = z.string().uuid();
 const sendSchema = z.object({
@@ -172,6 +172,21 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { error: result.error || result.reason || "Could not send order update template" },
           { status: 400 }
+        );
+      }
+      return NextResponse.json({ ok: true, messageId: result.messageId });
+    }
+
+    if (bodyJson.action === "send_feedback_request") {
+      const orderSchema = z.object({
+        orderId: z.string().uuid(),
+      });
+      const input = orderSchema.parse(bodyJson);
+      const result = await sendOutboundWhatsAppFeedbackRequest(input.orderId);
+      if (!result.success) {
+        return NextResponse.json(
+          { error: result.error || result.reason || "Could not send feedback request template" },
+          { status: result.reason === "feedback_template_pending" ? 409 : 400 }
         );
       }
       return NextResponse.json({ ok: true, messageId: result.messageId });
