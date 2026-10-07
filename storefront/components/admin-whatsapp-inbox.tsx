@@ -141,6 +141,7 @@ function applySavedReply(body: string, ord?: CustomerOrder, name?: string) {
     delivery_eta: ord?.estimatedDeliveryWindow || "Pending",
     address: ord?.deliveryAddress || "Saved delivery address",
     invoice_url: ord?.invoiceUrl || (ord ? `https://www.thegoodsugar.in/api/orders/${ord.id}/invoice` : ""),
+    feedback_link: ord ? `https://www.thegoodsugar.in/feedback?order=${encodeURIComponent(ord.orderNumber)}` : "https://www.thegoodsugar.in/feedback",
   };
   return body.replace(/\{\{([a-z_]+)\}\}/gi, (_, key: string) => values[key.toLowerCase()] ?? `{{${key}}}`);
 }
@@ -1371,7 +1372,7 @@ export function AdminWhatsAppInbox() {
               </div>
               <div className={styles.variableGuide}>
                 <strong>Live variables</strong>
-                <span>{"{{name}} {{order_number}} {{order_date}} {{order_status}} {{payment_status}} {{total}} {{items}} {{shipment_status}} {{shipment_updated_at}} {{courier}} {{awb}} {{tracking_url}} {{delivery_eta}} {{address}} {{invoice_url}}"}</span>
+                <span>{"{{name}} {{order_number}} {{order_date}} {{order_status}} {{payment_status}} {{total}} {{items}} {{shipment_status}} {{shipment_updated_at}} {{courier}} {{awb}} {{tracking_url}} {{delivery_eta}} {{address}} {{invoice_url}} {{feedback_link}}"}</span>
               </div>
               <div className={styles.modalActions}>
                 {templateId && (
