@@ -450,8 +450,11 @@ type FeedbackTemplateStatus = {
   error?: string;
 };
 
-const feedbackTemplateName = () =>
-  process.env.WHATSAPP_FEEDBACK_TEMPLATE_NAME?.trim() || "zucero_feedback_request";
+const feedbackTemplateName = () => {
+  const configured = process.env.WHATSAPP_FEEDBACK_TEMPLATE_NAME?.trim();
+  if (configured && configured !== "zucero_feedback_request") return configured;
+  return "zucero_feedback_request_v2";
+};
 const feedbackTemplateLanguage = () =>
   process.env.WHATSAPP_FEEDBACK_TEMPLATE_LANG?.trim() ||
   process.env.WHATSAPP_TEMPLATE_LANG?.trim() ||
@@ -578,9 +581,9 @@ export async function ensureOutboundWhatsAppFeedbackTemplate(): Promise<Feedback
           components: [
             {
               type: "BODY",
-              text: "Hello {{1}}, thank you for choosing Zucero. We would love to hear about your experience with order #{{2}}. Please share a short review and, if you wish, a photo.",
+              text: "Hello {{1}}, your Zucero order {{2}} has been delivered. If you would like to share feedback about your purchase, please use the button below.",
               example: {
-                body_text: [["Rupinder", "ZUC-12345"]],
+                body_text: [["Customer", "ZUC-12345"]],
               },
             },
             {
@@ -678,7 +681,9 @@ export async function sendOutboundWhatsAppFeedbackRequest(orderId: string): Prom
     return {
       success: false,
       reason: "feedback_template_pending",
-      error: `The Meta feedback template is ${String(template.status || "PENDING").toLowerCase()}. It can be sent as soon as Meta approves it.`,
+      error: String(template.status || "").toUpperCase() === "REJECTED"
+        ? "Meta rejected the Feedback Request template. A new template version must be approved before feedback messages can be sent."
+        : `The Meta feedback template is ${String(template.status || "PENDING").toLowerCase()}. It can be sent as soon as Meta approves it.`,
     };
   }
 
@@ -730,7 +735,7 @@ export async function sendOutboundWhatsAppFeedbackRequest(orderId: string): Prom
     }
 
     const messageId = result.messages?.[0]?.id;
-    const bodyText = `Hello ${customerName}, thank you for choosing Zucero. We would love to hear about your experience with order #${orderNumber}. Share your feedback: ${feedbackUrl}`;
+    const bodyText = `Hello ${customerName}, your Zucero order ${orderNumber} has been delivered. If you would like to share feedback about your purchase, please use this link: ${feedbackUrl}`;
 
     if (messageId) {
       await recordOutboundWhatsAppMessage({
