@@ -47,28 +47,28 @@ export const products: Product[] = [
         netWeightGrams: 330,
         weightGrams: 550,
         packedWeightGrams: 550,
-        pricePaise: 40000,
-        priceRupees: 400.00,
+        pricePaise: 42000,
+        priceRupees: 420.00,
         hsn: "1701",
         galleryPhotos: [
           { src: "/images/khand-branded-jar.png", label: "Single Origin Desi Khand 330 g jar" },
-          { src: "/images/labels/khand-330g-back.png", label: "Approved Nutrition Facts, Ingredients & MRP ₹400.00" },
+          
           { src: "/images/khand-matka-serving.png", label: "Fine Desi Khand served from a black matka" },
         ],
       },
       {
-        id: "khand-580",
-        label: "580 g",
-        sku: "ZUC-KHA-580",
-        netWeightGrams: 580,
+        id: "khand-680",
+        label: "680 g",
+        sku: "ZUC-KHA-680",
+        netWeightGrams: 680,
         weightGrams: 900,
-        packedWeightGrams: 900,
-        pricePaise: 68000,
-        priceRupees: 680.00,
+        packedWeightGrams: 1000,
+        pricePaise: 84000,
+        priceRupees: 840.00,
         hsn: "1701",
         galleryPhotos: [
-          { src: "/images/khand-branded-jar.png", label: "Single Origin Desi Khand 580 g jar" },
-          { src: "/images/labels/khand-580g-back.png", label: "Approved Nutrition Facts, Ingredients & MRP ₹680.00" },
+          { src: "/images/khand-branded-jar.png", label: "Single Origin Desi Khand 680 g jar" },
+          
           { src: "/images/khand-matka-serving.png", label: "Fine Desi Khand served from a black matka" },
         ],
       },
@@ -149,14 +149,16 @@ export function rupeesToPaise(rupees: number | null | undefined): number {
 
 export const LEGACY_VARIANT_ALIASES: Record<string, string> = {
   "khand-490": "khand-330",
-  "khand-990": "khand-580",
+  "khand-990": "khand-680",
+  "khand-580": "khand-680",
   "mishri-250": "mishri-280",
   "mishri-500": "mishri-580",
 };
 
 export const LEGACY_SKU_ALIASES: Record<string, string> = {
   "ZUC-KHA-490": "ZUC-KHA-330",
-  "ZUC-KHA-990": "ZUC-KHA-580",
+  "ZUC-KHA-990": "ZUC-KHA-680",
+  "ZUC-KHA-580": "ZUC-KHA-680",
   "ZUC-MIS-250": "ZUC-MIS-280",
   "ZUC-MIS-500": "ZUC-MIS-580",
 };
