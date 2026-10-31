@@ -1136,3 +1136,79 @@ footer h3{letter-spacing:.17em}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+/* Consistent alignment grid across editorial, commerce, and support pages. */
+:root{--page-gutter:clamp(1.25rem,6vw,7rem);--content-width:1320px}
+.hero-copy{left:var(--page-gutter)}
+.hero-proofs{width:min(var(--content-width),calc(100% - var(--page-gutter) - var(--page-gutter)))}
+.section-divider{width:min(var(--content-width),calc(100% - var(--page-gutter) - var(--page-gutter)));margin-inline:auto}
+.problem>.section-copy{width:min(1040px,calc(100% - var(--page-gutter) - var(--page-gutter)))}
+.section-shell,.heritage-collection,.heritage-philosophy,.heritage-founder,.heritage-rituals,.heritage-journal,.contact-section{padding-left:var(--page-gutter);padding-right:var(--page-gutter)}
+.heritage-columns{padding-left:var(--page-gutter);padding-right:var(--page-gutter);align-items:center}
+.heritage-collection>header{width:min(900px,100%);margin-inline:auto}
+.heritage-product-grid{width:min(1440px,100%);margin-inline:auto;align-items:stretch}
+.heritage-product-grid .heritage-product{height:100%;align-items:stretch}
+.heritage-product-grid .heritage-product-details{height:100%;align-items:flex-start}
+.heritage-product-grid .heritage-product-story{width:100%}
+.heritage-ritual-grid{align-items:stretch}
+.heritage-ritual-grid article{height:100%;display:flex;flex-direction:column;align-items:flex-start}
+.heritage-journal-grid{align-items:start}
+.nature-copy{margin-left:var(--page-gutter)}
+.nature-copy>p:not(.eyebrow){max-width:100%}
+.pdp-breadcrumb{width:min(1500px,100%);margin-inline:auto;padding-left:var(--page-gutter);padding-right:var(--page-gutter)}
+.pdp-page .product-detail{width:min(1500px,100%);margin-inline:auto;padding-left:var(--page-gutter);padding-right:var(--page-gutter);align-items:start}
+.pdp-page .purchase-panel{align-self:start}
+.pdp-page .purchase-panel>*{width:100%}
+.pdp-page .pdp-sizes{width:100%;grid-template-columns:repeat(2,minmax(0,1fr))}
+.pdp-gallery-column{min-width:0}
+.pdp-service-strip{padding-left:var(--page-gutter);padding-right:var(--page-gutter);align-items:stretch}
+.pdp-service-strip a{height:100%;justify-content:center}
+.pdp-difference>div{align-items:stretch}
+.pdp-difference article{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
+.pdp-information{padding-left:var(--page-gutter);padding-right:var(--page-gutter);align-items:start}
+.content-hero{padding-left:var(--page-gutter);padding-right:var(--page-gutter)}
+.content-shell{width:min(900px,calc(100% - var(--page-gutter) - var(--page-gutter)));margin-inline:auto;padding-top:clamp(3rem,6vw,6rem);padding-bottom:clamp(3rem,6vw,6rem)}
+.content-shell>*{max-width:100%}
+.contact-grid{width:min(var(--content-width),calc(100% - var(--page-gutter) - var(--page-gutter)));margin-inline:auto;grid-template-columns:minmax(260px,.8fr) minmax(0,1.2fr);align-items:start}
+.contact-details,.contact-form{height:100%}
+.contact-form{align-content:start}
+.cart-shell,.orders-shell{width:min(var(--content-width),calc(100% - var(--page-gutter) - var(--page-gutter)));padding-left:0;padding-right:0}
+.cart-layout{grid-template-columns:minmax(0,1fr) minmax(300px,390px);align-items:start}
+.cart-line{align-items:center}
+.cart-line>div:nth-child(2){align-self:center}
+.line-total{min-width:max-content}
+.checkout-layout{width:min(var(--content-width),calc(100% - var(--page-gutter) - var(--page-gutter)));padding-left:0;padding-right:0;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);align-items:start}
+.checkout-form,.checkout-summary{min-width:0}
+.checkout-summary{width:100%}
+.field-grid{align-items:start}
+.account-shell{grid-template-columns:minmax(0,1fr) minmax(360px,.9fr);align-items:center}
+.account-story,.account-card{width:100%;max-width:680px}
+.account-story{justify-self:end}
+.account-card{justify-self:start}
+.account-order-card{width:100%}
+footer{grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr));align-items:start}
+.footer-compliance{align-items:center}
+@media(max-width:900px){
+  .hero-copy{left:var(--page-gutter);right:var(--page-gutter)}
+  .pdp-page .product-detail{width:100%;padding-left:var(--page-gutter);padding-right:var(--page-gutter)}
+  .cart-layout,.checkout-layout{grid-template-columns:1fr}
+  .cart-shell,.orders-shell,.checkout-layout{width:calc(100% - var(--page-gutter) - var(--page-gutter))}
+  .contact-grid{width:calc(100% - var(--page-gutter) - var(--page-gutter));grid-template-columns:1fr}
+  .contact-details,.contact-form{height:auto}
+  .account-shell{grid-template-columns:1fr}
+  .account-story,.account-card{justify-self:center}
+}
+@media(max-width:640px){
+  :root{--page-gutter:1.2rem}
+  .section-shell,.heritage-collection,.heritage-philosophy,.heritage-founder,.heritage-rituals,.heritage-journal,.contact-section{padding-left:var(--page-gutter);padding-right:var(--page-gutter)}
+  .heritage-product-grid{width:100%}
+  .nature-copy{margin-inline:auto}
+  .pdp-breadcrumb{padding-left:var(--page-gutter);padding-right:var(--page-gutter)}
+  .pdp-page .product-detail{padding-left:var(--page-gutter);padding-right:var(--page-gutter)}
+  .pdp-service-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cart-shell,.orders-shell,.checkout-layout{width:calc(100% - var(--page-gutter) - var(--page-gutter))}
+  .cart-line{align-items:start}
+  .account-shell{padding-left:var(--page-gutter);padding-right:var(--page-gutter)}
+  footer{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .footer-brand,.footer-socials,.footer-compliance,.footer-bottom{grid-column:1/-1}
+}
