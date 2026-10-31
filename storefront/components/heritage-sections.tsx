@@ -13,7 +13,7 @@ export function PhilosophySection() {
   const layout = config.sectionLayouts?.["homepage.philosophy"];
   return <div className="heritage">
     <section id="philosophy" className="heritage-philosophy">
-      <SectionDivider number="05" title="Our Philosophy" />
+      <SectionDivider title="Our Philosophy" />
       <CMSSectionFrame layout={layout}>
         <h2>{config.homepage.philosophyHeading || "We believe in leaving good things alone."}</h2>
         <p>Nature has a remarkable way of getting things right.</p>
@@ -41,7 +41,7 @@ export function CollectionSection() {
       </p>
     </div>
     <section id="products" className="heritage-collection" style={{ ...cmsSectionStyle(layout), textAlign }}>
-      <div id="collection-title" className="collection-anchor"><SectionDivider number={config.homepage.collectionSectionNumber || "04"} title={config.homepage.collectionSectionTitle || "The Collection"} light /></div>
+      <div id="collection-title" className="collection-anchor"><SectionDivider title={config.homepage.collectionSectionTitle || "The Collection"} light /></div>
       <h2 className="sr-only">Explore Our Collection</h2>
       <CMSSectionFrame layout={layout}>
         <header>
@@ -64,7 +64,6 @@ export function CollectionSection() {
               sizes="(max-width: 760px) 88vw, 42vw"
             />
             <div className="heritage-image-title">
-              <span>No. 0{index + 1}</span>
               <h3>{product.name}</h3>
             </div>
           </div>
@@ -129,13 +128,13 @@ export function HeritageSections({ philosophy }: { philosophy: ReactNode }) {
           <p><strong>ZUCERO</strong><br /><em>The Good Sugar</em></p>
         </div>
       </div>
-      <div className="craft-steps">{[["Source", "Good begins at the source — with carefully selected sugarcane, chosen for its natural character and quality."], ["Purify", "Traditionally clarified using natural ingredients to remove unwanted impurities while preserving its natural character."], ["Crystallise", "Slowly transformed into crystals through the art of traditional craftsmanship."], ["Deliver", "Carefully packed and prepared to bring Zucero to your home."]].map(([title, copy], i) => <article key={title}><span className="eyebrow">0{i + 1}</span><h3>{title}</h3><p>{copy}</p></article>)}</div>
+      <div className="craft-steps">{[["Source", "Good begins at the source — with carefully selected sugarcane, chosen for its natural character and quality."], ["Purify", "Traditionally clarified using natural ingredients to remove unwanted impurities while preserving its natural character."], ["Crystallise", "Slowly transformed into crystals through the art of traditional craftsmanship."], ["Deliver", "Carefully packed and prepared to bring Zucero to your home."]].map(([title, copy]) => <article key={title}><h3>{title}</h3><p>{copy}</p></article>)}</div>
     </section>
     <CollectionSection />
     {philosophy}
-    <section className="heritage-dark heritage-slow" style={{ ...cmsSectionStyle(slowLayout), textAlign: cmsTextAlign(slowLayout) }}><SectionDivider number="06" title="Slow Sweetness" light /><div><span className="heritage-rule" /><p>There is something that happens when Mishri dissolves slowly in hot water. You wait for it. That waiting is the ritual. Not the sugar itself, but what it asks of you.</p></div><div className="heritage-panorama" style={{ ...(slowLayout?.imageHeightPx ? { minHeight: `${slowLayout.imageHeightPx}px`, height: `${slowLayout.imageHeightPx}px` } : {}), ...(slowLayout?.imageWidthPx ? { width: `${slowLayout.imageWidthPx}px`, maxWidth: "100%", marginLeft: "auto", marginRight: "auto" } : {}) }}><Image src={slowLayout?.image || "/images/slow-sweetness-ritual-v3.png"} alt={slowLayout?.imageAlt || "Brown Mishri beside a brass cup of morning chai"} fill sizes="100vw" /><div className="section-image-caption"><span>Everyday ritual</span><strong>Let sweetness<br />unfold slowly.</strong></div></div></section>
+    <section className="heritage-dark heritage-slow" style={{ ...cmsSectionStyle(slowLayout), textAlign: cmsTextAlign(slowLayout) }}><SectionDivider title="Slow Sweetness" light /><div><span className="heritage-rule" /><p>There is something that happens when Mishri dissolves slowly in hot water. You wait for it. That waiting is the ritual. Not the sugar itself, but what it asks of you.</p></div><div className="heritage-panorama" style={{ ...(slowLayout?.imageHeightPx ? { minHeight: `${slowLayout.imageHeightPx}px`, height: `${slowLayout.imageHeightPx}px` } : {}), ...(slowLayout?.imageWidthPx ? { width: `${slowLayout.imageWidthPx}px`, maxWidth: "100%", marginLeft: "auto", marginRight: "auto" } : {}) }}><Image src={slowLayout?.image || "/images/slow-sweetness-ritual-v3.png"} alt={slowLayout?.imageAlt || "Brown Mishri beside a brass cup of morning chai"} fill sizes="100vw" /><div className="section-image-caption"><span>Everyday ritual</span><strong>Let sweetness<br />unfold slowly.</strong></div></div></section>
     <section className="heritage-founder" style={{ ...cmsSectionStyle(founderLayout), textAlign: founderAlign }}>
-      <SectionDivider number="07" title="The Founder’s Point of View" />
+      <SectionDivider title="The Founder’s Point of View" />
       <Image
         src={config.homepage.founderImage || "/images/foundertamanna.webp"}
         alt={`${config.homepage.founderName || "Tamanna Sharma"}, founder of Zucero`}
@@ -159,12 +158,12 @@ export function HeritageSections({ philosophy }: { philosophy: ReactNode }) {
       <p><strong>ZUCERO<br />THE GOOD SUGAR</strong></p>
       <Link className="text-link" href="/our-story">Read the founder’s story →</Link>
     </section>
-    <section className="heritage-dark heritage-rituals"><SectionDivider number="08" title="Everyday Rituals" light /><CMSSectionFrame layout={ritualsLayout}><h2>Small moments,<br />made meaningful.</h2><div className="heritage-ritual-grid">{[
+    <section className="heritage-dark heritage-rituals"><SectionDivider title="Everyday Rituals" light /><CMSSectionFrame layout={ritualsLayout}><h2>Small moments,<br />made meaningful.</h2><div className="heritage-ritual-grid">{[
       ["Morning chai", "Stir a spoon of khand into strong cardamom tea. Start small and sweeten to your taste.", "desi-khand", "Meet Khand"],
       ["After-dinner pause", "Let a mishri crystal dissolve slowly beside a cup of warm water. Make a little room for the pause.", "dhage-wali-mishri", "Meet Mishri"],
       ["Slow baking", "Bring khand into cakes, puddings and time-honoured Indian sweets. Familiar ingredients, considered moments.", "desi-khand", "Bake with Khand"]
-    ].map(([title, copy, slug, cta], i) => <article key={title}><span className="eyebrow">0{i + 1}</span><h3>{title}</h3><p>{copy}</p><Link className="text-link" href={`/products/${slug}`}>{cta} →</Link></article>)}</div></CMSSectionFrame></section>
-    <section className="heritage-dark heritage-journal"><SectionDivider number="09" title="From the Journal" light /><CMSSectionFrame layout={journalLayout}><div className="heritage-journal-grid">{[
+    ].map(([title, copy, slug, cta]) => <article key={title}><h3>{title}</h3><p>{copy}</p><Link className="text-link" href={`/products/${slug}`}>{cta} →</Link></article>)}</div></CMSSectionFrame></section>
+    <section className="heritage-dark heritage-journal"><SectionDivider title="From the Journal" light /><CMSSectionFrame layout={journalLayout}><div className="heritage-journal-grid">{[
       ["morning-tea-ritual-v2.png", "Rituals", "The Ritual of Morning Tea", "A slower beginning, one cup at a time.", "morning-tea"],
       ["journal_editorial.webp", "Heritage", "The Hands Behind the Craft", "On the value of patience and traditional sugar-making.", "the-craft"]
     ].map(([img, tag, title, copy, slug]) => <Link href={`/journal#${slug}`} key={slug}><div className="heritage-picture"><Image src={`/images/${img}`} alt={title} fill sizes="(max-width: 760px) 88vw, 43vw" /><div className="section-image-caption"><span>{tag}</span><strong>{title}</strong></div></div><p>{copy}</p><span className="text-link">Read story →</span></Link>)}</div><Link className="button" href="/journal">View all stories</Link></CMSSectionFrame></section>

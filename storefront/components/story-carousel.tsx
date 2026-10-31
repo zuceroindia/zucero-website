@@ -49,7 +49,6 @@ export function StoryCarousel() {
       </div>
       <button className="carousel-arrow carousel-arrow-left" type="button" onClick={() => moveTo(activeIndex - 1)} aria-label="Previous Zucero story"><ChevronLeft aria-hidden="true" /></button>
       <button className="carousel-arrow carousel-arrow-right" type="button" onClick={() => moveTo(activeIndex + 1)} aria-label="Next Zucero story"><ChevronRight aria-hidden="true" /></button>
-      <p className="carousel-status" aria-live="polite">{activeIndex + 1} / {stories.length}</p>
     </section>
   );
 }

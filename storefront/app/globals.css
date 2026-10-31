@@ -705,14 +705,12 @@ p,li,summary,label,input,textarea,select{letter-spacing:.002em}
 .carousel-arrow:focus-visible{outline:2px solid var(--cream);outline-offset:3px}
 .carousel-arrow-left{left:18px}
 .carousel-arrow-right{right:18px}
-.carousel-status{position:absolute;z-index:2;right:76px;bottom:15px;margin:0;color:#ead7ad;font-size:.7rem;letter-spacing:.12em}
 @media(max-width:640px){
   .story-carousel{padding:8px 0}
   .carousel-viewport .marquee-image{width:82vw;height:56vw;max-height:235px;flex-basis:82vw}
   .carousel-arrow{width:40px;height:40px}
   .carousel-arrow-left{left:10px}
   .carousel-arrow-right{right:10px}
-  .carousel-status{right:62px;bottom:12px}
 }
 @media(prefers-reduced-motion:reduce){.carousel-viewport{scroll-behavior:auto}}
 

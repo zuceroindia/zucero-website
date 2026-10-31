@@ -115,7 +115,7 @@ export function DynamicProblemSection() {
 
   return (
     <section id="problem" className="problem">
-      <SectionDivider number="01" title={hp.sugarProblemEyebrow || "The Sugar Problem"} />
+      <SectionDivider title={hp.sugarProblemEyebrow || "The Sugar Problem"} />
       <CMSSectionFrame layout={layout}>
         <div className="section-copy">
           <header className="problem-heading">
@@ -174,8 +174,8 @@ export function DynamicWhyZuceroSection() {
 
   return (
     <section className="why-zucero section-shell">
-      <SectionDivider number="10" title={hp.whyZuceroEyebrow || "Why Zucero Exists"} />
-      <CMSSectionFrame layout={layout}>
+      <SectionDivider title={hp.whyZuceroEyebrow || "Why Zucero Exists"} />
+      <CMSSectionFrame layout={{ ...layout, textAlign: "center" }}>
         <h2>{hp.whyZuceroHeading || "We question what goes into everything else. Why not sugar?"}</h2>
         {hp.whyZuceroParagraphs?.map((paragraph, idx) => (
           <p key={idx} style={{ whiteSpace: "pre-line" }}>
@@ -201,7 +201,7 @@ export function DynamicLaunchListSection() {
 
   return (
     <section id="contact" className="contact-section">
-      <SectionDivider number="11" title={hp.launchListEyebrow || "The Launch List"} light />
+      <SectionDivider title={hp.launchListEyebrow || "The Launch List"} light />
       <CMSSectionFrame layout={layout}>
         <div>
           <h2>{hp.launchListHeading || "Be first to taste the good sugar."}</h2>

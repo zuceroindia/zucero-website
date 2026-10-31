@@ -129,7 +129,6 @@ export type CMSHomepage = {
   natureSolutionImage: string;
   collectionIntroLine1: string;
   collectionIntroLine2: string;
-  collectionSectionNumber: string;
   collectionSectionTitle: string;
   collectionSubtitle: string;
   collectionProductStories: Record<string, string>;
@@ -291,7 +290,7 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
       { title: "MINDFUL SWEETNESS", description: "A natural alternative to refined sugar" },
       { title: "DELICATE SWEETNESS", description: "Light, subtle and naturally sweet" },
     ],
-    sugarProblemEyebrow: "01 · The Sugar Problem",
+    sugarProblemEyebrow: "The Sugar Problem",
     sugarProblemHeading: "Sweetness lost its story.",
     sugarProblemParagraphs: [
       "Sugar begins with something beautifully simple.",
@@ -312,7 +311,6 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
     natureSolutionImage: "/images/nature-solution-field-v3.png",
     collectionIntroLine1: "Luxury is not about adding more.",
     collectionIntroLine2: "It’s about preserving what truly matters.",
-    collectionSectionNumber: "04",
     collectionSectionTitle: "The Collection",
     collectionSubtitle: "Each one distinct. Each one with a story older than the brand.",
     collectionProductStories: {
@@ -339,7 +337,7 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
       "For her, Zucero is not just about bringing back traditional sugar alternatives. It is about restoring integrity to a category where claims often blur the truth.",
       "Her vision is simple: create a modern, conscious food brand that stands for purity without compromise, provenance without pretence, and an unwavering respect for the intelligence of the consumer.",
     ],
-    whyZuceroEyebrow: "10 · Why Zucero Exists",
+    whyZuceroEyebrow: "Why Zucero Exists",
     whyZuceroHeading: "We question what goes into everything else. Why not sugar?",
     whyZuceroParagraphs: [
       "We know where our coffee comes from. We ask about our milk. We read the labels on what we eat.",
@@ -351,7 +349,7 @@ export const DEFAULT_CMS_CONFIG: CMSConfig = {
     whyZuceroBannerTitle: "Experience the goodness of the first batch",
     whyZuceroBannerSubtitle: "Exclusive referral access · Deliveries begin",
     whyZuceroButtonText: "Explore the collection",
-    launchListEyebrow: "11 · The Launch List",
+    launchListEyebrow: "The Launch List",
     launchListHeading: "Be first to taste the good sugar.",
     launchListSubtitle: "Get launch availability, founder notes, and early product access. No noisy inbox.",
     customSections: [],

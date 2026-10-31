@@ -60,7 +60,6 @@ export function ProductGallery({ product, selectedVariantId }: { product: Produc
           >
             <ChevronLeft />
           </button>
-          <span aria-live="polite">{safeActive + 1} / {photos.length}</span>
           <button
             type="button"
             aria-label="Next image"
