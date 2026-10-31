@@ -36,7 +36,7 @@ export const products: Product[] = [
     name: "Single Origin Desi Khand",
     eyebrow: "Natural unrefined cane sugar",
     description: "Born from fresh sugarcane juice. Shaped by time. Crafted to preserve its natural character.",
-    image: "/images/khand-product-story-2026.png",
+    image: "/images/khand-hero-2026.jpg",
     ingredients: "Sugarcane juice, desi cow milk and desi cow ghee. Contains milk.",
     variants: [
       {
@@ -50,7 +50,7 @@ export const products: Product[] = [
         priceRupees: 420.00,
         hsn: "1701",
         galleryPhotos: [
-          { src: "/images/khand-product-story-2026.png", label: "Single Origin Desi Khand jar with sugarcane and golden Khand" },
+          { src: "/images/khand-hero-2026.jpg", label: "Single Origin Desi Khand jar with sugarcane and golden Khand" },
           { src: "/images/khand-collage-01.jpg", label: "Desi Khand jar and product" },
           { src: "/images/khand-collage-02.jpg", label: "Why choose Zucero Desi Khand" },
           { src: "/images/khand-collage-03.jpg", label: "Desi Khand with a cup of tea" },
@@ -70,7 +70,7 @@ export const products: Product[] = [
         priceRupees: 840.00,
         hsn: "1701",
         galleryPhotos: [
-          { src: "/images/khand-product-story-2026.png", label: "Single Origin Desi Khand jar with sugarcane and golden Khand" },
+          { src: "/images/khand-hero-2026.jpg", label: "Single Origin Desi Khand jar with sugarcane and golden Khand" },
           { src: "/images/khand-collage-01.jpg", label: "Desi Khand jar and product" },
           { src: "/images/khand-collage-02.jpg", label: "Why choose Zucero Desi Khand" },
           { src: "/images/khand-collage-03.jpg", label: "Desi Khand with a cup of tea" },
