@@ -1188,6 +1188,9 @@ footer h3{letter-spacing:.17em}
 .account-order-card{width:100%}
 footer{grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr));align-items:start}
 .footer-compliance{align-items:center}
+/* Product-story artwork is square; keep the full campaign image visible even when CMS sizing is configured. */
+.heritage-product-grid .heritage-picture{height:auto!important;min-height:0!important;aspect-ratio:1/1!important}
+.heritage-product-grid .heritage-picture img{object-fit:contain!important;object-position:center;background:transparent}
 @media(max-width:900px){
   .hero-copy{left:var(--page-gutter);right:var(--page-gutter)}
   .pdp-page .product-detail{width:100%;padding-left:var(--page-gutter);padding-right:var(--page-gutter)}
