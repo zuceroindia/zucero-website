@@ -698,35 +698,24 @@ export function mergeWithDefaultCMS(partial?: Partial<CMSConfig> | null): CMSCon
     },
     products:
       Array.isArray(partial.products) && partial.products.length > 0
-        ? partial.products.map((p: Partial<Product>, idx: number) => {
-            const defProd = DEFAULT_CMS_CONFIG.products.find((d: Product) => d.slug === p.slug) ?? DEFAULT_CMS_CONFIG.products[idx] ?? (p as Product);
+        ? DEFAULT_CMS_CONFIG.products.map((defProd: Product, idx: number) => {
+            const p = partial.products?.find((candidate) => candidate.slug === defProd.slug)
+              ?? partial.products?.[idx];
+            if (!p) return defProd;
+
+            // Catalog values and product photography are versioned with the app.
+            // A saved CMS snapshot can outlive a catalog update, so it must not
+            // restore retired sizes, prices, or images over the current products.
             return {
               ...defProd,
               ...p,
-              variants: Array.isArray(p.variants)
-                ? p.variants.map((v: Partial<ProductVariant>, vIdx: number) => {
-                    const defVar = defProd.variants?.find((dv: ProductVariant) => dv.id === v.id) ?? defProd.variants?.[vIdx] ?? (v as ProductVariant);
-                    const hasPriceRupees = typeof v.priceRupees === "number";
-                    const hasPricePaise = typeof v.pricePaise === "number";
-                    const priceRupees = hasPriceRupees
-                      ? v.priceRupees!
-                      : hasPricePaise
-                        ? v.pricePaise! / 100
-                        : null;
-                    const pricePaise = hasPricePaise
-                      ? v.pricePaise!
-                      : hasPriceRupees
-                        ? Math.round(v.priceRupees! * 100)
-                        : null;
-                    return {
-                      ...defVar,
-                      ...v,
-                      priceRupees,
-                      pricePaise,
-                      galleryPhotos: Array.isArray(v.galleryPhotos) ? v.galleryPhotos : defVar.galleryPhotos ?? [],
-                    };
-                  })
-                : defProd.variants,
+              image: defProd.image,
+              cartImage: defProd.cartImage,
+              variants: defProd.variants.map((defVar: ProductVariant, vIdx: number) => {
+                const v = p.variants?.find((candidate) => candidate.id === defVar.id)
+                  ?? p.variants?.[vIdx];
+                return v ? { ...v, ...defVar } : defVar;
+              }),
             };
           })
         : JSON.parse(JSON.stringify(DEFAULT_CMS_CONFIG.products)),
