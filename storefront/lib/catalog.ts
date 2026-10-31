@@ -27,8 +27,7 @@ export type Product = {
   variants: ProductVariant[];
 };
 
-// India launch prices are before GST as shown on printed labels.
-// Checkout adds GST based on the delivery state.
+// India catalog prices are before GST; checkout adds GST based on the delivery state.
 // weightGrams remains a conservative shipping-weight alias for checkout serviceability.
 // packedWeightGrams is the packed weight used for direct PIN checks and Shiprocket fulfilment.
 export const products: Product[] = [
@@ -37,7 +36,7 @@ export const products: Product[] = [
     name: "Single Origin Desi Khand",
     eyebrow: "Natural unrefined cane sugar",
     description: "Born from fresh sugarcane juice. Shaped by time. Crafted to preserve its natural character.",
-    image: "/images/khand-branded-jar.png",
+    image: "/images/khand-hero-2026.jpg",
     ingredients: "Sugarcane juice, desi cow milk and desi cow ghee. Contains milk.",
     variants: [
       {
@@ -51,9 +50,14 @@ export const products: Product[] = [
         priceRupees: 420.00,
         hsn: "1701",
         galleryPhotos: [
-          { src: "/images/khand-branded-jar.png", label: "Single Origin Desi Khand 330 g jar" },
-          
-          { src: "/images/khand-matka-serving.png", label: "Fine Desi Khand served from a black matka" },
+          { src: "/images/khand-hero-2026.jpg", label: "Single Origin Desi Khand jar with sugarcane and golden Khand" },
+          { src: "/images/khand-collage-full.jpeg", label: "Desi Khand product and story collage" },
+          { src: "/images/khand-collage-01.jpg", label: "Desi Khand jar and product" },
+          { src: "/images/khand-collage-02.jpg", label: "Why choose Zucero Desi Khand" },
+          { src: "/images/khand-collage-03.jpg", label: "Desi Khand with a cup of tea" },
+          { src: "/images/khand-collage-04.jpg", label: "Desi Khand in everyday recipes" },
+          { src: "/images/khand-collage-05.jpg", label: "Traditional Desi Khand process" },
+          { src: "/images/khand-collage-06.jpg", label: "Golden Desi Khand powder" },
         ],
       },
       {
@@ -67,9 +71,14 @@ export const products: Product[] = [
         priceRupees: 840.00,
         hsn: "1701",
         galleryPhotos: [
-          { src: "/images/khand-branded-jar.png", label: "Single Origin Desi Khand 680 g jar" },
-          
-          { src: "/images/khand-matka-serving.png", label: "Fine Desi Khand served from a black matka" },
+          { src: "/images/khand-hero-2026.jpg", label: "Single Origin Desi Khand jar with sugarcane and golden Khand" },
+          { src: "/images/khand-collage-full.jpeg", label: "Desi Khand product and story collage" },
+          { src: "/images/khand-collage-01.jpg", label: "Desi Khand jar and product" },
+          { src: "/images/khand-collage-02.jpg", label: "Why choose Zucero Desi Khand" },
+          { src: "/images/khand-collage-03.jpg", label: "Desi Khand with a cup of tea" },
+          { src: "/images/khand-collage-04.jpg", label: "Desi Khand in everyday recipes" },
+          { src: "/images/khand-collage-05.jpg", label: "Traditional Desi Khand process" },
+          { src: "/images/khand-collage-06.jpg", label: "Golden Desi Khand powder" },
         ],
       },
     ],
@@ -79,8 +88,8 @@ export const products: Product[] = [
     name: "Original Khand Dhaga Mishri",
     eyebrow: "From the abundance of sugarcane to the rarity of every crystal",
     description: "Crafted crystal by crystal through an age-old Indian thread technique, preserving its distinctive colour, delicate sweetness and refined crunch.",
-    image: "/images/mishri-jar-lifestyle.png",
-    cartImage: "/images/mishri-jar-lifestyle.png",
+    image: "/images/mishri-jar-2026.jpg",
+    cartImage: "/images/mishri-jar-2026.jpg",
     ingredients: "Sugarcane juice, desi cow milk and desi cow ghee. Contains milk.",
     variants: [
       {
@@ -90,13 +99,18 @@ export const products: Product[] = [
         netWeightGrams: 280,
         weightGrams: 450,
         packedWeightGrams: 450,
-        pricePaise: 63000,
-        priceRupees: 630.00,
+        pricePaise: 67000,
+        priceRupees: 670.00,
         hsn: "1702",
         galleryPhotos: [
-          { src: "/images/mishri-jar-lifestyle.png", label: "Original Khand Dhaga Mishri 280 g jar" },
-          { src: "/images/labels/mishri-280g-back.png", label: "Approved Nutrition Facts, Ingredients & MRP ₹630.00" },
-          { src: "/images/mishri-raw-hero.png", label: "Brown Mishri served in a silver bowl" },
+          { src: "/images/mishri-jar-2026.jpg", label: "Original Khand Dhaga Mishri jar with golden crystals" },
+          { src: "/images/mishri-collage-full.jpeg", label: "Original Khand Dhaga Mishri product collage" },
+          { src: "/images/mishri-collage-01.jpg", label: "Golden Mishri crystals on a wooden surface" },
+          { src: "/images/mishri-collage-02.jpg", label: "Close view of Mishri crystal texture" },
+          { src: "/images/mishri-collage-03.jpg", label: "Mishri crystal texture detail" },
+          { src: "/images/mishri-collage-04.jpg", label: "Mishri crystals in a traditional bowl" },
+          { src: "/images/mishri-collage-05.jpg", label: "A Mishri crystal held in the hand" },
+          { src: "/images/mishri-collage-06.jpg", label: "Mishri crystals in a wooden bowl" },
         ],
       },
       {
@@ -106,13 +120,18 @@ export const products: Product[] = [
         netWeightGrams: 580,
         weightGrams: 900,
         packedWeightGrams: 900,
-        pricePaise: 110000,
-        priceRupees: 1100.00,
+        pricePaise: 139900,
+        priceRupees: 1399.00,
         hsn: "1702",
         galleryPhotos: [
-          { src: "/images/mishri-jar-lifestyle.png", label: "Original Khand Dhaga Mishri 580 g jar" },
-          { src: "/images/labels/mishri-580g-back.png", label: "Approved Nutrition Facts, Ingredients & MRP ₹1,100.00" },
-          { src: "/images/mishri-raw-hero.png", label: "Brown Mishri served in a silver bowl" },
+          { src: "/images/mishri-jar-2026.jpg", label: "Original Khand Dhaga Mishri jar with golden crystals" },
+          { src: "/images/mishri-collage-full.jpeg", label: "Original Khand Dhaga Mishri product collage" },
+          { src: "/images/mishri-collage-01.jpg", label: "Golden Mishri crystals on a wooden surface" },
+          { src: "/images/mishri-collage-02.jpg", label: "Close view of Mishri crystal texture" },
+          { src: "/images/mishri-collage-03.jpg", label: "Mishri crystal texture detail" },
+          { src: "/images/mishri-collage-04.jpg", label: "Mishri crystals in a traditional bowl" },
+          { src: "/images/mishri-collage-05.jpg", label: "A Mishri crystal held in the hand" },
+          { src: "/images/mishri-collage-06.jpg", label: "Mishri crystals in a wooden bowl" },
         ],
       },
     ],

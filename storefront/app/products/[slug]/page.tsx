@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       ? "Original Khand Dhaga Mishri | Dhage Wali Mishri"
       : product.name;
   const description = isKhand
-    ? "Explore Zucero Single Origin Desi Khand, traditionally crafted from sugarcane. See ingredients, approved 330 g & 580 g sizes, uses, pricing and shipping information."
+    ? "Explore Zucero Single Origin Desi Khand, traditionally crafted from sugarcane. See ingredients, approved 330 g & 680 g sizes, uses, pricing and shipping information."
     : isMishri
       ? "Explore Zucero Original Khand Dhaga Mishri, slowly crystallised using the traditional thread technique. See ingredients, approved 280 g & 580 g sizes, pricing and product information."
       : product.description;
