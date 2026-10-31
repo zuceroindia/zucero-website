@@ -17,7 +17,7 @@ export function DynamicHeroSection() {
   const layout = config.sectionLayouts?.["homepage.hero"];
   const highlightsLayout = config.sectionLayouts?.["homepage.highlights"];
   const textAlign = "left";
-  const contentJustify = textAlign === "center" ? "center" : textAlign === "right" ? "flex-end" : "flex-start";
+  const contentJustify = "flex-start";
 
   const highlights = hp.highlights && hp.highlights.length > 0
     ? hp.highlights
