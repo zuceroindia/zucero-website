@@ -15,5 +15,13 @@
 .reviewer strong{font-size:.86rem}
 .reviewer span{display:inline-flex;align-items:center;gap:.35rem;color:#56714f;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
 .empty,.loading{border:1px solid rgba(29,27,25,.14);padding:3rem;text-align:center;color:var(--muted);display:grid;justify-items:center;gap:1rem}
+.section{background:linear-gradient(180deg,#f7f4ec,#f0ebdf)}
+.grid{gap:1rem;background:transparent;border:0}
+.card{overflow:hidden;border:1px solid rgba(35,45,35,.1);border-radius:4px;box-shadow:0 14px 38px rgba(19,31,21,.07);transition:transform .25s ease,box-shadow .25s ease}
+.card:hover{transform:translateY(-4px);box-shadow:0 22px 48px rgba(19,31,21,.13)}
+.imageWrap img{transition:transform .55s cubic-bezier(.2,.65,.3,1)}
+.card:hover .imageWrap img{transform:scale(1.035)}
+.cardBody{padding:clamp(1.3rem,2.5vw,2rem)}
+.reviewer{border-top-color:rgba(29,27,25,.1)}
 @media(max-width:1000px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.heading{align-items:start}}
 @media(max-width:700px){.section{padding:5rem 6vw}.heading{display:grid;gap:1.5rem}.grid{grid-template-columns:1fr}.card blockquote{font-size:1.4rem}.reviewer{align-items:flex-start;flex-direction:column}}
