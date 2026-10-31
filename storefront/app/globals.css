@@ -1191,6 +1191,19 @@ footer{grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr));align-items
 /* Product-story artwork is square; keep the full campaign image visible even when CMS sizing is configured. */
 .heritage-product-picture{display:block;width:100%;height:auto!important;min-height:0!important;aspect-ratio:1/1!important;flex:0 0 auto}
 .heritage-product-picture img{object-fit:contain!important;object-position:center;background:transparent}
+.mishri-gallery-story{position:absolute;z-index:2;inset:0 0 0 auto;width:clamp(170px,34%,270px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(.45rem,1.1vw,.9rem);padding:clamp(.8rem,2vw,1.5rem);border-left:1px solid rgba(29,55,37,.18);background:linear-gradient(90deg,rgba(247,242,224,.9),rgba(250,247,236,.97) 22%,#faf7ec 100%);color:#10291d;text-align:center;pointer-events:none}
+.mishri-gallery-story>img{width:min(112px,68%);height:auto;object-fit:contain}
+.mishri-gallery-story h2{margin:0;font-family:var(--serif);font-size:clamp(1.05rem,2vw,1.6rem);font-weight:500;line-height:1.05;text-wrap:balance}
+.mishri-gallery-story p{margin:0;font-family:var(--serif);font-size:clamp(.78rem,1.3vw,1rem);font-style:italic;line-height:1.25}
+.mishri-gallery-story ul{display:grid;gap:.55rem;margin:.25rem 0 0;padding:0;list-style:none;font-size:clamp(.65rem,.92vw,.78rem);line-height:1.25}
+.mishri-gallery-story li{padding-top:.5rem;border-top:1px solid rgba(25,57,36,.22)}
+@media(max-width:640px){
+  .mishri-gallery-story{width:42%;min-width:150px;padding:.8rem;gap:.55rem}
+  .mishri-gallery-story>img{width:76px}
+  .mishri-gallery-story h2{font-size:1rem}
+  .mishri-gallery-story p{font-size:.78rem}
+  .mishri-gallery-story ul{gap:.35rem;font-size:.65rem}
+}
 @media(max-width:900px){
   .hero-copy{left:var(--page-gutter);right:var(--page-gutter)}
   .pdp-page .product-detail{width:100%;padding-left:var(--page-gutter);padding-right:var(--page-gutter)}

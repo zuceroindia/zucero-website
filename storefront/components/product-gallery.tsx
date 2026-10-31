@@ -19,10 +19,11 @@ export function ProductGallery({ product, selectedVariantId }: { product: Produc
   const safeActive = active >= photos.length ? 0 : active;
   const currentPhoto = photos[safeActive];
   const isLabel = currentPhoto.src.includes("/labels/");
+  const showMishriStory = product.slug === "dhage-wali-mishri" && safeActive > 0;
 
   return (
     <div className="pdp-gallery">
-      <div className={`pdp-main-image ${isLabel ? "is-label-view" : ""}`}>
+      <div className={`pdp-main-image ${isLabel ? "is-label-view" : ""} ${showMishriStory ? "has-mishri-story" : ""}`}>
         <button
           type="button"
           className={`pdp-zoom ${isLabel ? "pdp-zoom-label" : ""}`}
@@ -39,6 +40,18 @@ export function ProductGallery({ product, selectedVariantId }: { product: Produc
           />
           <Expand className="zoom-icon" size={22} />
         </button>
+        {showMishriStory && (
+          <aside className="mishri-gallery-story" aria-label="About Original Khand Dhaga Mishri">
+            <Image src="/images/zucerothegoodsugar-logo.webp" alt="Zucero The Good Sugar" width={156} height={156} />
+            <h2>Original Khand Dhaga Mishri</h2>
+            <p>Pure sweetness, just as nature intended.</p>
+            <ul>
+              <li>Traditional crystallisation</li>
+              <li>No artificial sweeteners</li>
+              <li>Rare &amp; limited</li>
+            </ul>
+          </aside>
+        )}
         <div className="gallery-controls">
           <button
             type="button"
