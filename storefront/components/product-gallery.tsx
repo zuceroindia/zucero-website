@@ -35,7 +35,7 @@ export function ProductGallery({ product, selectedVariantId }: { product: Produc
             fill
             priority
             sizes="(max-width: 900px) 92vw, 48vw"
-            style={isLabel ? { objectFit: "contain", padding: "36px" } : { objectFit: "cover" }}
+            style={{ objectFit: "contain" }}
           />
           <Expand className="zoom-icon" size={22} />
         </button>
@@ -74,7 +74,7 @@ export function ProductGallery({ product, selectedVariantId }: { product: Produc
                 alt=""
                 width={100}
                 height={100}
-                style={isThumbLabel ? { objectFit: "contain", padding: "6px", background: "#fbf9f5" } : { objectFit: "cover" }}
+                style={isThumbLabel ? { objectFit: "contain", padding: "6px", background: "#fbf9f5" } : { objectFit: "contain" }}
               />
             </button>
           );
