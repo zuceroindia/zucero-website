@@ -56,7 +56,7 @@ export function CollectionSection() {
       </CMSSectionFrame>
       <div className="heritage-product-grid">
         {products.map((product, index) => <article className="heritage-product" key={product.slug}>
-          <div className="heritage-picture">
+          <div className="heritage-picture heritage-product-picture">
             <Image
               src={product.image || (index === 0 ? "/images/carousel-khand-matka-v2.png" : "/images/collection-mishri-v2.png")}
               alt={product.name}

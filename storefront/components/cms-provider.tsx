@@ -81,7 +81,7 @@ export function CMSProvider({
         ? `.heritage-product,.heritage-ritual-grid article,.heritage-journal-grid>a,.proof-grid article,.process-grid article,.pdp-difference article,.pdp-recommendation-card,.account-card,.order-card{min-height:${l.cardMinHeightPx}px!important;}`
         : "",
       l.cardImageHeightPx > 0
-        ? `.heritage-picture,.prelaunch-card img,.pdp-difference article img{height:${l.cardImageHeightPx}px!important;min-height:${l.cardImageHeightPx}px!important;aspect-ratio:auto!important;}`
+        ? `.heritage-picture:not(.heritage-product-picture),.prelaunch-card img,.pdp-difference article img{height:${l.cardImageHeightPx}px!important;min-height:${l.cardImageHeightPx}px!important;aspect-ratio:auto!important;}`
         : "",
       l.carouselCardWidthPx > 0
         ? `.carousel-viewport .marquee-image{width:${l.carouselCardWidthPx}px!important;flex-basis:${l.carouselCardWidthPx}px!important;}`
