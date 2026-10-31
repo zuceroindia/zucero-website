@@ -11,7 +11,7 @@ export function StoryCarousel() {
   const { config } = useCMS();
   const stories = config.homepage.storyCarousel;
   const layout = config.sectionLayouts?.["homepage.storyCarousel"];
-  const textAlign = layout?.textAlign || "left";
+  const textAlign = "left";
   const viewportRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);

@@ -43,7 +43,7 @@ import {
 
 export default function Home() {
   return (
-    <main>
+    <main className="home-page">
       <DynamicHeroSection />
       <StoryCarousel />
       <DynamicProblemSection />

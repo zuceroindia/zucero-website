@@ -1202,6 +1202,42 @@ footer{grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr));align-items
   .mishri-gallery-story p{font-size:.78rem}
   .mishri-gallery-story ul{gap:.35rem;font-size:.65rem}
 }
+
+/* Align homepage copy blocks deliberately, independent of saved CMS alignment settings. */
+.home-page .hero-copy{text-align:left!important}
+.home-page .hero-copy .button-row,.home-page .hero-copy .hero-labels{justify-content:flex-start!important}
+.home-page .hero-proofs-track>span{text-align:left}
+.home-page .hero-proof-copy{text-align:left}
+.home-page .problem .cms-section-layout-copy,.home-page .problem .section-copy{text-align:center!important}
+.home-page .problem .section-copy{align-items:center}
+.home-page .problem .problem-heading,.home-page .problem .problem-heading h2{text-align:center}
+.home-page .problem .section-copy>p{width:min(100%,760px);margin-inline:auto;text-align:center}
+.home-page .nature-copy{text-align:center!important;margin-inline:auto}
+.home-page .nature-copy>p:not(.eyebrow){max-width:680px;margin-inline:auto}
+.home-page .heritage-craft .heritage-copy-only>div{width:min(100%,920px);margin-inline:auto;text-align:center!important}
+.home-page .craft-steps article{text-align:center}
+.home-page .heritage-collection,.home-page .collection-intro{text-align:center!important}
+.home-page .heritage-collection .cms-section-layout-copy{text-align:center!important}
+.home-page .heritage-collection .heritage-product-details{text-align:left!important}
+.home-page .heritage-collection .heritage-product-details>*{text-align:left}
+.home-page .heritage-philosophy .cms-section-layout-copy{text-align:center!important}
+.home-page .heritage-philosophy p{margin-inline:auto}
+.home-page .heritage-slow{text-align:center!important}
+.home-page .heritage-slow>div:not(.heritage-panorama){width:min(calc(100% - 2rem),780px);margin-inline:auto;text-align:center}
+.home-page .heritage-slow>div:not(.heritage-panorama) p{margin-inline:auto}
+.home-page .heritage-founder{text-align:center!important}
+.home-page .heritage-founder>img{margin-inline:auto}
+.home-page .heritage-founder>p,.home-page .heritage-founder>blockquote{width:min(calc(100% - 2rem),820px);margin-inline:auto}
+.home-page .heritage-founder>.text-link{margin-inline:auto}
+.home-page .heritage-rituals .cms-section-layout-copy,.home-page .heritage-journal .cms-section-layout-copy{text-align:center!important}
+.home-page .heritage-ritual-grid article,.home-page .heritage-journal-grid>a{text-align:left}
+.home-page .why-zucero .cms-section-layout-copy{text-align:center!important}
+.home-page .contact-section .cms-section-layout-copy{text-align:center!important}
+.home-page .contact-section .launch-form{text-align:left}
+@media(max-width:760px){
+  .home-page .hero-proofs-track>span{text-align:center}
+  .home-page .hero-proof-copy{text-align:center}
+}
 @media(max-width:900px){
   .hero-copy{left:var(--page-gutter);right:var(--page-gutter)}
   .pdp-page .product-detail{width:100%;padding-left:var(--page-gutter);padding-right:var(--page-gutter)}

@@ -16,7 +16,7 @@ export function DynamicHeroSection() {
   const hp = config.homepage;
   const layout = config.sectionLayouts?.["homepage.hero"];
   const highlightsLayout = config.sectionLayouts?.["homepage.highlights"];
-  const textAlign = cmsTextAlign(layout);
+  const textAlign = "left";
   const contentJustify = textAlign === "center" ? "center" : textAlign === "right" ? "flex-end" : "flex-start";
 
   const highlights = hp.highlights && hp.highlights.length > 0
@@ -116,7 +116,7 @@ export function DynamicProblemSection() {
   return (
     <section id="problem" className="problem">
       <SectionDivider title={hp.sugarProblemEyebrow || "The Sugar Problem"} />
-      <CMSSectionFrame layout={layout}>
+      <CMSSectionFrame layout={{ ...layout, textAlign: "center" }}>
         <div className="section-copy">
           <header className="problem-heading">
             <h2>{hp.sugarProblemHeading || "Sweetness lost its story."}</h2>
@@ -153,7 +153,7 @@ export function DynamicNatureSection() {
           sizes="100vw"
         />
       </div>
-      <div className="nature-copy" style={{ textAlign: cmsTextAlign(layout) }}>
+      <div className="nature-copy" style={{ textAlign: "center" }}>
         <p className="overlay-section-title">{hp.natureSolutionOverlayTitle || "Nature’s Solution"}</p>
         <Sun />
         <h2>{hp.natureSolutionHeading || "Begin with sugarcane. Interfere less."}</h2>
@@ -202,7 +202,7 @@ export function DynamicLaunchListSection() {
   return (
     <section id="contact" className="contact-section">
       <SectionDivider title={hp.launchListEyebrow || "The Launch List"} light />
-      <CMSSectionFrame layout={layout}>
+      <CMSSectionFrame layout={{ ...layout, textAlign: "center" }}>
         <div>
           <h2>{hp.launchListHeading || "Be first to taste the good sugar."}</h2>
           <p>{hp.launchListSubtitle || "Get launch availability, founder notes, and early product access. No noisy inbox."}</p>
@@ -237,7 +237,7 @@ export function DynamicCustomSections() {
         const splitImage = section.imagePosition === "left" || section.imagePosition === "right";
 
         const copy = (
-          <div style={{ padding: "clamp(3.5rem,7vw,7rem)", display: "flex", flexDirection: "column", justifyContent: "center", textAlign: section.textAlign || "left" }}>
+          <div style={{ padding: "clamp(3.5rem,7vw,7rem)", display: "flex", flexDirection: "column", justifyContent: "center", textAlign: "center" }}>
             {section.eyebrow && (
               <p className="eyebrow" style={{ color: dark ? "#d8b456" : undefined }}>
                 {section.eyebrow}
